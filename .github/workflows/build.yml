@@ -1,0 +1,63 @@
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+name: Build
+
+jobs:
+  build:
+    name: All
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install packages
+        run: sudo apt update && sudo apt install -y cmake
+      - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: '12.2.Rel1'
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: thumbv7em-none-eabihf
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/cargo@v1
+        name: "Install cargo-make"
+        with:
+          command: install
+          args: --force cargo-make
+      - uses: actions-rs/cargo@v1
+        name: "Build all binaries"
+        with:
+          command: build
+          args: --release
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUST_MIN_STACK: 8388608
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install packages
+        run: sudo apt update && sudo apt install -y cmake
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        name: "Install cargo-make"
+        with:
+          command: install
+          args: --force cargo-make
+      - uses: actions-rs/cargo@v1
+        name: "Run Host Tests"
+        with:
+          command: make
+          args: test-host
