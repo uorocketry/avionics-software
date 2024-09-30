@@ -80,7 +80,7 @@ mod app {
     #[init]
     fn init(ctx: init::Context) -> (SharedResources, LocalResources) {
         // channel setup
-        let (s, r) = make_channel!(Message, DATA_CHANNEL_CAPACITY);
+        let (_s, r) = make_channel!(Message, DATA_CHANNEL_CAPACITY);
 
         let core = ctx.core;
 
@@ -131,7 +131,6 @@ mod app {
 
         info!("CAN enabled");
         // GPIO
-        let gpioc = ctx.device.GPIOC.split(ccdr.peripheral.GPIOC);
         let gpioa = ctx.device.GPIOA.split(ccdr.peripheral.GPIOA);
         let gpiod = ctx.device.GPIOD.split(ccdr.peripheral.GPIOD);
         let gpiob = ctx.device.GPIOB.split(ccdr.peripheral.GPIOB);
@@ -194,7 +193,6 @@ mod app {
 
         let can_data_manager = CanDataManager::new(can_data.into_normal());
 
-        /// SAFETY: This is done as a result of a single memory mapped bit in hardware. Safe in this context.
         let can1: fdcan::FdCan<
             stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN1>,
             fdcan::ConfigMode,
@@ -356,14 +354,14 @@ mod app {
         match reason {
             Some(reason) => {
                 let x = match reason {
-                    stm32h7xx_hal::rcc::ResetReason::BrownoutReset => sensor::ResetReason::BrownoutReset, 
+                    stm32h7xx_hal::rcc::ResetReason::BrownoutReset => sensor::ResetReason::BrownoutReset,
                     stm32h7xx_hal::rcc::ResetReason::CpuReset => sensor::ResetReason::CpuReset,
                     stm32h7xx_hal::rcc::ResetReason::D1EntersDStandbyErroneouslyOrCpuEntersCStopErroneously => sensor::ResetReason::D1EntersDStandbyErroneouslyOrCpuEntersCStopErroneously,
                     stm32h7xx_hal::rcc::ResetReason::D1ExitsDStandbyMode => sensor::ResetReason::D1ExitsDStandbyMode,
                     stm32h7xx_hal::rcc::ResetReason::D2ExitsDStandbyMode => sensor::ResetReason::D2ExitsDStandbyMode,
                     stm32h7xx_hal::rcc::ResetReason::GenericWatchdogReset => sensor::ResetReason::GenericWatchdogReset,
                     stm32h7xx_hal::rcc::ResetReason::IndependentWatchdogReset => sensor::ResetReason::IndependentWatchdogReset,
-                    stm32h7xx_hal::rcc::ResetReason::PinReset => sensor::ResetReason::PinReset, 
+                    stm32h7xx_hal::rcc::ResetReason::PinReset => sensor::ResetReason::PinReset,
                     stm32h7xx_hal::rcc::ResetReason::PowerOnReset => sensor::ResetReason::PowerOnReset,
                     stm32h7xx_hal::rcc::ResetReason::SystemReset => sensor::ResetReason::SystemReset,
                     stm32h7xx_hal::rcc::ResetReason::Unknown { rcc_rsr } => sensor::ResetReason::Unknown { rcc_rsr },
@@ -504,16 +502,17 @@ mod app {
     //     });
     // }
 
-    #[task( priority = 3, binds = FDCAN2_IT0, shared = [can_data_manager, data_manager])]
+    #[task( priority = 3, binds = FDCAN2_IT0, shared = [&em, can_data_manager, data_manager])]
     fn can_data(mut cx: can_data::Context) {
         cx.shared.can_data_manager.lock(|can| {
-            cx.shared
-                .data_manager
-                .lock(|data_manager| can.process_data(data_manager));
+            cx.shared.em.run(|| {
+                can.process_data()?;
+                Ok(())
+            });
         });
     }
 
-    #[task(priority = 2, shared = [can_data_manager, data_manager])]
+    #[task(priority = 2, shared = [&em, can_data_manager, data_manager])]
     async fn send_data_internal(
         mut cx: send_data_internal::Context,
         mut receiver: Receiver<'static, Message, DATA_CHANNEL_CAPACITY>,
@@ -521,17 +520,23 @@ mod app {
         loop {
             if let Ok(m) = receiver.recv().await {
                 cx.shared.can_data_manager.lock(|can| {
-                    can.send_message(m);
+                    cx.shared.em.run(|| {
+                        can.send_message(m)?;
+                        Ok(())
+                    })
                 });
             }
         }
     }
 
-    #[task(priority = 2, shared = [can_command_manager, data_manager])]
+    #[task(priority = 2, shared = [&em, can_command_manager, data_manager])]
     async fn send_command_internal(mut cx: send_command_internal::Context, m: Message) {
         // while let Ok(m) = receiver.recv().await {
         cx.shared.can_command_manager.lock(|can| {
-            can.send_message(m);
+            cx.shared.em.run(|| {
+                can.send_message(m)?;
+                Ok(())
+            })
         });
         // }
     }

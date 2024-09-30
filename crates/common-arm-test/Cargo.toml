@@ -7,12 +7,13 @@ edition = "2021"
 
 [dependencies]
 common-arm = { path = "../common-arm" }
+stm32h7xx-hal = { workspace = true }
 cortex-m = { workspace = true }
 cortex-m-rt = "0.7.3"
 defmt = "0.3.4"
 defmt-rtt = "0.4.0"
 defmt-test = "0.3.0"
-panic-probe = { version = "0.3.1", features = ["print-defmt" ] }
+panic-probe = { workspace = true}
 
 # A [[test]] section is needed for each file in "tests"
 [[test]]

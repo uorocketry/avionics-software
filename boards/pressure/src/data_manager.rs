@@ -56,7 +56,7 @@ impl DataManager {
             return rate_cln;
         }
         self.logging_rate = Some(RadioRate::Slow);
-        return RadioRate::Slow;
+        RadioRate::Slow
     }
 
     /// Do not clone instead take to reduce CPU load.
@@ -85,7 +85,7 @@ impl DataManager {
     }
 
     pub fn clone_reset_reason(&self) -> Option<ResetReason> {
-        self.reset_reason.clone()
+        self.reset_reason
     }
 
     pub fn set_reset_reason(&mut self, reset: ResetReason) {
