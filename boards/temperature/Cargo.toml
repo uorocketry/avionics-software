@@ -22,3 +22,14 @@ defmt-rtt = { workspace = true }
 panic-probe = { workspace = true }
 chrono = { workspace = true }
 messages = {workspace = true}
+
+[dev-dependencies]
+defmt-test = { workspace = true }
+
+[[test]]
+name = "sd"
+harness = false
+
+[[bin]]
+name = "temperature"
+harness = false

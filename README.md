@@ -15,3 +15,8 @@ uORocketry's rocket instrumentation system.
 
 ## Running code 
 `cargo run --bin {board}`
+
+## Tests 
+- To run device tests `cargo make test-device` 
+- - `cargo make test-temperature-board`
+- To run host tests `cargo make test-host` 

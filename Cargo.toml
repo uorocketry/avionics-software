@@ -69,3 +69,6 @@ version = "0.5.0"
 
 [workspace.dependencies.messages]
 git = "https://github.com/uorocketry/messages"
+
+[workspace.dependencies.defmt-test]
+version = "0.3.2"

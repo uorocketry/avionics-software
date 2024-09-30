@@ -1,5 +1,5 @@
 [package]
-name = "rtic-playground"
+name = "simple-playground"
 version = "0.1.0"
 edition = "2021"
 
@@ -24,7 +24,7 @@ chrono = { workspace = true }
 messages = {workspace = true}
 
 [[bin]]
-name = "rtic-playground"
+name = "simple-playground"
 path = "src/main.rs"
 test = false
 doctest = false

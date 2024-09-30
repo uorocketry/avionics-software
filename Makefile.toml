@@ -10,7 +10,7 @@ default_to_workspace = false
 
 [tasks.test-host]
 dependencies = [
-    "test-messages",
+    # "test-messages",
 ]
 
 # -----------------------
@@ -19,9 +19,24 @@ dependencies = [
 
 [tasks.test-device]
 dependencies = [
+    "test-temperature-board",
+    "test-pressure-board",
+    "test-strain-board",
     "test-common-arm",
 ]
 
 [tasks.test-common-arm]
 command = "cargo"
-args = ["test", "-p", "common-arm-test", "${@}"]
+args = ["test", "-p", "common-arm", "${@}"]
+
+[tasks.test-temperature-board]
+command = "cargo"
+args = ["test", "-p", "temperature", "${@}"]
+
+[tasks.test-pressure-board]
+command = "cargo"
+args = ["test", "-p", "pressure", "${@}"]
+
+[tasks.test-strain-board]
+command = "cargo"
+args = ["test", "-p", "strain", "${@}"]

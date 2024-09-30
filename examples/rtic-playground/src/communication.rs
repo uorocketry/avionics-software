@@ -11,7 +11,6 @@ use messages::mavlink::uorocketry::MavMessage;
 use messages::mavlink::{self};
 use messages::Message;
 use postcard::from_bytes;
-use stm32h7xx_hal::prelude::*;
 
 /// Clock configuration is out of scope for this builder
 /// easiest way to avoid alloc is to use no generics
@@ -41,20 +40,17 @@ impl CanCommandManager {
             bit_rate_switching: false,
             marker: None,
         };
-        self.can.transmit(header, &payload)?;
+        self.can.transmit(header, payload)?;
         Ok(())
     }
     pub fn process_data(&mut self, data_manager: &mut DataManager) -> Result<(), HydraError> {
         let mut buf = [0u8; 64];
-        for message in self.can.receive0(&mut buf) {
-            match from_bytes::<Message>(&buf) {
-                Ok(data) => {
-                    info!("Received message {}", data.clone());
-                    data_manager.handle_command(data)?;
-                }
-                Err(e) => {
-                    info!("Error: {:?}", e)
-                }
+        while self.can.receive0(&mut buf).is_ok() {
+            if let Ok(data) = from_bytes::<Message>(&buf) {
+                info!("Received message {}", data.clone());
+                data_manager.handle_command(data)?;
+            } else {
+                info!("Error: {:?}", from_bytes::<Message>(&buf).unwrap_err());
             }
         }
         Ok(())
@@ -91,22 +87,18 @@ impl CanDataManager {
         };
         // self.can.abort(fdcan::Mailbox::_2); // this is needed if boards are not in sync (if they are not in sync that is a bigger problem)
 
-        stm32h7xx_hal::nb::block!(self.can.transmit(header, &payload))?;
+        stm32h7xx_hal::nb::block!(self.can.transmit(header, payload))?;
 
         Ok(())
     }
-    pub fn process_data(&mut self, data_manager: &mut DataManager) -> Result<(), HydraError> {
+    pub fn process_data(&mut self) -> Result<(), HydraError> {
         let mut buf = [0u8; 64];
-        for message in self.can.receive0(&mut buf) {
-            match from_bytes::<Message>(&buf) {
-                Ok(data) => {
-                    info!("Received message {}", data.clone());
-                    crate::app::send_gs::spawn(data).ok();
-                    // data_manager.handle_data(data);
-                }
-                Err(e) => {
-                    info!("Error: {:?}", e)
-                }
+        while self.can.receive0(&mut buf).is_ok() {
+            if let Ok(data) = from_bytes::<Message>(&buf) {
+                info!("Received message {}", data.clone());
+                crate::app::send_gs::spawn(data).ok();
+            } else if let Err(e) = from_bytes::<Message>(&buf) {
+                info!("Error: {:?}", e);
             }
         }
         self.can
@@ -182,20 +174,20 @@ impl RadioManager {
         // Do we need the header?
         match msg {
             mavlink::uorocketry::MavMessage::POSTCARD_MESSAGE(msg) => {
-                return Ok(postcard::from_bytes::<Message>(&msg.message)?);
+                Ok(postcard::from_bytes::<Message>(&msg.message)?)
                 // weird Ok syntax to coerce to hydra error type.
             }
             mavlink::uorocketry::MavMessage::COMMAND_MESSAGE(command) => {
                 info!("{}", command.command);
-                return Ok(postcard::from_bytes::<Message>(&command.command)?);
+                Ok(postcard::from_bytes::<Message>(&command.command)?)
             }
-            mavlink::uorocketry::MavMessage::HEARTBEAT(heartbeat) => {
+            mavlink::uorocketry::MavMessage::HEARTBEAT(_) => {
                 info!("Heartbeat");
-                return Err(mavlink::error::MessageReadError::Io.into());
+                Err(mavlink::error::MessageReadError::Io.into())
             }
             _ => {
                 error!("Error, ErrorContext::UnkownPostcardMessage");
-                return Err(mavlink::error::MessageReadError::Io.into());
+                Err(mavlink::error::MessageReadError::Io.into())
             }
         }
     }
