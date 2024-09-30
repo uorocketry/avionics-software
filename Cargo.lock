@@ -100,7 +100,9 @@ dependencies = [
  "heapless 0.7.17",
  "messages",
  "nb 1.1.0",
+ "panic-probe",
  "postcard",
+ "stm32h7xx-hal",
 ]
 
 [[package]]

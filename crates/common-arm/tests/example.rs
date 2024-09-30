@@ -36,7 +36,7 @@ mod tests {
     }
 
     #[test]
-    fn example_test(state: &mut State) {
-
+    fn example_test() {
+        assert!(true);
     }
 }

@@ -20,3 +20,7 @@ uORocketry's rocket instrumentation system.
 - To run device tests `cargo make test-device` 
 - - `cargo make test-temperature-board`
 - To run host tests `cargo make test-host` 
+
+## Helpful VSCode Extensions 
+- probe-rs.probe-rs-debugger
+- rust-lang.rust-analyzer

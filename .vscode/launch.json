@@ -1,0 +1,41 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "name": "Probe-rs Debug Strain",
+            "chip": "STM32H733VGTx",
+            "coreConfigs": [
+                {
+                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/strain",
+                }
+            ]
+        },
+        {
+            "type": "probe-rs-debug",
+            "request": "attach",
+            "name": "Probe-rs Debug Temperature",
+            "chip": "STM32H733VGTx",
+            "coreConfigs": [
+                {
+                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/temperature",
+                }
+            ]
+        },
+        {
+            "type": "probe-rs-debug",
+            "request": "attach",
+            "name": "Probe-rs Debug Pressure",
+            "chip": "STM32H733VGTx",
+            "coreConfigs": [
+                {
+                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/pressure",
+                }
+            ]
+        },
+    ]
+}
