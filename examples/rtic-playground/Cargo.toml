@@ -22,3 +22,11 @@ defmt-rtt = { workspace = true }
 panic-probe = { workspace = true }
 chrono = { workspace = true }
 messages = {workspace = true}
+
+[[bin]]
+name = "rtic-playground"
+path = "src/main.rs"
+test = false
+doctest = false
+bench = false
+harness = false

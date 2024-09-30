@@ -4,16 +4,16 @@
 use common_arm::SdManager;
 use defmt::info;
 use panic_probe as _;
+use stm32h7xx_hal::gpio::{Output, PushPull, PA4};
 use stm32h7xx_hal::pac;
 use stm32h7xx_hal::prelude::*;
-use stm32h7xx_hal::gpio::{PA4, Output, PushPull};
-use stm32h7xx_hal::spi; 
+use stm32h7xx_hal::spi;
 
 struct State {
     sd_manager: SdManager<
-    stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
-    PA4<Output<PushPull>>,
->,
+        stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
+        PA4<Output<PushPull>>,
+    >,
 }
 
 #[defmt_test::tests]

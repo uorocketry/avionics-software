@@ -93,6 +93,7 @@ dependencies = [
  "cortex-m",
  "defmt",
  "defmt-rtt",
+ "defmt-test",
  "derive_more",
  "embedded-hal 0.2.7",
  "embedded-sdmmc",
@@ -100,20 +101,6 @@ dependencies = [
  "messages",
  "nb 1.1.0",
  "postcard",
-]
-
-[[package]]
-name = "common-arm-test"
-version = "0.1.0"
-dependencies = [
- "common-arm",
- "cortex-m",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "defmt-test",
- "panic-probe",
- "stm32h7xx-hal",
 ]
 
 [[package]]
@@ -629,6 +616,7 @@ dependencies = [
  "cortex-m-rt",
  "defmt",
  "defmt-rtt",
+ "defmt-test",
  "embedded-alloc",
  "fdcan",
  "heapless 0.7.17",
@@ -962,6 +950,7 @@ dependencies = [
  "cortex-m-rt",
  "defmt",
  "defmt-rtt",
+ "defmt-test",
  "embedded-alloc",
  "fdcan",
  "heapless 0.7.17",
@@ -1006,6 +995,7 @@ dependencies = [
  "cortex-m-rt",
  "defmt",
  "defmt-rtt",
+ "defmt-test",
  "embedded-alloc",
  "fdcan",
  "heapless 0.7.17",

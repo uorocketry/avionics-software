@@ -15,3 +15,10 @@ embedded-sdmmc = "0.3.0"
 messages = {workspace = true}
 embedded-hal = {workspace = true}
 nb = {workspace = true}
+
+[dev-dependencies]
+defmt-test = { workspace = true }
+
+[[test]]
+name = "example"
+harness = false
