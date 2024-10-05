@@ -43,8 +43,6 @@ fn panic() -> ! {
     cortex_m::asm::udf()
 }
 
-static RTC: Mutex<RefCell<Option<rtc::Rtc>>> = Mutex::new(RefCell::new(None));
-
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
 
@@ -65,6 +63,7 @@ mod app {
         can_command_manager: CanCommandManager,
         can_data_manager: CanDataManager,
         sbg_power: PB4<Output<PushPull>>,
+        rtc: rtc::Rtc,
     }
     #[local]
     struct LocalResources {
@@ -294,10 +293,6 @@ mod app {
 
         rtc.set_date_time(now);
 
-        cortex_m::interrupt::free(|cs| {
-            RTC.borrow(cs).replace(Some(rtc));
-        });
-
         /* Monotonic clock */
         Mono::start(core.SYST, 200_000_000);
 
@@ -321,6 +316,7 @@ mod app {
                 can_command_manager,
                 can_data_manager,
                 sbg_power,
+                rtc,
             },
             LocalResources {
                 led_red,
