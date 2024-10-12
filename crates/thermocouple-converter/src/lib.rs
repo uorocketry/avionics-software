@@ -64,31 +64,36 @@ mod tests {
 
     #[test]
     fn voltage_to_celsius_test1() {
-        println!("Test 1: {}", voltage_to_celsius(20.644));
-        assert!(between(499.97, 500.0, voltage_to_celsius(20.644)));
+        //println!("Test 1: {}", voltage_to_celsius(20.644));
+        let result:f64 = voltage_to_celsius(20.644);
+        assert!(499.97 <= result && 500.0 >= result);
     }
 
     #[test]
     fn voltage_to_celsius_test2() {
-        println!("Test 2: {}", voltage_to_celsius(6.138));
-        assert!(between(150.01, 150.03, voltage_to_celsius(6.138)));
+        // println!("Test 2: {}", voltage_to_celsius(6.138));
+        let result:f64 = voltage_to_celsius(6.138);
+        assert!(150.01 <= result && 150.03 >= result);
     }
 
     #[test]
     fn voltage_to_celsius_test3() {
-        println!("Test 3: {}", voltage_to_celsius(0.039));
-        assert!(between(0.97, 0.98, voltage_to_celsius(0.039)));
+        // println!("Test 3: {}", voltage_to_celsius(0.039));
+        let result:f64 = voltage_to_celsius(0.039);
+        assert!(0.97 <= result && 0.98 >= result);
     }
 
     #[test]
     fn voltage_to_celsius_test4() {
-        println!("Test 4: {}", voltage_to_celsius(-0.778));
-        assert!(between(-20.03, -20.01, voltage_to_celsius(-0.778)));
+        // println!("Test 4: {}", voltage_to_celsius(-0.778));
+        let result:f64 = voltage_to_celsius(-0.778);
+        assert!(-20.03 <= result && -20.01 >= result);
     }
 
     #[test]
     fn voltage_to_celsius_test5() {
-        println!("Test 5: {}", voltage_to_celsius(10.0));
-        assert!(between(246.1, 246.3, voltage_to_celsius(10.0)));
+        // println!("Test 5: {}", voltage_to_celsius(10.0));
+        let result:f64 = voltage_to_celsius(10.0);
+        assert!(246.1 <= result && 246.3 >= result);
     }
 }
