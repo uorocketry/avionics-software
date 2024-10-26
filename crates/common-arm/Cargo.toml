@@ -24,3 +24,7 @@ defmt-test = { workspace = true }
 [[test]]
 name = "example"
 harness = false
+
+[lib]
+name = "common_arm"
+harness = false
