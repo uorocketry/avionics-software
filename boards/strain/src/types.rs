@@ -1,3 +1,3 @@
-use messages::sender::{Sender, Sender::CommunicationBoard};
+use messages::node::{Node, Node::StrainBoard};
 
-pub static COM_ID: Sender = CommunicationBoard;
+pub static COM_ID: Node = StrainBoard;

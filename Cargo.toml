@@ -8,7 +8,8 @@ members = ["boards/*", "examples/*", "crates/*"]
 default-members = ["boards/*", "examples/*"]
 
 [workspace.dependencies.stm32h7xx-hal]
-version = "0.16.0"
+#version = "0.16.0"
+path = "/home/ns/Rocketry/stm32h7xx-hal"
 # We use 35 even though we have the 33. 
 features = ["defmt", "rt", "stm32h735", "can", "rtc"]
 
@@ -58,7 +59,8 @@ version = "0.2"
 version = "0.4"
 
 [workspace.dependencies.chrono]
-version = "0.4.0"
+#version = "0.4.0"
+path = "/home/ns/Rocketry/chrono"
 default-features = false
 
 [workspace.dependencies.heapless]
@@ -68,7 +70,8 @@ version = "0.7.16"
 version = "0.5.0"
 
 [workspace.dependencies.messages]
-git = "https://github.com/uorocketry/messages"
+#git = "https://github.com/uorocketry/messages"
+path = "/home/ns/Rocketry/messages"
 
 [workspace.dependencies.defmt-test]
 version = "0.3.2"

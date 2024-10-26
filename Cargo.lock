@@ -74,10 +74,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "chrono"
 version = "0.4.38"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a21f936df1771bf62b77f047b726c4625ff2e8aa607c01ec06e5a05bd8463401"
 dependencies = [
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -506,9 +505,9 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 [[package]]
 name = "messages"
 version = "0.1.0"
-source = "git+https://github.com/uorocketry/messages#4cfab78740cf0e9f7d623feb0140ff0a4321c8f2"
 dependencies = [
  "bitflags 2.6.0",
+ "chrono",
  "defmt",
  "derive_more",
  "fugit",
@@ -521,7 +520,6 @@ dependencies = [
 [[package]]
 name = "messages-proc-macros-lib"
 version = "0.1.0"
-source = "git+https://github.com/uorocketry/messages#4cfab78740cf0e9f7d623feb0140ff0a4321c8f2"
 dependencies = [
  "quote",
  "serde",
@@ -923,8 +921,6 @@ dependencies = [
 [[package]]
 name = "stm32h7xx-hal"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3bd869329be25440b24e2b3583a1c016151b4a54bc36d96d82af7fcd9d010b98"
 dependencies = [
  "bare-metal 1.0.0",
  "cast",
