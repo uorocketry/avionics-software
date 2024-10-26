@@ -1,4 +1,5 @@
 #![no_std]
+#![no_main]
 
 //!
 //! This crate contains common code. Any code that is not platform specific should be put in

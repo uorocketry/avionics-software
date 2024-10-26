@@ -9,9 +9,7 @@ use chrono::NaiveDate;
 use common_arm::*;
 use communication::{CanCommandManager, CanDataManager};
 use communication::{RadioDevice, RadioManager};
-use core::cell::RefCell;
 use core::num::{NonZeroU16, NonZeroU8};
-use cortex_m::interrupt::Mutex;
 use data_manager::DataManager;
 use defmt::info;
 use fdcan::{
@@ -324,12 +322,14 @@ mod app {
         )
     }
 
-    #[task(priority = 3, shared = [&em])]
-    async fn generate_random_messages(cx: generate_random_messages::Context) {
+    #[task(priority = 3, shared = [&em, rtc])]
+    async fn generate_random_messages(mut cx: generate_random_messages::Context) {
         loop {
             cx.shared.em.run(|| {
                 let message = Message::new(
-                    0,
+                    cx.shared.rtc.lock(|rtc| {
+                        messages::FormattedNaiveDateTime(rtc.date_time().unwrap())
+                    }),
                     COM_ID,
                     messages::state::State::new(messages::state::StateData::Initializing),
                 );
@@ -341,7 +341,7 @@ mod app {
         }
     }
 
-    #[task(priority = 3, shared = [data_manager, &em])]
+    #[task(priority = 3, shared = [data_manager, &em, rtc])]
     async fn reset_reason_send(mut cx: reset_reason_send::Context) {
         let reason = cx
             .shared
@@ -364,7 +364,9 @@ mod app {
                     stm32h7xx_hal::rcc::ResetReason::WindowWatchdogReset => sensor::ResetReason::WindowWatchdogReset,
                 };
                 let message =
-                    messages::Message::new(Mono::now().ticks(), COM_ID, sensor::Sensor::new(x));
+                    messages::Message::new(cx.shared.rtc.lock(|rtc| {
+                        messages::FormattedNaiveDateTime(rtc.date_time().unwrap())
+                    }), COM_ID, sensor::Sensor::new(x));
 
                 cx.shared.em.run(|| {
                     spawn!(send_gs, message)?;
@@ -375,7 +377,7 @@ mod app {
         }
     }
 
-    #[task(shared = [data_manager, &em])]
+    #[task(shared = [data_manager, &em, rtc])]
     async fn state_send(mut cx: state_send::Context) {
         let state_data = cx
             .shared
@@ -384,7 +386,9 @@ mod app {
         cx.shared.em.run(|| {
             if let Some(x) = state_data {
                 let message =
-                    Message::new(Mono::now().ticks(), COM_ID, messages::state::State::new(x));
+                    Message::new(cx.shared.rtc.lock(|rtc| {
+                        messages::FormattedNaiveDateTime(rtc.date_time().unwrap())
+                    }), COM_ID, messages::state::State::new(x));
                 spawn!(send_gs, message)?;
             } // if there is none we still return since we simply don't have data yet.
             Ok(())
@@ -434,9 +438,23 @@ mod app {
     /// Receives a log message from the custom logger so that it can be sent over the radio.
     pub fn queue_gs_message(d: impl Into<Data>) {
         info!("Queueing message");
-        let message = messages::Message::new(Mono::now().ticks(), COM_ID, d.into());
-        info!("{:?}", message);
-        // send_in::spawn(message).ok();
+        send_gs_intermediate::spawn(d.into()).ok();
+    }
+
+    #[task(priority = 3, shared = [rtc, &em])]
+    async fn send_gs_intermediate(mut cx: send_gs_intermediate::Context, m: Data)
+    {
+        cx.shared.em.run(|| {
+            cx.shared.rtc.lock(|rtc| {
+                let message = messages::Message::new(
+                    messages::FormattedNaiveDateTime(rtc.date_time().unwrap()),
+                    COM_ID,
+                    m,
+                );
+                spawn!(send_gs, message)?;
+                Ok(())
+            })
+        });
     }
 
     #[task(priority = 2, binds = FDCAN1_IT0, shared = [can_command_manager, data_manager, &em])]
@@ -477,34 +495,15 @@ mod app {
         });
     }
 
-    // #[task(priority = 3, binds = UART4, local = [just_fired: bool = false], shared = [&em, radio_manager])]
-    // fn radio_rx(mut cx: radio_rx::Context) {
-    //     if *cx.local.just_fired {
-    //         *cx.local.just_fired = false;
-    //         return;
-    //     }
-    //     info!("Radio Rx");
-
-    //     cx.shared.radio_manager.lock(|radio_manager| {
-    //         cx.shared.em.run(|| {
-    //             // cortex_m::interrupt::free(|cs| {
-    //                 let m = radio_manager.receive_message()?;
-    //                 *cx.local.just_fired = true;
-    //                 info!("Received message {}", m.clone());
-    //                 spawn!(send_command_internal, m)?;
-    //             // })?;
-    //             Ok(())
-    //         });
-    //     });
-    // }
-
     #[task( priority = 3, binds = FDCAN2_IT0, shared = [&em, can_data_manager, data_manager])]
     fn can_data(mut cx: can_data::Context) {
         cx.shared.can_data_manager.lock(|can| {
-            cx.shared.em.run(|| {
-                can.process_data()?;
-                Ok(())
-            });
+            {
+                cx.shared.em.run(|| {
+                    can.process_data()?;
+                    Ok(())
+                })
+            }
         });
     }
 

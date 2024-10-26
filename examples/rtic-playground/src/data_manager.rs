@@ -114,44 +114,46 @@ impl DataManager {
     pub fn handle_data(&mut self, data: Message) {
         match data.data {
             messages::Data::Sensor(ref sensor) => match sensor.data {
-                messages::sensor::SensorData::EkfNavAcc(_) => {
-                    self.ekf_nav_acc = Some(data);
-                }
-                messages::sensor::SensorData::GpsPosAcc(_) => {
-                    self.gps_pos_acc = Some(data);
-                }
-                messages::sensor::SensorData::Air(_) => {
-                    self.air = Some(data);
-                }
-                messages::sensor::SensorData::EkfNav1(_) => {
-                    self.ekf_nav_1 = Some(data);
-                }
-                messages::sensor::SensorData::EkfNav2(_) => {
-                    self.ekf_nav_2 = Some(data);
-                }
-                messages::sensor::SensorData::EkfQuat(_) => {
-                    self.ekf_quat = Some(data);
-                }
-                messages::sensor::SensorData::GpsVel(_) => {
-                    self.gps_vel = Some(data);
-                }
-                messages::sensor::SensorData::GpsVelAcc(_) => {
-                    self.gps_vel_acc = Some(data);
-                }
-                messages::sensor::SensorData::Imu1(_) => {
-                    self.imu_1 = Some(data);
-                }
-                messages::sensor::SensorData::Imu2(_) => {
-                    self.imu_2 = Some(data);
-                }
-                messages::sensor::SensorData::UtcTime(_) => {
-                    self.utc_time = Some(data);
-                }
-                messages::sensor::SensorData::GpsPos1(_) => {
-                    self.gps_pos_1 = Some(data);
-                }
-                messages::sensor::SensorData::GpsPos2(_) => {
-                    self.gps_pos_2 = Some(data);
+                messages::sensor::SensorData::SbgData(ref sbg_data) => match sbg_data{
+                    messages::sensor::SbgData::EkfNavAcc(_) => {
+                        self.ekf_nav_acc = Some(data);
+                    }
+                    messages::sensor::SbgData::GpsPosAcc(_) => {
+                        self.gps_pos_acc = Some(data);
+                    }
+                    messages::sensor::SbgData::Air(_) => {
+                        self.air = Some(data);
+                    }
+                    messages::sensor::SbgData::EkfNav1(_) => {
+                        self.ekf_nav_1 = Some(data);
+                    }
+                    messages::sensor::SbgData::EkfNav2(_) => {
+                        self.ekf_nav_2 = Some(data);
+                    }
+                    messages::sensor::SbgData::EkfQuat(_) => {
+                        self.ekf_quat = Some(data);
+                    }
+                    messages::sensor::SbgData::GpsVel(_) => {
+                        self.gps_vel = Some(data);
+                    }
+                    messages::sensor::SbgData::GpsVelAcc(_) => {
+                        self.gps_vel_acc = Some(data);
+                    }
+                    messages::sensor::SbgData::Imu1(_) => {
+                        self.imu_1 = Some(data);
+                    }
+                    messages::sensor::SbgData::Imu2(_) => {
+                        self.imu_2 = Some(data);
+                    }
+                    messages::sensor::SbgData::UtcTime(_) => {
+                        self.utc_time = Some(data);
+                    }
+                    messages::sensor::SbgData::GpsPos1(_) => {
+                        self.gps_pos_1 = Some(data);
+                    }
+                    messages::sensor::SbgData::GpsPos2(_) => {
+                        self.gps_pos_2 = Some(data);
+                    }
                 }
                 messages::sensor::SensorData::RecoverySensing(_) => {
                     self.recovery_sensing = Some(data);
