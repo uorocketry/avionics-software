@@ -78,10 +78,11 @@ pub enum ADCCommand {
     SYOCAL2,
     SYGCAL2,
     SFOCAL2,
-    RREG(u8, u8), // (register address, number of registers)
-    WREG(u8, u8), // (register address, number of registers)
+    RREG(Register, u8), // (register address, number of registers)
+    WREG(Register, u8), // (register address, number of registers)
 }
 
+#[repr(u8)]
 pub enum Register {
     ID = 0x00,
     POWER = 0x01,
@@ -136,8 +137,8 @@ where
             ADCCommand::SYOCAL2 => (0x1B, None),
             ADCCommand::SYGCAL2 => (0x1C, None),
             ADCCommand::SFOCAL2 => (0x1E, None),
-            ADCCommand::RREG(addr, num) => (0x20 | addr, Some(num)),
-            ADCCommand::WREG(addr, num) => (0x40 | addr, Some(num)),
+            ADCCommand::RREG(addr, num) => (0x20 | addr as u8, Some(num)),
+            ADCCommand::WREG(addr, num) => (0x40 | addr as u8, Some(num)),
         };
 
         self.spi.send(opcode1).map_err(|_| ADS126xError::IO)?;
@@ -151,7 +152,7 @@ where
         if num > 27 {
             return Err(ADS126xError::InvalidInputData);
         }
-        self.send_command(ADCCommand::RREG(reg as u8, num - 1))?;
+        self.send_command(ADCCommand::RREG(reg, num - 1))?;
         let mut buffer: Vec<u8, 27> = Vec::new();
         for _ in 0..num {
             buffer
@@ -165,7 +166,7 @@ where
         if data.len() > 27 {
             return Err(ADS126xError::InvalidInputData);
         }
-        self.send_command(ADCCommand::WREG(reg as u8, data.len() as u8 - 1))?;
+        self.send_command(ADCCommand::WREG(reg, data.len() as u8 - 1))?;
         for &byte in data {
             self.spi.send(byte).map_err(|_| ADS126xError::IO)?;
         }
