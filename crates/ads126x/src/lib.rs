@@ -2,8 +2,10 @@
 #![no_main]
 
 mod error;
+mod register;
 
 use error::ADS126xError;
+use register::{Register, IdRegister, PowerRegister, InterfaceRegister};
 
 use bitflags::bitflags;
 use embedded_hal::spi::FullDuplex;
@@ -82,37 +84,6 @@ pub enum ADCCommand {
     WREG(Register, u8), // (register address, number of registers)
 }
 
-#[repr(u8)]
-pub enum Register {
-    ID = 0x00,
-    POWER = 0x01,
-    INTERFACE = 0x02,
-    MODE0 = 0x03,
-    MODE1 = 0x04,
-    MODE2 = 0x05,
-    INPMUX = 0x06,
-    OFCAL0 = 0x07,
-    OFCAL1 = 0x08,
-    OFCAL2 = 0x09,
-    FSCAL0 = 0x0A,
-    FSCAL1 = 0x0B,
-    FSCAL2 = 0x0C,
-    IDACMUX = 0x0D,
-    IDACMAG = 0x0E,
-    REFMUX = 0x0F,
-    TDACP = 0x10,
-    TDACN = 0x11,
-    GPIOCON = 0x12,
-    GPIODIR = 0x13,
-    GPIODAT = 0x14,
-    ADC2CFG = 0x15,
-    ADC2MUX = 0x16,
-    ADC2OFC0 = 0x17,
-    ADC2OFC1 = 0x18,
-    ADC2FSC0 = 0x19,
-    ADC2FSC1 = 0x1A,
-}
-
 impl<SPI> ADS126x<SPI>
 where
     SPI: FullDuplex<u8>,
@@ -162,6 +133,13 @@ where
         Ok(buffer)
     }
 
+    /// Reads data from only the single provided register.
+    /// To read multiple registers, see [read_register](ADS126x::read_register).
+    pub fn read_single_register(&mut self, reg: Register) -> Result<u8, ADS126xError> {
+        let data = self.read_register(reg, 1)?;
+        Ok(data[0])
+    }
+
     pub fn write_register(&mut self, reg: Register, data: &[u8]) -> Result<(), ADS126xError> {
         if data.len() > 27 {
             return Err(ADS126xError::InvalidInputData);
@@ -171,5 +149,40 @@ where
             self.spi.send(byte).map_err(|_| ADS126xError::IO)?;
         }
         Ok(())
+    }
+
+    pub fn get_id(&mut self) -> Result<IdRegister, ADS126xError> {
+        let bits = self.read_single_register(Register::ID)?;
+        let data = IdRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        }
+    }
+
+    pub fn get_power(&mut self) -> Result<PowerRegister, ADS126xError> {
+        let bits = self.read_single_register(Register::POWER)?;
+        let data = PowerRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        }
+    }
+
+    pub fn set_power(&mut self, reg: &PowerRegister) -> Result<(), ADS126xError> {
+        self.write_register(Register::POWER, &[reg.bits()])
+    }
+
+    pub fn get_interface(&mut self) -> Result<InterfaceRegister, ADS126xError> {
+        let bits = self.read_single_register(Register::INTERFACE)?;
+        let data = InterfaceRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        }
+    }
+
+    pub fn set_interface(&mut self, reg: &InterfaceRegister) -> Result<(), ADS126xError> {
+        self.write_register(Register::INTERFACE, &[reg.bits()])
     }
 }
