@@ -77,7 +77,6 @@ bitflags! {
 pub enum Crc {
     DISABLED = 0b00,
     ENABLED = 0b01,
-    RESERVED = 0b11,
 }
 
 impl InterfaceRegister {
@@ -85,10 +84,16 @@ impl InterfaceRegister {
         match self.bits() & 0b0000_0011 {
             0b00 => Crc::DISABLED,
             0b01 => Crc::ENABLED,
-            0b11 => Crc::RESERVED,
+
+            0b11 => panic!("Reserved state is set. Should not be 0b11."),
 
             // Exhaustive list for possible combinations of 2 bits
             _ => unreachable!("Only 2 bits should be set.")
         }
+    }
+
+    pub fn set_crc(&mut self, crc: Crc) {
+        let crc_bits = crc as u8 & 0b0000_0011;
+        self.insert(InterfaceRegister::from_bits_truncate(crc_bits));
     }
 }
