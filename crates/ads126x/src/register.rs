@@ -66,34 +66,11 @@ bitflags! {
 }
 
 bitflags! {
+    /// WARNING: If CRC is 0b11 set by ADC, it will reflect as CRC enabled not reserved.
+    /// CRC only accounts for 0b00 disabled and 0b01 enabled.
     pub struct InterfaceRegister: u8 {
+        const CRC     = 0b0000_0001;
         const STATUS  = 0b0000_0100;
         const TIMEOUT = 0b0000_1000;
-
-        const _ = 0b0000_0011; // Source may set CDC bits
-    }
-}
-
-pub enum Crc {
-    DISABLED = 0b00,
-    ENABLED = 0b01,
-}
-
-impl InterfaceRegister {
-    pub fn get_crc(&self) -> Crc {
-        match self.bits() & 0b0000_0011 {
-            0b00 => Crc::DISABLED,
-            0b01 => Crc::ENABLED,
-
-            0b11 => panic!("Reserved state is set. Should not be 0b11."),
-
-            // Exhaustive list for possible combinations of 2 bits
-            _ => unreachable!("Only 2 bits should be set.")
-        }
-    }
-
-    pub fn set_crc(&mut self, crc: Crc) {
-        let crc_bits = crc as u8 & 0b0000_0011;
-        self.insert(InterfaceRegister::from_bits_truncate(crc_bits));
     }
 }
