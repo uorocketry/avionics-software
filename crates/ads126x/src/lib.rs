@@ -134,7 +134,7 @@ where
     }
 
     /// Reads data from only the single provided register.
-    /// To read multiple registers, see [read_register](ADS126x::read_register).
+    /// To read multiple registers, see [read_multiple_registers](ADS126x::read_multiple_registers).
     pub fn read_register(&mut self, reg: Register) -> Result<u8, ADS126xError> {
         // zero since number of registers read - 1, so 1-1=0. 
         self.send_command(ADCCommand::RREG(reg, 0))?; 
