@@ -119,7 +119,7 @@ where
         Ok(())
     }
 
-    pub fn read_register(&mut self, reg: Register, num: u8) -> Result<Vec<u8, 27>, ADS126xError> {
+    pub fn read_multiple_registers(&mut self, reg: Register, num: u8) -> Result<Vec<u8, 27>, ADS126xError> {
         if num > 27 {
             return Err(ADS126xError::InvalidInputData);
         }
@@ -135,9 +135,11 @@ where
 
     /// Reads data from only the single provided register.
     /// To read multiple registers, see [read_register](ADS126x::read_register).
-    pub fn read_single_register(&mut self, reg: Register) -> Result<u8, ADS126xError> {
-        let data = self.read_register(reg, 1)?;
-        Ok(data[0])
+    pub fn read_register(&mut self, reg: Register) -> Result<u8, ADS126xError> {
+        // zero since number of registers read - 1, so 1-1=0. 
+        self.send_command(ADCCommand::RREG(reg, 0))?; 
+        let data = self.spi.read().map_err(|_| ADS126xError::IO)?;
+        Ok(data)
     }
 
     pub fn write_register(&mut self, reg: Register, data: &[u8]) -> Result<(), ADS126xError> {
@@ -152,7 +154,7 @@ where
     }
 
     pub fn get_id(&mut self) -> Result<IdRegister, ADS126xError> {
-        let bits = self.read_single_register(Register::ID)?;
+        let bits = self.read_register(Register::ID)?;
         let data = IdRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -161,7 +163,7 @@ where
     }
 
     pub fn get_power(&mut self) -> Result<PowerRegister, ADS126xError> {
-        let bits = self.read_single_register(Register::POWER)?;
+        let bits = self.read_register(Register::POWER)?;
         let data = PowerRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -174,7 +176,7 @@ where
     }
 
     pub fn get_interface(&mut self) -> Result<InterfaceRegister, ADS126xError> {
-        let bits = self.read_single_register(Register::INTERFACE)?;
+        let bits = self.read_register(Register::INTERFACE)?;
         let data = InterfaceRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
