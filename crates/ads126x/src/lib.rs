@@ -119,6 +119,8 @@ where
         Ok(())
     }
 
+    /// Reads data from multiple registers starting at the provided register.
+    /// To read a single register, see [read_register](ADS126x::read_register).
     pub fn read_multiple_registers(&mut self, reg: Register, num: u8) -> Result<Vec<u8, 27>, ADS126xError> {
         if num > 27 {
             return Err(ADS126xError::InvalidInputData);
@@ -142,7 +144,9 @@ where
         Ok(data)
     }
 
-    pub fn write_register(&mut self, reg: Register, data: &[u8]) -> Result<(), ADS126xError> {
+    /// Writes data to multiple registers starting at the provided register.
+    /// To write data to a single register, see [write_register](ADS126x::write_register).
+    pub fn write_multiple_registers(&mut self, reg: Register, data: &[u8]) -> Result<(), ADS126xError> {
         if data.len() > 27 {
             return Err(ADS126xError::InvalidInputData);
         }
@@ -151,6 +155,13 @@ where
             self.spi.send(byte).map_err(|_| ADS126xError::IO)?;
         }
         Ok(())
+    }
+
+    /// Writes data to only the single provided register.
+    /// To write data to multiple registers, see [write_multiple_registers](ADS126x::write_multiple_registers).
+    pub fn write_register(&mut self, reg: Register, data: u8) -> Result<(), ADS126xError> {
+        self.send_command(ADCCommand::WREG(reg, 0))?;
+        self.spi.send(data).map_err(|_| ADS126xError::IO)
     }
 
     pub fn get_id(&mut self) -> Result<IdRegister, ADS126xError> {
@@ -172,7 +183,7 @@ where
     }
 
     pub fn set_power(&mut self, reg: &PowerRegister) -> Result<(), ADS126xError> {
-        self.write_register(Register::POWER, &[reg.bits()])
+        self.write_register(Register::POWER, reg.bits())
     }
 
     pub fn get_interface(&mut self) -> Result<InterfaceRegister, ADS126xError> {
@@ -185,6 +196,6 @@ where
     }
 
     pub fn set_interface(&mut self, reg: &InterfaceRegister) -> Result<(), ADS126xError> {
-        self.write_register(Register::INTERFACE, &[reg.bits()])
+        self.write_register(Register::INTERFACE, reg.bits())
     }
 }
