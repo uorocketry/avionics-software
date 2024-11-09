@@ -7,7 +7,6 @@ mod register;
 use error::ADS126xError;
 use register::{Register, IdRegister, PowerRegister, InterfaceRegister};
 
-use bitflags::bitflags;
 use embedded_hal::spi::FullDuplex;
 use heapless::Vec;
 
@@ -16,53 +15,6 @@ where
     SPI: FullDuplex<u8>,
 {
     spi: SPI,
-}
-
-bitflags! {
-    pub struct StatusRegister: u8 {
-        const ADC2      = 0b1000_0000;
-        const ADC1      = 0b0100_0000;
-        const EXTCLK    = 0b0010_0000;
-        const REF_ALM   = 0b0001_0000;
-        const PGAL_ALM  = 0b0000_1000;
-        const PGAH_ALM  = 0b0000_0100;
-        const PGAD_ALM  = 0b0000_0010;
-        const RESET     = 0b0000_0001;
-    }
-}
-
-impl StatusRegister {
-    pub fn is_adc2_data_new(&self) -> bool {
-        self.contains(StatusRegister::ADC2)
-    }
-
-    pub fn is_adc1_data_new(&self) -> bool {
-        self.contains(StatusRegister::ADC1)
-    }
-
-    pub fn is_extclk(&self) -> bool {
-        self.contains(StatusRegister::EXTCLK)
-    }
-
-    pub fn is_ref_alm(&self) -> bool {
-        self.contains(StatusRegister::REF_ALM)
-    }
-
-    pub fn is_pgal_alm(&self) -> bool {
-        self.contains(StatusRegister::PGAL_ALM)
-    }
-
-    pub fn is_pgah_alm(&self) -> bool {
-        self.contains(StatusRegister::PGAH_ALM)
-    }
-
-    pub fn is_pgad_alm(&self) -> bool {
-        self.contains(StatusRegister::PGAD_ALM)
-    }
-
-    pub fn is_reset(&self) -> bool {
-        self.contains(StatusRegister::RESET)
-    }
 }
 
 pub enum ADCCommand {
