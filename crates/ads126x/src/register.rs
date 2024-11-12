@@ -193,7 +193,7 @@ impl Mode1Register {
             0b110 => SensorBiasMagnitude::R10MOhm,
 
             0b111 => panic!("Reserved SBMAG"),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -211,7 +211,7 @@ impl Mode1Register {
             0b100 => DigitalFilter::FIR,
 
             0b101..=0b111 => panic!("Reserved filter"),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -249,7 +249,7 @@ impl Mode2Register {
             0b1110 => DataRate::SPS19200,
             0b1111 => DataRate::SPS38400,
 
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -268,12 +268,232 @@ impl Mode2Register {
             0b101 => PGAGain::VV32,
 
             0b110 | 0b111 => panic!("Reserved gain"),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
     pub fn set_gain(&mut self, gain: PGAGain) {
         let bits = gain as u8;
         self.insert(Mode2Register::from_bits_retain(bits << 4));
+    }
+}
+
+bitflags! {
+    pub struct InpMuxRegister: u8 {
+        const _ = !0; // Source may set any bits
+    }
+}
+
+impl InpMuxRegister {
+    pub fn get_muxn(&self) -> NegativeInpMux {
+        match self.bits() & 0b0000_1111 {
+            0b0000 => NegativeInpMux::AIN0,
+            0b0001 => NegativeInpMux::AIN1,
+            0b0010 => NegativeInpMux::AIN2,
+            0b0011 => NegativeInpMux::AIN3,
+            0b0100 => NegativeInpMux::AIN4,
+            0b0101 => NegativeInpMux::AIN5,
+            0b0110 => NegativeInpMux::AIN6,
+            0b0111 => NegativeInpMux::AIN7,
+            0b1000 => NegativeInpMux::AIN8,
+            0b1001 => NegativeInpMux::AIN9,
+            0b1010 => NegativeInpMux::AINCOM,
+            0b1011 => NegativeInpMux::TempSensMonNeg,
+            0b1100 => NegativeInpMux::AnlgPwrSupMonNeg,
+            0b1101 => NegativeInpMux::DgtlPwrSubMonNeg,
+            0b1110 => NegativeInpMux::TDACTestSignalNeg,
+            0b1111 => NegativeInpMux::Float,
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_muxn(&mut self, muxn: NegativeInpMux) {
+        let bits = muxn as u8;
+        self.insert(InpMuxRegister::from_bits_retain(bits));
+    }
+
+    pub fn get_muxp(&self) -> PositiveInpMux {
+        match (self.bits() & 0b1111_0000) >> 4 {
+            0b0000 => PositiveInpMux::AIN0,
+            0b0001 => PositiveInpMux::AIN1,
+            0b0010 => PositiveInpMux::AIN2,
+            0b0011 => PositiveInpMux::AIN3,
+            0b0100 => PositiveInpMux::AIN4,
+            0b0101 => PositiveInpMux::AIN5,
+            0b0110 => PositiveInpMux::AIN6,
+            0b0111 => PositiveInpMux::AIN7,
+            0b1000 => PositiveInpMux::AIN8,
+            0b1001 => PositiveInpMux::AIN9,
+            0b1010 => PositiveInpMux::AINCOM,
+            0b1011 => PositiveInpMux::TempSensMonPos,
+            0b1100 => PositiveInpMux::AnlgPwrSupMonPos,
+            0b1101 => PositiveInpMux::DgtlPwrSubMonPos,
+            0b1110 => PositiveInpMux::TDACTestSignalPos,
+            0b1111 => PositiveInpMux::Float,
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_muxp(&mut self, muxp: PositiveInpMux) {
+        let bits = muxp as u8;
+        self.insert(InpMuxRegister::from_bits_retain(bits << 4));
+    }
+}
+
+bitflags! {
+    pub struct IdacMuxRegister: u8 {
+        const _ = !0; // Source may set any bits
+    }
+}
+
+impl IdacMuxRegister {
+    pub fn get_mux1(&self) -> IdacOutMux {
+        match self.bits() & 0b0000_1111 {
+            0b0000 => IdacOutMux::AIN0,
+            0b0001 => IdacOutMux::AIN1,
+            0b0010 => IdacOutMux::AIN2,
+            0b0011 => IdacOutMux::AIN3,
+            0b0100 => IdacOutMux::AIN4,
+            0b0101 => IdacOutMux::AIN5,
+            0b0110 => IdacOutMux::AIN6,
+            0b0111 => IdacOutMux::AIN7,
+            0b1000 => IdacOutMux::AIN8,
+            0b1001 => IdacOutMux::AIN9,
+            0b1010 => IdacOutMux::AINCOM,
+            0b1011 => IdacOutMux::NoConnection,
+
+            0b1100..=0b1111 => panic!("Reserved IDAC Output Multiplexer"),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_mux1(&mut self, mux1: IdacOutMux) {
+        let bits = mux1 as u8;
+        self.insert(IdacMuxRegister::from_bits_retain(bits));
+    }
+
+    pub fn get_mux2(&self) -> IdacOutMux {
+        match (self.bits() & 0b1111_0000) >> 4 {
+            0b0000 => IdacOutMux::AIN0,
+            0b0001 => IdacOutMux::AIN1,
+            0b0010 => IdacOutMux::AIN2,
+            0b0011 => IdacOutMux::AIN3,
+            0b0100 => IdacOutMux::AIN4,
+            0b0101 => IdacOutMux::AIN5,
+            0b0110 => IdacOutMux::AIN6,
+            0b0111 => IdacOutMux::AIN7,
+            0b1000 => IdacOutMux::AIN8,
+            0b1001 => IdacOutMux::AIN9,
+            0b1010 => IdacOutMux::AINCOM,
+            0b1011 => IdacOutMux::NoConnection,
+
+            0b1100..=0b1111 => panic!("Reserved IDAC Output Multiplexer"),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_mux2(&mut self, mux2: IdacOutMux) {
+        let bits = mux2 as u8;
+        self.insert(IdacMuxRegister::from_bits_retain(bits << 4));
+    }
+}
+
+bitflags! {
+    pub struct IdacMagRegister: u8 {
+        const _ = !0; // Source may set any bits
+    }
+}
+
+impl IdacMagRegister {
+    pub fn get_mag1(&self) -> IdacCurMag {
+        match self.bits() & 0b0000_1111 {
+            0b0000 => IdacCurMag::I50uA,
+            0b0001 => IdacCurMag::I100uA,
+            0b0010 => IdacCurMag::I250uA,
+            0b0011 => IdacCurMag::I500uA,
+            0b0100 => IdacCurMag::I750uA,
+            0b0101 => IdacCurMag::I1000uA,
+            0b0110 => IdacCurMag::I1500uA,
+            0b0111 => IdacCurMag::I2000uA,
+            0b1000 => IdacCurMag::I2500uA,
+            0b1001 => IdacCurMag::I3000uA,
+
+            0b1010..=0b1111 => panic!("Reserved IDAC Magnitude Multiplexer"),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_mag1(&mut self, mag1: IdacCurMag) {
+        let bits = mag1 as u8;
+        self.insert(IdacMagRegister::from_bits_retain(bits));
+    }
+
+    pub fn get_mag2(&self) -> IdacCurMag {
+        match (self.bits() & 0b1111_0000) >> 4 {
+            0b0000 => IdacCurMag::I50uA,
+            0b0001 => IdacCurMag::I100uA,
+            0b0010 => IdacCurMag::I250uA,
+            0b0011 => IdacCurMag::I500uA,
+            0b0100 => IdacCurMag::I750uA,
+            0b0101 => IdacCurMag::I1000uA,
+            0b0110 => IdacCurMag::I1500uA,
+            0b0111 => IdacCurMag::I2000uA,
+            0b1000 => IdacCurMag::I2500uA,
+            0b1001 => IdacCurMag::I3000uA,
+
+            0b1010..=0b1111 => panic!("Reserved IDAC Output Multiplexer"),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_mag2(&mut self, mag2: IdacCurMag) {
+        let bits = mag2 as u8;
+        self.insert(IdacMagRegister::from_bits_retain(bits << 4));
+    }
+}
+
+bitflags! {
+    pub struct RefMuxRegister: u8 {
+        const _ = 0b0011_1111;
+    }
+}
+
+impl RefMuxRegister {
+    pub fn get_rmuxn(&self) -> RefNegativeInp {
+        match self.bits() & 0b0000_0111 {
+            0b000 => RefNegativeInp::Int2_5VRef,
+            0b001 => RefNegativeInp::ExtAIN1,
+            0b010 => RefNegativeInp::ExtAIN3,
+            0b011 => RefNegativeInp::ExtAIN5,
+            0b100 => RefNegativeInp::IntAnlgSup,
+
+            0b101..=0b111 => panic!("Reserved Reference Negative Input"),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_rmuxn(&mut self, rmuxn: RefNegativeInp) {
+        let bits = rmuxn as u8;
+        self.insert(RefMuxRegister::from_bits_retain(bits));
+    }
+
+    pub fn get_rmuxp(&self) -> RefPositiveInp {
+        match (self.bits() & 0b0011_1000) >> 3 {
+            0b000 => RefPositiveInp::Int2_5VRef,
+            0b001 => RefPositiveInp::ExtAIN0,
+            0b010 => RefPositiveInp::ExtAIN2,
+            0b011 => RefPositiveInp::ExtAIN4,
+            0b100 => RefPositiveInp::IntAnlgSup,
+
+            0b101..=0b111 => panic!("Reserved Reference Positive Input"),
+            _ => unreachable!()
+        }
+    }
+
+    pub fn set_rmuxp(&mut self, rmuxp: RefPositiveInp) {
+        let bits = rmuxp as u8;
+        self.insert(RefMuxRegister::from_bits_retain(bits << 3));
     }
 }

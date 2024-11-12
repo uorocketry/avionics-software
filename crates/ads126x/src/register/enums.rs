@@ -110,3 +110,96 @@ pub enum PGAGain {
     VV16 = 0b100,
     VV32 = 0b101,
 }
+
+#[repr(u8)]
+pub enum NegativeInpMux {
+    AIN0              = 0b0000,
+    AIN1              = 0b0001,
+    AIN2              = 0b0010,
+    AIN3              = 0b0011,
+    AIN4              = 0b0100,
+    AIN5              = 0b0101,
+    AIN6              = 0b0110,
+    AIN7              = 0b0111,
+    AIN8              = 0b1000,
+    AIN9              = 0b1001,
+    AINCOM            = 0b1010,
+    TempSensMonNeg    = 0b1011,
+    AnlgPwrSupMonNeg  = 0b1100,
+    DgtlPwrSubMonNeg  = 0b1101,
+    TDACTestSignalNeg = 0b1110,
+    Float             = 0b1111,
+}
+
+#[repr(u8)]
+pub enum PositiveInpMux {
+    AIN0              = 0b0000,
+    AIN1              = 0b0001,
+    AIN2              = 0b0010,
+    AIN3              = 0b0011,
+    AIN4              = 0b0100,
+    AIN5              = 0b0101,
+    AIN6              = 0b0110,
+    AIN7              = 0b0111,
+    AIN8              = 0b1000,
+    AIN9              = 0b1001,
+    AINCOM            = 0b1010,
+    TempSensMonPos    = 0b1011,
+    AnlgPwrSupMonPos  = 0b1100,
+    DgtlPwrSubMonPos  = 0b1101,
+    TDACTestSignalPos = 0b1110,
+    Float             = 0b1111,
+}
+
+#[repr(u8)]
+pub enum IdacOutMux {
+    AIN0         = 0b0000,
+    AIN1         = 0b0001,
+    AIN2         = 0b0010,
+    AIN3         = 0b0011,
+    AIN4         = 0b0100,
+    AIN5         = 0b0101,
+    AIN6         = 0b0110,
+    AIN7         = 0b0111,
+    AIN8         = 0b1000,
+    AIN9         = 0b1001,
+    AINCOM       = 0b1010,
+    NoConnection = 0b1011,
+}
+
+/// Current magnitudes follow the pattern `I<mag><units>`.
+/// - `mag` is the magnitude of current.
+/// - `units` are uA meaning microamperes.
+/// 
+/// I50uA = 50 microamps of current.
+#[repr(u8)]
+pub enum IdacCurMag {
+    I50uA         = 0b0000,
+    I100uA         = 0b0001,
+    I250uA         = 0b0010,
+    I500uA         = 0b0011,
+    I750uA         = 0b0100,
+    I1000uA         = 0b0101,
+    I1500uA         = 0b0110,
+    I2000uA         = 0b0111,
+    I2500uA         = 0b1000,
+    I3000uA         = 0b1001,
+}
+
+#[repr(u8)]
+pub enum RefNegativeInp {
+    Int2_5VRef = 0b000,
+    ExtAIN1    = 0b001,
+    ExtAIN3    = 0b010,
+    ExtAIN5    = 0b011,
+    IntAnlgSup = 0b100,
+}
+
+#[repr(u8)]
+pub enum RefPositiveInp {
+    Int2_5VRef = 0b000,
+    ExtAIN0    = 0b001,
+    ExtAIN2    = 0b010,
+    ExtAIN4    = 0b011,
+    IntAnlgSup = 0b100,
+}
