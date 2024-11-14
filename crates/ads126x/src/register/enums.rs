@@ -174,16 +174,16 @@ pub enum IdacOutMux {
 /// I50uA = 50 microamps of current.
 #[repr(u8)]
 pub enum IdacCurMag {
-    I50uA         = 0b0000,
-    I100uA         = 0b0001,
-    I250uA         = 0b0010,
-    I500uA         = 0b0011,
-    I750uA         = 0b0100,
-    I1000uA         = 0b0101,
-    I1500uA         = 0b0110,
-    I2000uA         = 0b0111,
-    I2500uA         = 0b1000,
-    I3000uA         = 0b1001,
+    I50uA    = 0b0000,
+    I100uA   = 0b0001,
+    I250uA   = 0b0010,
+    I500uA   = 0b0011,
+    I750uA   = 0b0100,
+    I1000uA  = 0b0101,
+    I1500uA  = 0b0110,
+    I2000uA  = 0b0111,
+    I2500uA  = 0b1000,
+    I3000uA  = 0b1001,
 }
 
 #[repr(u8)]
@@ -202,4 +202,32 @@ pub enum RefPositiveInp {
     ExtAIN2    = 0b010,
     ExtAIN4    = 0b011,
     IntAnlgSup = 0b100,
+}
+
+/// Voltages are with respect to V_AVSS.
+/// Output magnitudes follow the pattern `V<num>`.
+/// - `num` is the output magnitude in volts where _ is a substitute for a decimal point.
+/// 
+/// V4_5 = 4.5 V.
+#[repr(u8)]
+pub enum TdacOutMag {
+    V4_5       = 0b01001,
+    V3_5       = 0b01000,
+    V3         = 0b00111,
+    V2_75      = 0b00110,
+    V2_625     = 0b00101,
+    V2_5625    = 0b00100,
+    V2_53125   = 0b00011,
+    V2_515625  = 0b00010,
+    V2_5078125 = 0b00001,
+    V2_5       = 0b00000,
+    V2_4921875 = 0b10001,
+    V2_484375  = 0b10010,
+    V2_46875   = 0b10011,
+    V2_4375    = 0b10100,
+    V2_375     = 0b10101,
+    V2_25      = 0b10110,
+    V2         = 0b10111,
+    V1_5       = 0b11000,
+    V0_5       = 0b11001,
 }

@@ -6,7 +6,7 @@ mod register;
 
 use error::ADS126xError;
 use register::{
-    IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register, Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register
+    GpioConRegister, GpioDatRegister, GpioDirRegister, IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register, Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, TdacnRegister, TdacpRegister
 };
 
 use embedded_hal::spi::FullDuplex;
@@ -289,5 +289,70 @@ where
 
     pub fn set_refmux(&mut self, reg: &RefMuxRegister) -> Result<()> {
         self.write_register(Register::REFMUX, reg.bits())
+    }
+
+    pub fn get_tdacp(&mut self) -> Result<TdacpRegister> {
+        let bits = self.read_register(Register::TDACP)?;
+        let data = TdacpRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        }
+    }
+
+    pub fn set_tdacp(&mut self, reg: &TdacpRegister) -> Result<()> {
+        self.write_register(Register::TDACP, reg.bits())
+    }
+
+    pub fn get_tdacn(&mut self) -> Result<TdacnRegister> {
+        let bits = self.read_register(Register::TDACN)?;
+        let data = TdacnRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        }
+    }
+
+    pub fn set_tdacn(&mut self, reg: &TdacnRegister) -> Result<()> {
+        self.write_register(Register::TDACN, reg.bits())
+    }
+
+    pub fn get_gpiocon(&mut self) -> Result<GpioConRegister> {
+        let bits = self.read_register(Register::GPIOCON)?;
+        let data = GpioConRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        } 
+    }
+
+    pub fn set_gpiocon(&mut self, reg: &GpioConRegister) -> Result<()> {
+        self.write_register(Register::GPIOCON, reg.bits())
+    }
+
+    pub fn get_gpiodir(&mut self) -> Result<GpioDirRegister> {
+        let bits = self.read_register(Register::GPIODIR)?;
+        let data = GpioDirRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        } 
+    }
+
+    pub fn set_gpiodir(&mut self, reg: &GpioDirRegister) -> Result<()> {
+        self.write_register(Register::GPIODIR, reg.bits())
+    }
+
+    pub fn get_gpiodat(&mut self) -> Result<GpioDatRegister> {
+        let bits = self.read_register(Register::GPIODAT)?;
+        let data = GpioDatRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        } 
+    }
+
+    pub fn set_gpiodat(&mut self, reg: &GpioDatRegister) -> Result<()> {
+        self.write_register(Register::GPIODAT, reg.bits())
     }
 }

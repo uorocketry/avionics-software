@@ -463,3 +463,131 @@ impl RefMuxRegister {
         self.insert(RefMuxRegister::from_bits_retain(bits << 3));
     }
 }
+
+bitflags! {
+    pub struct TdacpRegister: u8 {
+        const OUTP = 0b1000_0000;
+
+        const _ = 0b1001_1111;
+    }
+}
+
+impl TdacpRegister {
+    pub fn get_magp(&self) -> TdacOutMag {
+        match self.bits() & 0b0001_1111 {
+            0b01001 => TdacOutMag::V4_5,
+            0b01000 => TdacOutMag::V3_5,
+            0b00111 => TdacOutMag::V3,
+            0b00110 => TdacOutMag::V2_75,
+            0b00101 => TdacOutMag::V2_625,
+            0b00100 => TdacOutMag::V2_5625,
+            0b00011 => TdacOutMag::V2_53125,
+            0b00010 => TdacOutMag::V2_515625,
+            0b00001 => TdacOutMag::V2_5078125,
+            0b00000 => TdacOutMag::V2_5,
+            0b10001 => TdacOutMag::V2_4921875,
+            0b10010 => TdacOutMag::V2_484375,
+            0b10011 => TdacOutMag::V2_46875,
+            0b10100 => TdacOutMag::V2_4375,
+            0b10101 => TdacOutMag::V2_375,
+            0b10110 => TdacOutMag::V2_25,
+            0b10111 => TdacOutMag::V2,
+            0b11000 => TdacOutMag::V1_5,
+            0b11001 => TdacOutMag::V0_5,
+
+            0b01010..=0b10000 | 0b11010..=0b11111 => panic!("Reserved MAGP"),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_magp(&mut self, magp: TdacOutMag) {
+        let bits = magp as u8;
+        self.insert(TdacpRegister::from_bits_retain(bits));
+    }
+}
+
+bitflags! {
+    pub struct TdacnRegister: u8 {
+        const OUTN = 0b1000_0000;
+        
+        const _ = 0b1001_1111;
+    }
+}
+
+impl TdacnRegister {
+    pub fn get_magn(&self) -> TdacOutMag {
+        match self.bits() & 0b0001_1111 {
+            0b01001 => TdacOutMag::V4_5,
+            0b01000 => TdacOutMag::V3_5,
+            0b00111 => TdacOutMag::V3,
+            0b00110 => TdacOutMag::V2_75,
+            0b00101 => TdacOutMag::V2_625,
+            0b00100 => TdacOutMag::V2_5625,
+            0b00011 => TdacOutMag::V2_53125,
+            0b00010 => TdacOutMag::V2_515625,
+            0b00001 => TdacOutMag::V2_5078125,
+            0b00000 => TdacOutMag::V2_5,
+            0b10001 => TdacOutMag::V2_4921875,
+            0b10010 => TdacOutMag::V2_484375,
+            0b10011 => TdacOutMag::V2_46875,
+            0b10100 => TdacOutMag::V2_4375,
+            0b10101 => TdacOutMag::V2_375,
+            0b10110 => TdacOutMag::V2_25,
+            0b10111 => TdacOutMag::V2,
+            0b11000 => TdacOutMag::V1_5,
+            0b11001 => TdacOutMag::V0_5,
+
+            0b01010..=0b10000 | 0b11010..=0b11111 => panic!("Reserved MAGN"),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_magn(&mut self, magn: TdacOutMag) {
+        let bits = magn as u8;
+        self.insert(TdacnRegister::from_bits_retain(bits));
+    }
+}
+
+bitflags! {
+    pub struct GpioConRegister: u8 {
+        const CON0 = 0b0000_0001; // GPIO[0] -> AIN3
+        const CON1 = 0b0000_0010; // GPIO[1] -> AIN4
+        const CON2 = 0b0000_0100; // GPIO[2] -> AIN5
+        const CON3 = 0b0000_1000; // GPIO[3] -> AIN6
+        const CON4 = 0b0001_0000; // GPIO[4] -> AIN7
+        const CON5 = 0b0010_0000; // GPIO[5] -> AIN8
+        const CON6 = 0b0100_0000; // GPIO[6] -> AIN9
+        const CON7 = 0b1000_0000; // GPIO[7] -> AINCOM
+    }
+}
+
+bitflags! {
+    /// Setting `DIR<x>` to:
+    /// - 0 = `GPIO<x>` is output
+    /// - 1 = `GPIO<x>` is input
+    pub struct GpioDirRegister: u8 {
+        const DIR0 = 0b0000_0001;
+        const DIR1 = 0b0000_0010;
+        const DIR2 = 0b0000_0100;
+        const DIR3 = 0b0000_1000;
+        const DIR4 = 0b0001_0000;
+        const DIR5 = 0b0010_0000;
+        const DIR6 = 0b0100_0000;
+        const DIR7 = 0b1000_0000;
+    }
+}
+
+bitflags! {
+    /// If `GPIO<x>` is output, read returns 0b.
+    /// If `GPIO<x>` is input, write sets `GPIO<x>` to high (if 1) or low (if 0).
+    pub struct GpioDatRegister: u8 {
+        const DAT0 = 0b0000_0001;
+        const DAT1 = 0b0000_0010;
+        const DAT2 = 0b0000_0100;
+        const DAT3 = 0b0000_1000;
+        const DAT4 = 0b0001_0000;
+        const DAT5 = 0b0010_0000;
+        const DAT6 = 0b0100_0000;
+        const DAT7 = 0b1000_0000;
+    }
+}
