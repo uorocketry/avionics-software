@@ -47,40 +47,6 @@ bitflags! {
     }
 }
 
-impl StatusRegister {
-    pub fn is_adc2_data_new(&self) -> bool {
-        self.contains(StatusRegister::ADC2)
-    }
-
-    pub fn is_adc1_data_new(&self) -> bool {
-        self.contains(StatusRegister::ADC1)
-    }
-
-    pub fn is_extclk(&self) -> bool {
-        self.contains(StatusRegister::EXTCLK)
-    }
-
-    pub fn is_ref_alm(&self) -> bool {
-        self.contains(StatusRegister::REF_ALM)
-    }
-
-    pub fn is_pgal_alm(&self) -> bool {
-        self.contains(StatusRegister::PGAL_ALM)
-    }
-
-    pub fn is_pgah_alm(&self) -> bool {
-        self.contains(StatusRegister::PGAH_ALM)
-    }
-
-    pub fn is_pgad_alm(&self) -> bool {
-        self.contains(StatusRegister::PGAD_ALM)
-    }
-
-    pub fn is_reset(&self) -> bool {
-        self.contains(StatusRegister::RESET)
-    }
-}
-
 bitflags! {
     pub struct IdRegister: u8 {
         const _ = !0; // Source may set any bits
