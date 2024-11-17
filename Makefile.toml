@@ -10,7 +10,7 @@ default_to_workspace = false
 
 [tasks.test-host]
 dependencies = [
-    # "test-messages",
+    "test-thermocouple",
 ]
 
 # -----------------------
@@ -40,3 +40,8 @@ args = ["test", "-p", "pressure", "${@}"]
 [tasks.test-strain-board]
 command = "cargo"
 args = ["test", "-p", "strain", "${@}"]
+
+[tasks.test-thermocouple]
+command = "cargo"
+args = ["test", "-p", "thermocouple-converter", "--target", "${CARGO_MAKE_RUST_TARGET_TRIPLE}"]
+env = {RUST_MIN_STACK = "8388608"}
