@@ -231,3 +231,32 @@ pub enum TdacOutMag {
     V1_5       = 0b11000,
     V0_5       = 0b11001,
 }
+
+#[repr(u8)]
+pub enum Adc2Gain {
+    VV1   = 0b000,
+    VV2   = 0b001,
+    VV4   = 0b010,
+    VV8   = 0b011,
+    VV16  = 0b100,
+    VV32  = 0b101,
+    VV64  = 0b110,
+    VV128 = 0b111,
+}
+
+#[repr(u8)]
+pub enum Adc2RefInp {
+    Int2_5VRef = 0b000,
+    ExtAIN0_1  = 0b001,
+    ExtAIN2_3  = 0b010,
+    ExtAIN4_5  = 0b011,
+    IntAnlgSup = 0b100,
+}
+
+#[repr(u8)]
+pub enum Adc2DataRate {
+    SPS10    = 0b00,
+    SPS100   = 0b01,
+    SPS400   = 0b10,
+    SPS800   = 0b11,
+}

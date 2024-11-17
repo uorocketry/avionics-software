@@ -591,3 +591,129 @@ bitflags! {
         const DAT7 = 0b1000_0000;
     }
 }
+
+bitflags! {
+    pub struct Adc2CfgRegister: u8 {
+        const _ = !0; // Source may set any bits
+    }
+}
+
+impl Adc2CfgRegister {
+    pub fn get_gain2(&self) -> Adc2Gain {
+        match self.bits() & 0b0000_0111 {
+            0b000 => Adc2Gain::VV1,
+            0b001 => Adc2Gain::VV2,
+            0b010 => Adc2Gain::VV4,
+            0b011 => Adc2Gain::VV8,
+            0b100 => Adc2Gain::VV16,
+            0b101 => Adc2Gain::VV32,
+            0b110 => Adc2Gain::VV64,
+            0b111 => Adc2Gain::VV128,
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_gain2(&mut self, gain2: Adc2Gain) {
+        let bits = gain2 as u8;
+        self.insert(Adc2CfgRegister::from_bits_retain(bits));
+    }
+
+    pub fn get_ref2(&self) -> Adc2RefInp {
+        match (self.bits() & 0b0011_1000) >> 3 {
+            0b000 => Adc2RefInp::Int2_5VRef,
+            0b001 => Adc2RefInp::ExtAIN0_1,
+            0b010 => Adc2RefInp::ExtAIN2_3,
+            0b011 => Adc2RefInp::ExtAIN4_5,
+            0b100 => Adc2RefInp::IntAnlgSup,
+
+            0b101..=0b111 => panic!("Reserved ADC2 reference input"),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_ref2(&mut self, ref2: Adc2RefInp) {
+        let bits = ref2 as u8;
+        self.insert(Adc2CfgRegister::from_bits_retain(bits << 3));
+    }
+
+    pub fn get_dr2(&self) -> Adc2DataRate {
+        match (self.bits() & 0b1100_0000) >> 6 {
+            0b00 => Adc2DataRate::SPS10,
+            0b01 => Adc2DataRate::SPS100,
+            0b10 => Adc2DataRate::SPS400,
+            0b11 => Adc2DataRate::SPS800,
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_dr2(&mut self, dr2: Adc2DataRate) {
+        let bits = dr2 as u8;
+        self.insert(Adc2CfgRegister::from_bits_retain(bits << 6));
+    }
+}
+
+bitflags! {
+    pub struct Adc2MuxRegister: u8 {
+        const _ = !0; // Source may set any bits
+    }
+}
+
+impl Adc2MuxRegister {
+    pub fn get_muxn2(&self) -> NegativeInpMux {
+        match self.bits() & 0b0000_1111 {
+            0b0000 => NegativeInpMux::AIN0,
+            0b0001 => NegativeInpMux::AIN1,
+            0b0010 => NegativeInpMux::AIN2,
+            0b0011 => NegativeInpMux::AIN3,
+            0b0100 => NegativeInpMux::AIN4,
+            0b0101 => NegativeInpMux::AIN5,
+            0b0110 => NegativeInpMux::AIN6,
+            0b0111 => NegativeInpMux::AIN7,
+            0b1000 => NegativeInpMux::AIN8,
+            0b1001 => NegativeInpMux::AIN9,
+            0b1010 => NegativeInpMux::AINCOM,
+            0b1011 => NegativeInpMux::TempSensMonNeg,
+            0b1100 => NegativeInpMux::AnlgPwrSupMonNeg,
+            0b1101 => NegativeInpMux::DgtlPwrSubMonNeg,
+            0b1110 => NegativeInpMux::TDACTestSignalNeg,
+            0b1111 => NegativeInpMux::Float,
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_muxn2(&mut self, muxn2: NegativeInpMux) {
+        let bits = muxn2 as u8;
+        self.insert(Adc2MuxRegister::from_bits_retain(bits));
+    }
+
+    pub fn get_muxp2(&self) -> PositiveInpMux {
+        match (self.bits() & 0b1111_0000) >> 4 {
+            0b0000 => PositiveInpMux::AIN0,
+            0b0001 => PositiveInpMux::AIN1,
+            0b0010 => PositiveInpMux::AIN2,
+            0b0011 => PositiveInpMux::AIN3,
+            0b0100 => PositiveInpMux::AIN4,
+            0b0101 => PositiveInpMux::AIN5,
+            0b0110 => PositiveInpMux::AIN6,
+            0b0111 => PositiveInpMux::AIN7,
+            0b1000 => PositiveInpMux::AIN8,
+            0b1001 => PositiveInpMux::AIN9,
+            0b1010 => PositiveInpMux::AINCOM,
+            0b1011 => PositiveInpMux::TempSensMonPos,
+            0b1100 => PositiveInpMux::AnlgPwrSupMonPos,
+            0b1101 => PositiveInpMux::DgtlPwrSubMonPos,
+            0b1110 => PositiveInpMux::TDACTestSignalPos,
+            0b1111 => PositiveInpMux::Float,
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_muxp2(&mut self, muxp2: PositiveInpMux) {
+        let bits = muxp2 as u8;
+        self.insert(Adc2MuxRegister::from_bits_retain(bits << 4));
+    }
+}

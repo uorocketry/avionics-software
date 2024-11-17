@@ -6,7 +6,7 @@ mod register;
 
 use error::ADS126xError;
 use register::{
-    GpioConRegister, GpioDatRegister, GpioDirRegister, IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register, Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, TdacnRegister, TdacpRegister
+    Adc2CfgRegister, Adc2MuxRegister, GpioConRegister, GpioDatRegister, GpioDirRegister, IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register, Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, TdacnRegister, TdacpRegister
 };
 
 use embedded_hal::spi::FullDuplex;
@@ -213,43 +213,39 @@ where
     }
 
     pub fn get_ofcal(&mut self) -> Result<u32> {
-        let mut bytes = self.read_multiple_registers(Register::OFCAL0, 3)?; // [OFCAL0, OFCAL1, OFCAL2]
-        bytes.reverse(); // [OFCAL2, OFCAL1, OFCAL0]
-        let mut res: u32 = 0;
-        for &b in &bytes[3..0] {
-            res <<= 8; // Shift previous bits left one byte
-            res |= b as u32; // Append new byte to the end
-        }
+        let bytes = self.read_multiple_registers(Register::OFCAL0, 3)?; // [OFCAL0, OFCAL1, OFCAL2]
+        let res = (bytes[2] as u32) << 16 |
+                  (bytes[1] as u32) << 8 |
+                  (bytes[0] as u32);
         Ok(res)
     }
     
     pub fn set_ofcal(&mut self, ofcal: u32) -> Result<()> {
-        let mut bytes: [u8; 4] = [0; 4];
-        for i in 0..4 {
-            let b = (ofcal >> (8 * i)) & 0xFF; // Get desired byte
-            bytes[i] = u8::try_from(b).unwrap(); // Should not panic as & 0xFF ensures b is a u8
-        }
-        self.write_multiple_registers(Register::OFCAL0, &bytes[0..3])
+        // Will not panic as & 0xFF ensures values are u8
+        let res: [u8; 3] = [
+            u8::try_from(ofcal & 0xFF).unwrap(),
+            u8::try_from((ofcal >> 8) & 0xFF).unwrap(),
+            u8::try_from((ofcal >> 16) & 0xFF).unwrap(),
+        ];
+        self.write_multiple_registers(Register::OFCAL0, &res)
     }
 
     pub fn get_fscal(&mut self) -> Result<u32> {
-        let mut bytes = self.read_multiple_registers(Register::FSCAL0, 3)?; // [FSCAL0, FSCAL1, FSCAL2]
-        bytes.reverse(); // [FSCAL2, FSCAL1, FSCAL0]
-        let mut res: u32 = 0;
-        for &b in &bytes[3..0] {
-            res <<= 8; // Shift previous bits left one byte
-            res |= b as u32; // Append new byte to the end
-        }
+        let bytes = self.read_multiple_registers(Register::FSCAL0, 3)?; // [FSCAL0, FSCAL1, FSCAL2]
+        let res = (bytes[2] as u32) << 16 |
+                  (bytes[1] as u32) << 8 |
+                  (bytes[0] as u32);
         Ok(res)
     }
     
     pub fn set_fscal(&mut self, fscal: u32) -> Result<()> {
-        let mut bytes: [u8; 4] = [0; 4];
-        for i in 0..4 {
-            let b = (fscal >> (8 * i)) & 0xFF; // Get desired byte
-            bytes[i] = u8::try_from(b).unwrap(); // Should not panic as & 0xFF ensures b is a u8
-        }
-        self.write_multiple_registers(Register::FSCAL0, &bytes[0..3])
+        // Will not panic as & 0xFF ensures values are u8
+        let res: [u8; 3] = [
+            u8::try_from(fscal & 0xFF).unwrap(),
+            u8::try_from((fscal >> 8) & 0xFF).unwrap(),
+            u8::try_from((fscal >> 16) & 0xFF).unwrap(),
+        ];
+        self.write_multiple_registers(Register::FSCAL0, &res)
     }
 
     pub fn get_idacmux(&mut self) -> Result<IdacMuxRegister> {
@@ -354,5 +350,64 @@ where
 
     pub fn set_gpiodat(&mut self, reg: &GpioDatRegister) -> Result<()> {
         self.write_register(Register::GPIODAT, reg.bits())
+    }
+
+    pub fn get_adc2cfg(&mut self) -> Result<Adc2CfgRegister> {
+        let bits = self.read_register(Register::ADC2CFG)?;
+        let data = Adc2CfgRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        } 
+    }
+
+    pub fn set_adc2cfg(&mut self, reg: &Adc2CfgRegister) -> Result<()> {
+        self.write_register(Register::ADC2CFG, reg.bits())
+    }
+
+    
+    pub fn get_adc2mux(&mut self) -> Result<Adc2MuxRegister> {
+        let bits = self.read_register(Register::ADC2MUX)?;
+        let data = Adc2MuxRegister::from_bits(bits);
+        match data {
+            Some(reg) => Ok(reg),
+            None => Err(ADS126xError::InvalidInputData),
+        } 
+    }
+
+    pub fn set_adc2mux(&mut self, reg: &Adc2MuxRegister) -> Result<()> {
+        self.write_register(Register::ADC2MUX, reg.bits())
+    }
+
+    pub fn get_adc2ofc(&mut self) -> Result<u16> {
+        let bytes = self.read_multiple_registers(Register::ADC2OFC0, 2)?; // [ADC2OFC0, ADC2OFC1]
+        let res = (bytes[1] as u16) << 8 |
+                  (bytes[0] as u16);
+        Ok(res)
+    }
+    
+    pub fn set_adc2ofc(&mut self, ofc2: u16) -> Result<()> {
+        // Will not panic as & 0xFF ensures values are u8
+        let res: [u8; 2] = [
+            u8::try_from(ofc2 & 0xFF).unwrap(),
+            u8::try_from((ofc2 >> 8) & 0xFF).unwrap(),
+        ];
+        self.write_multiple_registers(Register::ADC2OFC0, &res)
+    }
+
+    pub fn get_adc2fsc(&mut self) -> Result<u16> {
+        let bytes = self.read_multiple_registers(Register::ADC2FSC0, 2)?; // [ADC2FSC0, ADC2FSC1]
+        let res = (bytes[1] as u16) << 8 |
+                  (bytes[0] as u16);
+        Ok(res)
+    }
+    
+    pub fn set_adc2fsc(&mut self, fsc2: u32) -> Result<()> {
+        // Will not panic as & 0xFF ensures values are u8
+        let res: [u8; 2] = [
+            u8::try_from(fsc2 & 0xFF).unwrap(),
+            u8::try_from((fsc2 >> 8) & 0xFF).unwrap(),
+        ];
+        self.write_multiple_registers(Register::ADC2FSC0, &res)
     }
 }
