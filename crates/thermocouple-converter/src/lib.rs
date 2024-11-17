@@ -57,3 +57,32 @@ pub fn voltage_to_celsius(voltage: f64) -> f64 {
 
     return -1.0;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::voltage_to_celsius;
+
+    #[test]
+    fn voltage_to_celsius_test1() {
+        //println!("Test 1: {}", voltage_to_celsius(20.644));
+        let result:f64 = voltage_to_celsius(20.644);
+        assert!(499.97 <= result && 500.0 >= result);
+
+        // println!("Test 2: {}", voltage_to_celsius(6.138));
+        let result:f64 = voltage_to_celsius(6.138);
+        assert!(150.01 <= result && 150.03 >= result);
+
+        // println!("Test 3: {}", voltage_to_celsius(0.039));
+        let result:f64 = voltage_to_celsius(0.039);
+        assert!(0.97 <= result && 0.98 >= result);
+
+        // println!("Test 4: {}", voltage_to_celsius(-0.778));
+        let result:f64 = voltage_to_celsius(-0.778);
+        assert!(-20.03 <= result && -20.01 >= result);
+ 
+        // println!("Test 5: {}", voltage_to_celsius(10.0));
+        let result:f64 = voltage_to_celsius(10.0);
+        assert!(246.1 <= result && 246.3 >= result);
+    }
+}
