@@ -10,16 +10,19 @@ use register::{
 };
 
 use embedded_hal::spi::FullDuplex;
+use embedded_hal::digital::v2::OutputPin;
 use heapless::Vec;
 
 /// The [`Result`] type for ADS126x operations.
 pub type Result<T> = core::result::Result<T, ADS126xError>;
 
-pub struct ADS126x<SPI>
+pub struct ADS126x<SPI, GpioPin>
 where
     SPI: FullDuplex<u8>,
+    GpioPin: OutputPin<Error = ()>,    
 {
     spi: SPI,
+    reset_pin: GpioPin,
 }
 
 pub enum ADCCommand {
@@ -41,12 +44,47 @@ pub enum ADCCommand {
     WREG(Register, u8), // (register address, number of registers)
 }
 
-impl<SPI> ADS126x<SPI>
+fn delay(delay: u32) {
+    for _ in 0..delay {
+        cortex_m::asm::nop();
+    }
+}
+
+impl<SPI, GpioPin> ADS126x<SPI, GpioPin>
 where
     SPI: FullDuplex<u8>,
+    GpioPin: OutputPin<Error = ()>,
 {
-    pub fn new(spi: SPI) -> Self {
-        Self { spi }
+    pub fn new(spi: SPI, reset_pin: GpioPin) -> Self {
+        Self { spi, reset_pin }
+    }
+
+    pub fn init(&mut self) -> Result<()> {
+        self.reset()?;
+        // write configuration registers
+        delay(65536); // must wait 2^16 clock cycles, is this SPI clock? 
+        let mut mode2_cfg = Mode2Register::default();
+        mode2_cfg.set_dr(register::DataRate::SPS1200);
+        self.set_mode2(&mode2_cfg)?;
+
+        // Set the rest of the registers below 
+        // ... 
+
+        // start adc1 
+        self.send_command(ADCCommand::START1)?;  
+        // start adc2
+        self.send_command(ADCCommand::START2)?;
+        Ok(())
+    }
+
+    fn reset(&mut self) -> Result<()> {
+        self.reset_pin.set_high().map_err(|_| ADS126xError::IO)?;
+        delay(1000);
+        self.reset_pin.set_low().map_err(|_| ADS126xError::IO)?;
+        delay(1000);
+        self.reset_pin.set_high().map_err(|_| ADS126xError::IO)?;
+        delay(1000);
+        Ok(())
     }
 
     pub fn send_command(&mut self, command: ADCCommand) -> Result<()> {

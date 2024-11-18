@@ -196,6 +196,10 @@ bitflags! {
 }
 
 impl Mode2Register {
+    pub fn default() -> Self {
+        Mode2Register::from_bits_truncate(0b0000_0100)
+    }
+
     pub fn get_dr(&self) -> DataRate {
         match self.bits() & 0b0000_1111 {
             0b0000 => DataRate::SPS2_5,
