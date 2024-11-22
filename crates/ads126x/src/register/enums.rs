@@ -69,6 +69,13 @@ pub enum SensorBiasMagnitude {
 }
 
 #[repr(u8)]
+pub enum CrcMode {
+    Disabled = 0b00,
+    Checksum = 0b01,
+    CRC = 0b10, 
+}
+
+#[repr(u8)]
 pub enum DigitalFilter {
     Sinc1 = 0b000,
     Sinc2 = 0b001,

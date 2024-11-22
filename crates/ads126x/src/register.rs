@@ -76,6 +76,37 @@ bitflags! {
     }
 }
 
+impl PowerRegister {
+    pub fn default() -> Self {
+        PowerRegister::from_bits_truncate(0b0001_0001)
+    }
+
+    pub fn set_vbias(&mut self, vbias: bool) {
+        if vbias {
+            self.insert(PowerRegister::VBIAS);
+        } else {
+            self.remove(PowerRegister::VBIAS);
+        }
+    }
+
+    pub fn set_intref(&mut self, intref: bool) {
+        if intref {
+            self.insert(PowerRegister::INTREF);
+        } else {
+            self.remove(PowerRegister::INTREF);
+        }
+    }
+
+    pub fn get_reset(&self) -> bool {
+        self.contains(PowerRegister::RESET)
+    }
+
+    // must be cleared if set to detect further resets. 
+    pub fn clear_reset(&mut self) {
+        self.remove(PowerRegister::RESET);
+    }
+}
+
 bitflags! {
     /// WARNING: If CRC is 0b11 set by ADC, it will reflect as CRC enabled not reserved.
     /// CRC only accounts for 0b00 disabled and 0b01 enabled.
@@ -83,6 +114,50 @@ bitflags! {
         const CRC     = 0b0000_0001;
         const STATUS  = 0b0000_0100;
         const TIMEOUT = 0b0000_1000;
+    }
+}
+
+impl InterfaceRegister {
+    pub fn default() -> Self {
+        InterfaceRegister::from_bits_truncate(0b0000_0101)
+    }
+
+    pub fn get_crc(&self) -> CrcMode {
+        match self.bits() & 0b0000_0001 {
+            0b00 => CrcMode::Disabled,
+            0b01 => CrcMode::Checksum,
+            0b10 => CrcMode::CRC,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_crc(&mut self, crc: CrcMode) {
+        let bits = crc as u8;
+        self.insert(InterfaceRegister::from_bits_retain(bits));
+    }
+
+    pub fn get_status(&self) -> bool {
+        self.contains(InterfaceRegister::STATUS)
+    }
+
+    pub fn set_status(&mut self, status: bool) {
+        if status {
+            self.insert(InterfaceRegister::STATUS);
+        } else {
+            self.remove(InterfaceRegister::STATUS);
+        }
+    }
+
+    pub fn get_timeout(&self) -> bool {
+        self.contains(InterfaceRegister::TIMEOUT)
+    }
+
+    pub fn set_timeout(&mut self, timeout: bool) {
+        if timeout {
+            self.insert(InterfaceRegister::TIMEOUT);
+        } else {
+            self.remove(InterfaceRegister::TIMEOUT);
+        }
     }
 }
 
@@ -96,6 +171,10 @@ bitflags! {
 }
 
 impl Mode0Register {
+    pub fn default() -> Self {
+        Mode0Register::from_bits_truncate(0b0000_0000)
+    }
+
     pub fn get_delay(&self) -> ConversionDelay {
         match self.bits() & 0b0000_1111 {
             0b0000 => ConversionDelay::DNone,
@@ -148,6 +227,10 @@ bitflags! {
 }
 
 impl Mode1Register {
+    pub fn default() -> Self {
+        Mode1Register::from_bits_truncate(0b1000_0000)
+    }
+
     pub fn get_sbmag(&self) -> SensorBiasMagnitude {
         match self.bits() & 0b0000_0111 {
             0b000 => SensorBiasMagnitude::BNone,
@@ -255,6 +338,10 @@ bitflags! {
 }
 
 impl InpMuxRegister {
+    pub fn default() -> Self {
+        InpMuxRegister::from_bits_truncate(0b0000_0001)
+    }
+
     pub fn get_muxn(&self) -> NegativeInpMux {
         match self.bits() & 0b0000_1111 {
             0b0000 => NegativeInpMux::AIN0,
@@ -319,6 +406,10 @@ bitflags! {
 }
 
 impl IdacMuxRegister {
+    pub fn default() -> Self {
+        IdacMuxRegister::from_bits_truncate(0b1011_1011)
+    }
+
     pub fn get_mux1(&self) -> IdacOutMux {
         match self.bits() & 0b0000_1111 {
             0b0000 => IdacOutMux::AIN0,
@@ -377,6 +468,10 @@ bitflags! {
 }
 
 impl IdacMagRegister {
+    pub fn default() -> Self {
+        IdacMagRegister::from_bits_truncate(0b0000_0000)
+    }
+
     pub fn get_mag1(&self) -> IdacCurMag {
         match self.bits() & 0b0000_1111 {
             0b0000 => IdacCurMag::I50uA,
@@ -431,6 +526,10 @@ bitflags! {
 }
 
 impl RefMuxRegister {
+    pub fn default() -> Self {
+        RefMuxRegister::from_bits_truncate(0b0000_0000)
+    }
+
     pub fn get_rmuxn(&self) -> RefNegativeInp {
         match self.bits() & 0b0000_0111 {
             0b000 => RefNegativeInp::Int2_5VRef,
@@ -477,6 +576,11 @@ bitflags! {
 }
 
 impl TdacpRegister {
+    // there is no defined default values in the datasheet so just zeros. 
+    pub fn default() -> Self {
+        TdacpRegister::from_bits_truncate(0b0000_0000)
+    }
+
     pub fn get_magp(&self) -> TdacOutMag {
         match self.bits() & 0b0001_1111 {
             0b01001 => TdacOutMag::V4_5,
@@ -519,6 +623,11 @@ bitflags! {
 }
 
 impl TdacnRegister {
+    // there is no defined default values in the datasheet so just zeros. 
+    pub fn default() -> Self {
+        TdacnRegister::from_bits_truncate(0b0000_0000)
+    }
+
     pub fn get_magn(&self) -> TdacOutMag {
         match self.bits() & 0b0001_1111 {
             0b01001 => TdacOutMag::V4_5,
@@ -565,6 +674,12 @@ bitflags! {
     }
 }
 
+impl GpioConRegister {
+    pub fn default() -> Self {
+        GpioConRegister::from_bits_truncate(0b0000_0000)
+    }
+}
+
 bitflags! {
     /// Setting `DIR<x>` to:
     /// - 0 = `GPIO<x>` is output
@@ -578,6 +693,12 @@ bitflags! {
         const DIR5 = 0b0010_0000;
         const DIR6 = 0b0100_0000;
         const DIR7 = 0b1000_0000;
+    }
+}
+
+impl GpioDirRegister {
+    pub fn default() -> Self {
+        GpioDirRegister::from_bits_truncate(0b0000_0000)
     }
 }
 
@@ -596,6 +717,13 @@ bitflags! {
     }
 }
 
+impl GpioDatRegister {
+    // there is no defined default values in the datasheet so just zeros. 
+    pub fn default() -> Self {
+        GpioDatRegister::from_bits_truncate(0b0000_0000)
+    }
+}
+
 bitflags! {
     pub struct Adc2CfgRegister: u8 {
         const _ = !0; // Source may set any bits
@@ -603,6 +731,10 @@ bitflags! {
 }
 
 impl Adc2CfgRegister {
+    pub fn default() -> Self {
+        Adc2CfgRegister::from_bits_truncate(0b0000_0000)
+    }
+
     pub fn get_gain2(&self) -> Adc2Gain {
         match self.bits() & 0b0000_0111 {
             0b000 => Adc2Gain::VV1,
@@ -665,6 +797,10 @@ bitflags! {
 }
 
 impl Adc2MuxRegister {
+    pub fn default() -> Self {
+        Adc2MuxRegister::from_bits_truncate(0b0000_0001)
+    }
+
     pub fn get_muxn2(&self) -> NegativeInpMux {
         match self.bits() & 0b0000_1111 {
             0b0000 => NegativeInpMux::AIN0,
