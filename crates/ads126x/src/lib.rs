@@ -1,27 +1,28 @@
 #![no_std]
 #![no_main]
 
-mod error;
-mod register;
+pub mod error;
+pub mod register;
 
 use error::ADS126xError;
 use register::{
-    Adc2CfgRegister, Adc2MuxRegister, GpioConRegister, GpioDatRegister, GpioDirRegister, IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register, Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, TdacnRegister, TdacpRegister
+    Adc2CfgRegister, Adc2MuxRegister, GpioConRegister, GpioDatRegister, GpioDirRegister,
+    IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register,
+    Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, TdacnRegister,
+    TdacpRegister,
 };
 
-use embedded_hal::spi::FullDuplex;
 use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::spi::FullDuplex;
 use heapless::Vec;
 
 /// The [`Result`] type for ADS126x operations.
 pub type Result<T> = core::result::Result<T, ADS126xError>;
 
-pub struct ADS126x<SPI, GpioPin>
+pub struct Ads126x<GpioPin>
 where
-    SPI: FullDuplex<u8>,
-    GpioPin: OutputPin<Error = ()>,    
+    GpioPin: OutputPin,
 {
-    spi: SPI,
     reset_pin: GpioPin,
 }
 
@@ -50,34 +51,15 @@ fn delay(delay: u32) {
     }
 }
 
-impl<SPI, GpioPin> ADS126x<SPI, GpioPin>
+impl<GpioPin> Ads126x<GpioPin>
 where
-    SPI: FullDuplex<u8>,
-    GpioPin: OutputPin<Error = ()>,
+    GpioPin: OutputPin,
 {
-    pub fn new(spi: SPI, reset_pin: GpioPin) -> Self {
-        Self { spi, reset_pin }
+    pub fn new(reset_pin: GpioPin) -> Self {
+        Self { reset_pin }
     }
 
-    pub fn init(&mut self) -> Result<()> {
-        self.reset()?;
-        // write configuration registers
-        delay(65536); // must wait 2^16 clock cycles, is this SPI clock? 
-        let mut mode2_cfg = Mode2Register::default();
-        mode2_cfg.set_dr(register::DataRate::SPS1200);
-        self.set_mode2(&mode2_cfg)?;
-
-        // Set the rest of the registers below 
-        // ... 
-
-        // start adc1 
-        self.send_command(ADCCommand::START1)?;  
-        // start adc2
-        self.send_command(ADCCommand::START2)?;
-        Ok(())
-    }
-
-    fn reset(&mut self) -> Result<()> {
+    pub fn reset(&mut self) -> Result<()> {
         self.reset_pin.set_high().map_err(|_| ADS126xError::IO)?;
         delay(1000);
         self.reset_pin.set_low().map_err(|_| ADS126xError::IO)?;
@@ -87,7 +69,10 @@ where
         Ok(())
     }
 
-    pub fn send_command(&mut self, command: ADCCommand) -> Result<()> {
+    pub fn send_command<SPI>(&mut self, command: ADCCommand, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
         let (opcode1, opcode2) = match command {
             ADCCommand::NOP => (0x00, None),
             ADCCommand::RESET => (0x06, None),
@@ -107,64 +92,88 @@ where
             ADCCommand::WREG(addr, num) => (0x40 | addr as u8, Some(num)),
         };
 
-        self.spi.send(opcode1).map_err(|_| ADS126xError::IO)?;
+        spi.send(opcode1).map_err(|_| ADS126xError::IO)?;
         if let Some(op2) = opcode2 {
-            self.spi.send(op2).map_err(|_| ADS126xError::IO)?;
+            spi.send(op2).map_err(|_| ADS126xError::IO)?;
         }
         Ok(())
     }
 
     /// Reads data from multiple registers starting at the provided register.
     /// To read a single register, see [`ADS126x::read_register`].
-    /// 
+    ///
     /// Vector returns byte for each register read in order registers were read (increasing address).
-    pub fn read_multiple_registers(&mut self, reg: Register, num: u8) -> Result<Vec<u8, 27>> {
+    pub fn read_multiple_registers<SPI>(
+        &mut self,
+        reg: Register,
+        num: u8,
+        spi: &mut SPI,
+    ) -> Result<Vec<u8, 27>>
+    where
+        SPI: FullDuplex<u8>,
+    {
         if num > 27 {
             return Err(ADS126xError::InvalidInputData);
         }
-        self.send_command(ADCCommand::RREG(reg, num - 1))?;
+        self.send_command(ADCCommand::RREG(reg, num - 1), spi)?;
         let mut buffer: Vec<u8, 27> = Vec::new();
         for _ in 0..num {
             buffer
-                .push(self.spi.read().map_err(|_| ADS126xError::IO)?)
+                .push(spi.read().map_err(|_| ADS126xError::IO)?)
                 .map_err(|_| ADS126xError::InvalidInputData)?;
         }
         Ok(buffer)
     }
-
     /// Reads data from only the single provided register.
     /// To read multiple registers, see [`ADS126x::read_multiple_registers`].
-    pub fn read_register(&mut self, reg: Register) -> Result<u8> {
-        // zero since number of registers read - 1, so 1-1=0. 
-        self.send_command(ADCCommand::RREG(reg, 0))?; 
-        let data = self.spi.read().map_err(|_| ADS126xError::IO)?;
+    pub fn read_register<SPI>(&mut self, reg: Register, spi: &mut SPI) -> Result<u8>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        // zero since number of registers read - 1, so 1-1=0.
+        self.send_command(ADCCommand::RREG(reg, 0), spi)?;
+        let data = spi.read().map_err(|_| ADS126xError::IO)?;
         Ok(data)
     }
 
     /// Writes data to multiple registers starting at the provided register.
     /// To write data to a single register, see [`ADS126x::write_register`].
-    /// 
+    ///
     /// Data has byte for each register in order registers are written to (increasing address).
-    pub fn write_multiple_registers(&mut self, reg: Register, data: &[u8]) -> Result<()> {
+    pub fn write_multiple_registers<SPI>(
+        &mut self,
+        reg: Register,
+        data: &[u8],
+        spi: &mut SPI,
+    ) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
         if data.len() > 27 {
             return Err(ADS126xError::InvalidInputData);
         }
-        self.send_command(ADCCommand::WREG(reg, data.len() as u8 - 1))?;
+        self.send_command(ADCCommand::WREG(reg, data.len() as u8 - 1), spi)?;
         for &byte in data {
-            self.spi.send(byte).map_err(|_| ADS126xError::IO)?;
+            spi.send(byte).map_err(|_| ADS126xError::IO)?;
         }
         Ok(())
     }
 
     /// Writes data to only the single provided register.
     /// To write data to multiple registers, see [`ADS126x::write_multiple_registers`].
-    pub fn write_register(&mut self, reg: Register, data: u8) -> Result<()> {
-        self.send_command(ADCCommand::WREG(reg, 0))?;
-        self.spi.send(data).map_err(|_| ADS126xError::IO)
+    pub fn write_register<SPI>(&mut self, reg: Register, data: u8, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.send_command(ADCCommand::WREG(reg, 0), spi)?;
+        spi.send(data).map_err(|_| ADS126xError::IO)
     }
 
-    pub fn get_id(&mut self) -> Result<IdRegister> {
-        let bits = self.read_register(Register::ID)?;
+    pub fn get_id<SPI>(&mut self, spi: &mut SPI) -> Result<IdRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::ID, spi)?;
         let data = IdRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -172,8 +181,11 @@ where
         }
     }
 
-    pub fn get_power(&mut self) -> Result<PowerRegister> {
-        let bits = self.read_register(Register::POWER)?;
+    pub fn get_power<SPI>(&mut self, spi: &mut SPI) -> Result<PowerRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::POWER, spi)?;
         let data = PowerRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -181,12 +193,18 @@ where
         }
     }
 
-    pub fn set_power(&mut self, reg: &PowerRegister) -> Result<()> {
-        self.write_register(Register::POWER, reg.bits())
+    pub fn set_power<SPI>(&mut self, reg: &PowerRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::POWER, reg.bits(), spi)
     }
 
-    pub fn get_interface(&mut self) -> Result<InterfaceRegister> {
-        let bits = self.read_register(Register::INTERFACE)?;
+    pub fn get_interface<SPI>(&mut self, spi: &mut SPI) -> Result<InterfaceRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::INTERFACE, spi)?;
         let data = InterfaceRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -194,12 +212,18 @@ where
         }
     }
 
-    pub fn set_interface(&mut self, reg: &InterfaceRegister) -> Result<()> {
-        self.write_register(Register::INTERFACE, reg.bits())
+    pub fn set_interface<SPI>(&mut self, reg: &InterfaceRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::INTERFACE, reg.bits(), spi)
     }
 
-    pub fn get_mode0(&mut self) -> Result<Mode0Register> {
-        let bits = self.read_register(Register::MODE0)?;
+    pub fn get_mode0<SPI>(&mut self, spi: &mut SPI) -> Result<Mode0Register>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::MODE0, spi)?;
         let data = Mode0Register::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -207,12 +231,18 @@ where
         }
     }
 
-    pub fn set_mode0(&mut self, reg: &Mode0Register) -> Result<()> {
-        self.write_register(Register::MODE0, reg.bits())
+    pub fn set_mode0<SPI>(&mut self, reg: &Mode0Register, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::MODE0, reg.bits(), spi)
     }
-    
-    pub fn get_mode1(&mut self) -> Result<Mode1Register> {
-        let bits = self.read_register(Register::MODE1)?;
+
+    pub fn get_mode1<SPI>(&mut self, spi: &mut SPI) -> Result<Mode1Register>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::MODE1, spi)?;
         let data = Mode1Register::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -220,12 +250,18 @@ where
         }
     }
 
-    pub fn set_mode1(&mut self, reg: &Mode1Register) -> Result<()> {
-        self.write_register(Register::MODE1, reg.bits())
+    pub fn set_mode1<SPI>(&mut self, reg: &Mode1Register, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::MODE1, reg.bits(), spi)
     }
-    
-    pub fn get_mode2(&mut self) -> Result<Mode2Register> {
-        let bits = self.read_register(Register::MODE2)?;
+
+    pub fn get_mode2<SPI>(&mut self, spi: &mut SPI) -> Result<Mode2Register>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::MODE2, spi)?;
         let data = Mode2Register::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -233,12 +269,18 @@ where
         }
     }
 
-    pub fn set_mode2(&mut self, reg: &Mode2Register) -> Result<()> {
-        self.write_register(Register::MODE2, reg.bits())
+    pub fn set_mode2<SPI>(&mut self, reg: &Mode2Register, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::MODE2, reg.bits(), spi)
     }
 
-    pub fn get_inpmux(&mut self) -> Result<InpMuxRegister> {
-        let bits = self.read_register(Register::INPMUX)?;
+    pub fn get_inpmux<SPI>(&mut self, spi: &mut SPI) -> Result<InpMuxRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::INPMUX, spi)?;
         let data = InpMuxRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -246,48 +288,62 @@ where
         }
     }
 
-    pub fn set_inpmux(&mut self, reg: &InpMuxRegister) -> Result<()> {
-        self.write_register(Register::INPMUX, reg.bits())
+    pub fn set_inpmux<SPI>(&mut self, reg: &InpMuxRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::INPMUX, reg.bits(), spi)
     }
 
-    pub fn get_ofcal(&mut self) -> Result<u32> {
-        let bytes = self.read_multiple_registers(Register::OFCAL0, 3)?; // [OFCAL0, OFCAL1, OFCAL2]
-        let res = (bytes[2] as u32) << 16 |
-                  (bytes[1] as u32) << 8 |
-                  (bytes[0] as u32);
+    pub fn get_ofcal<SPI>(&mut self, spi: &mut SPI) -> Result<u32>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bytes = self.read_multiple_registers(Register::OFCAL0, 3, spi)?; // [OFCAL0, OFCAL1, OFCAL2]
+        let res = (bytes[2] as u32) << 16 | (bytes[1] as u32) << 8 | (bytes[0] as u32);
         Ok(res)
     }
-    
-    pub fn set_ofcal(&mut self, ofcal: u32) -> Result<()> {
+
+    pub fn set_ofcal<SPI>(&mut self, ofcal: u32, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
         // Will not panic as & 0xFF ensures values are u8
         let res: [u8; 3] = [
             u8::try_from(ofcal & 0xFF).unwrap(),
             u8::try_from((ofcal >> 8) & 0xFF).unwrap(),
             u8::try_from((ofcal >> 16) & 0xFF).unwrap(),
         ];
-        self.write_multiple_registers(Register::OFCAL0, &res)
+        self.write_multiple_registers(Register::OFCAL0, &res, spi)
     }
 
-    pub fn get_fscal(&mut self) -> Result<u32> {
-        let bytes = self.read_multiple_registers(Register::FSCAL0, 3)?; // [FSCAL0, FSCAL1, FSCAL2]
-        let res = (bytes[2] as u32) << 16 |
-                  (bytes[1] as u32) << 8 |
-                  (bytes[0] as u32);
+    pub fn get_fscal<SPI>(&mut self, spi: &mut SPI) -> Result<u32>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bytes = self.read_multiple_registers(Register::FSCAL0, 3, spi)?; // [FSCAL0, FSCAL1, FSCAL2]
+        let res = (bytes[2] as u32) << 16 | (bytes[1] as u32) << 8 | (bytes[0] as u32);
         Ok(res)
     }
-    
-    pub fn set_fscal(&mut self, fscal: u32) -> Result<()> {
+
+    pub fn set_fscal<SPI>(&mut self, fscal: u32, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
         // Will not panic as & 0xFF ensures values are u8
         let res: [u8; 3] = [
             u8::try_from(fscal & 0xFF).unwrap(),
             u8::try_from((fscal >> 8) & 0xFF).unwrap(),
             u8::try_from((fscal >> 16) & 0xFF).unwrap(),
         ];
-        self.write_multiple_registers(Register::FSCAL0, &res)
+        self.write_multiple_registers(Register::FSCAL0, &res, spi)
     }
 
-    pub fn get_idacmux(&mut self) -> Result<IdacMuxRegister> {
-        let bits = self.read_register(Register::IDACMUX)?;
+    pub fn get_idacmux<SPI>(&mut self, spi: &mut SPI) -> Result<IdacMuxRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::IDACMUX, spi)?;
         let data = IdacMuxRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -295,12 +351,18 @@ where
         }
     }
 
-    pub fn set_idacmux(&mut self, reg: &IdacMuxRegister) -> Result<()> {
-        self.write_register(Register::IDACMUX, reg.bits())
+    pub fn set_idacmux<SPI>(&mut self, reg: &IdacMuxRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::IDACMUX, reg.bits(), spi)
     }
 
-    pub fn get_idacmag(&mut self) -> Result<IdacMagRegister> {
-        let bits = self.read_register(Register::IDACMAG)?;
+    pub fn get_idacmag<SPI>(&mut self, spi: &mut SPI) -> Result<IdacMagRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::IDACMAG, spi)?;
         let data = IdacMagRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -308,12 +370,18 @@ where
         }
     }
 
-    pub fn set_idacmag(&mut self, reg: &IdacMagRegister) -> Result<()> {
-        self.write_register(Register::IDACMAG, reg.bits())
+    pub fn set_idacmag<SPI>(&mut self, reg: &IdacMagRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::IDACMAG, reg.bits(), spi)
     }
 
-    pub fn get_refmux(&mut self) -> Result<RefMuxRegister> {
-        let bits = self.read_register(Register::REFMUX)?;
+    pub fn get_refmux<SPI>(&mut self, spi: &mut SPI) -> Result<RefMuxRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::REFMUX, spi)?;
         let data = RefMuxRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -321,12 +389,18 @@ where
         }
     }
 
-    pub fn set_refmux(&mut self, reg: &RefMuxRegister) -> Result<()> {
-        self.write_register(Register::REFMUX, reg.bits())
+    pub fn set_refmux<SPI>(&mut self, reg: &RefMuxRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::REFMUX, reg.bits(), spi)
     }
 
-    pub fn get_tdacp(&mut self) -> Result<TdacpRegister> {
-        let bits = self.read_register(Register::TDACP)?;
+    pub fn get_tdacp<SPI>(&mut self, spi: &mut SPI) -> Result<TdacpRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::TDACP, spi)?;
         let data = TdacpRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -334,12 +408,18 @@ where
         }
     }
 
-    pub fn set_tdacp(&mut self, reg: &TdacpRegister) -> Result<()> {
-        self.write_register(Register::TDACP, reg.bits())
+    pub fn set_tdacp<SPI>(&mut self, reg: &TdacpRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::TDACP, reg.bits(), spi)
     }
 
-    pub fn get_tdacn(&mut self) -> Result<TdacnRegister> {
-        let bits = self.read_register(Register::TDACN)?;
+    pub fn get_tdacn<SPI>(&mut self, spi: &mut SPI) -> Result<TdacnRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::TDACN, spi)?;
         let data = TdacnRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
@@ -347,105 +427,147 @@ where
         }
     }
 
-    pub fn set_tdacn(&mut self, reg: &TdacnRegister) -> Result<()> {
-        self.write_register(Register::TDACN, reg.bits())
+    pub fn set_tdacn<SPI>(&mut self, reg: &TdacnRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::TDACN, reg.bits(), spi)
     }
 
-    pub fn get_gpiocon(&mut self) -> Result<GpioConRegister> {
-        let bits = self.read_register(Register::GPIOCON)?;
+    pub fn get_gpiocon<SPI>(&mut self, spi: &mut SPI) -> Result<GpioConRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::GPIOCON, spi)?;
         let data = GpioConRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
             None => Err(ADS126xError::InvalidInputData),
-        } 
+        }
     }
 
-    pub fn set_gpiocon(&mut self, reg: &GpioConRegister) -> Result<()> {
-        self.write_register(Register::GPIOCON, reg.bits())
+    pub fn set_gpiocon<SPI>(&mut self, reg: &GpioConRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::GPIOCON, reg.bits(), spi)
     }
 
-    pub fn get_gpiodir(&mut self) -> Result<GpioDirRegister> {
-        let bits = self.read_register(Register::GPIODIR)?;
+    pub fn get_gpiodir<SPI>(&mut self, spi: &mut SPI) -> Result<GpioDirRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::GPIODIR, spi)?;
         let data = GpioDirRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
             None => Err(ADS126xError::InvalidInputData),
-        } 
+        }
     }
 
-    pub fn set_gpiodir(&mut self, reg: &GpioDirRegister) -> Result<()> {
-        self.write_register(Register::GPIODIR, reg.bits())
+    pub fn set_gpiodir<SPI>(&mut self, reg: &GpioDirRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::GPIODIR, reg.bits(), spi)
     }
 
-    pub fn get_gpiodat(&mut self) -> Result<GpioDatRegister> {
-        let bits = self.read_register(Register::GPIODAT)?;
+    pub fn get_gpiodat<SPI>(&mut self, spi: &mut SPI) -> Result<GpioDatRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::GPIODAT, spi)?;
         let data = GpioDatRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
             None => Err(ADS126xError::InvalidInputData),
-        } 
+        }
     }
 
-    pub fn set_gpiodat(&mut self, reg: &GpioDatRegister) -> Result<()> {
-        self.write_register(Register::GPIODAT, reg.bits())
+    pub fn set_gpiodat<SPI>(&mut self, reg: &GpioDatRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::GPIODAT, reg.bits(), spi)
     }
 
-    pub fn get_adc2cfg(&mut self) -> Result<Adc2CfgRegister> {
-        let bits = self.read_register(Register::ADC2CFG)?;
+    pub fn get_adc2cfg<SPI>(&mut self, spi: &mut SPI) -> Result<Adc2CfgRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::ADC2CFG, spi)?;
         let data = Adc2CfgRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
             None => Err(ADS126xError::InvalidInputData),
-        } 
+        }
     }
 
-    pub fn set_adc2cfg(&mut self, reg: &Adc2CfgRegister) -> Result<()> {
-        self.write_register(Register::ADC2CFG, reg.bits())
+    pub fn set_adc2cfg<SPI>(&mut self, reg: &Adc2CfgRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::ADC2CFG, reg.bits(), spi)
     }
 
-    
-    pub fn get_adc2mux(&mut self) -> Result<Adc2MuxRegister> {
-        let bits = self.read_register(Register::ADC2MUX)?;
+    pub fn get_adc2mux<SPI>(&mut self, spi: &mut SPI) -> Result<Adc2MuxRegister>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bits = self.read_register(Register::ADC2MUX, spi)?;
         let data = Adc2MuxRegister::from_bits(bits);
         match data {
             Some(reg) => Ok(reg),
             None => Err(ADS126xError::InvalidInputData),
-        } 
+        }
     }
 
-    pub fn set_adc2mux(&mut self, reg: &Adc2MuxRegister) -> Result<()> {
-        self.write_register(Register::ADC2MUX, reg.bits())
+    pub fn set_adc2mux<SPI>(&mut self, reg: &Adc2MuxRegister, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        self.write_register(Register::ADC2MUX, reg.bits(), spi)
     }
 
-    pub fn get_adc2ofc(&mut self) -> Result<u16> {
-        let bytes = self.read_multiple_registers(Register::ADC2OFC0, 2)?; // [ADC2OFC0, ADC2OFC1]
-        let res = (bytes[1] as u16) << 8 |
-                  (bytes[0] as u16);
+    pub fn get_adc2ofc<SPI>(&mut self, spi: &mut SPI) -> Result<u16>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bytes = self.read_multiple_registers(Register::ADC2OFC0, 2, spi)?; // [ADC2OFC0, ADC2OFC1]
+        let res = (bytes[1] as u16) << 8 | (bytes[0] as u16);
         Ok(res)
     }
-    
-    pub fn set_adc2ofc(&mut self, ofc2: u16) -> Result<()> {
+
+    pub fn set_adc2ofc<SPI>(&mut self, ofc2: u16, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
         // Will not panic as & 0xFF ensures values are u8
         let res: [u8; 2] = [
             u8::try_from(ofc2 & 0xFF).unwrap(),
             u8::try_from((ofc2 >> 8) & 0xFF).unwrap(),
         ];
-        self.write_multiple_registers(Register::ADC2OFC0, &res)
+        self.write_multiple_registers(Register::ADC2OFC0, &res, spi)
     }
 
-    pub fn get_adc2fsc(&mut self) -> Result<u16> {
-        let bytes = self.read_multiple_registers(Register::ADC2FSC0, 2)?; // [ADC2FSC0, ADC2FSC1]
-        let res = (bytes[1] as u16) << 8 |
-                  (bytes[0] as u16);
+    pub fn get_adc2fsc<SPI>(&mut self, spi: &mut SPI) -> Result<u16>
+    where
+        SPI: FullDuplex<u8>,
+    {
+        let bytes = self.read_multiple_registers(Register::ADC2FSC0, 2, spi)?; // [ADC2FSC0, ADC2FSC1]
+        let res = (bytes[1] as u16) << 8 | (bytes[0] as u16);
         Ok(res)
     }
-    
-    pub fn set_adc2fsc(&mut self, fsc2: u32) -> Result<()> {
+
+    pub fn set_adc2fsc<SPI>(&mut self, fsc2: u32, spi: &mut SPI) -> Result<()>
+    where
+        SPI: FullDuplex<u8>,
+    {
         // Will not panic as & 0xFF ensures values are u8
         let res: [u8; 2] = [
             u8::try_from(fsc2 & 0xFF).unwrap(),
             u8::try_from((fsc2 >> 8) & 0xFF).unwrap(),
         ];
-        self.write_multiple_registers(Register::ADC2FSC0, &res)
+        self.write_multiple_registers(Register::ADC2FSC0, &res, spi)
     }
 }

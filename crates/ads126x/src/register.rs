@@ -1,37 +1,37 @@
 mod enums;
 
-pub use enums::*;
 use bitflags::bitflags;
+pub use enums::*;
 
 #[repr(u8)]
 pub enum Register {
-    ID        = 0x00,
-    POWER     = 0x01,
+    ID = 0x00,
+    POWER = 0x01,
     INTERFACE = 0x02,
-    MODE0     = 0x03,
-    MODE1     = 0x04,
-    MODE2     = 0x05,
-    INPMUX    = 0x06,
-    OFCAL0    = 0x07,
-    OFCAL1    = 0x08,
-    OFCAL2    = 0x09,
-    FSCAL0    = 0x0A,
-    FSCAL1    = 0x0B,
-    FSCAL2    = 0x0C,
-    IDACMUX   = 0x0D,
-    IDACMAG   = 0x0E,
-    REFMUX    = 0x0F,
-    TDACP     = 0x10,
-    TDACN     = 0x11,
-    GPIOCON   = 0x12,
-    GPIODIR   = 0x13,
-    GPIODAT   = 0x14,
-    ADC2CFG   = 0x15,
-    ADC2MUX   = 0x16,
-    ADC2OFC0  = 0x17,
-    ADC2OFC1  = 0x18,
-    ADC2FSC0  = 0x19,
-    ADC2FSC1  = 0x1A,
+    MODE0 = 0x03,
+    MODE1 = 0x04,
+    MODE2 = 0x05,
+    INPMUX = 0x06,
+    OFCAL0 = 0x07,
+    OFCAL1 = 0x08,
+    OFCAL2 = 0x09,
+    FSCAL0 = 0x0A,
+    FSCAL1 = 0x0B,
+    FSCAL2 = 0x0C,
+    IDACMUX = 0x0D,
+    IDACMAG = 0x0E,
+    REFMUX = 0x0F,
+    TDACP = 0x10,
+    TDACN = 0x11,
+    GPIOCON = 0x12,
+    GPIODIR = 0x13,
+    GPIODAT = 0x14,
+    ADC2CFG = 0x15,
+    ADC2MUX = 0x16,
+    ADC2OFC0 = 0x17,
+    ADC2OFC1 = 0x18,
+    ADC2FSC0 = 0x19,
+    ADC2FSC1 = 0x1A,
 }
 
 bitflags! {
@@ -101,7 +101,7 @@ impl PowerRegister {
         self.contains(PowerRegister::RESET)
     }
 
-    // must be cleared if set to detect further resets. 
+    // must be cleared if set to detect further resets.
     pub fn clear_reset(&mut self) {
         self.remove(PowerRegister::RESET);
     }
@@ -557,7 +557,7 @@ impl RefMuxRegister {
             0b100 => RefPositiveInp::IntAnlgSup,
 
             0b101..=0b111 => panic!("Reserved Reference Positive Input"),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -576,7 +576,7 @@ bitflags! {
 }
 
 impl TdacpRegister {
-    // there is no defined default values in the datasheet so just zeros. 
+    // there is no defined default values in the datasheet so just zeros.
     pub fn default() -> Self {
         TdacpRegister::from_bits_truncate(0b0000_0000)
     }
@@ -617,13 +617,13 @@ impl TdacpRegister {
 bitflags! {
     pub struct TdacnRegister: u8 {
         const OUTN = 0b1000_0000;
-        
+
         const _ = 0b1001_1111;
     }
 }
 
 impl TdacnRegister {
-    // there is no defined default values in the datasheet so just zeros. 
+    // there is no defined default values in the datasheet so just zeros.
     pub fn default() -> Self {
         TdacnRegister::from_bits_truncate(0b0000_0000)
     }
@@ -718,7 +718,7 @@ bitflags! {
 }
 
 impl GpioDatRegister {
-    // there is no defined default values in the datasheet so just zeros. 
+    // there is no defined default values in the datasheet so just zeros.
     pub fn default() -> Self {
         GpioDatRegister::from_bits_truncate(0b0000_0000)
     }

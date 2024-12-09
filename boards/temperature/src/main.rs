@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+mod adc_manager;
 mod communication;
 mod data_manager;
 mod types;
@@ -378,6 +379,11 @@ mod app {
             }
             None => return,
         }
+    }
+
+    #[task(priority = 3)]
+    async fn delay(_cx: delay::Context, delay: u32) {
+        Mono::delay(delay.millis()).await;
     }
 
     #[task(shared = [data_manager, &em, rtc])]

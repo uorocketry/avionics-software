@@ -8,8 +8,9 @@ members = ["boards/*", "examples/*", "crates/*"]
 default-members = ["boards/*", "examples/*"]
 
 [workspace.dependencies.stm32h7xx-hal]
-git = "https://github.com/uorocketry/stm32h7xx-hal"
+# git = "https://github.com/uorocketry/stm32h7xx-hal"
 # We use 35 even though we have the 33. 
+path = "/home/bonjour/Rocketry/stm32h7xx-hal"
 features = ["defmt", "rt", "stm32h735", "can", "rtc"]
 
 [workspace.dependencies.serde]
