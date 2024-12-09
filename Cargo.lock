@@ -939,6 +939,7 @@ dependencies = [
 [[package]]
 name = "stm32h7xx-hal"
 version = "0.16.0"
+source = "git+https://github.com/uorocketry/stm32h7xx-hal#412160269f1729d55bc52de17463695db2c6bc6c"
 dependencies = [
  "bare-metal 1.0.0",
  "cast",
