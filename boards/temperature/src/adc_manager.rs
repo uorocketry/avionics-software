@@ -11,26 +11,28 @@ use stm32h7xx_hal::{
 
 use crate::app::delay;
 
+
+// There is an option to use interrupts using the data ready pins, but for now we will poll.
 pub struct AdcManager {
-    pub spi: Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled, u8>,
-    pub adc1: Ads126x<Pin<'A', 0, Output<PushPull>>>,
-    pub adc2: Ads126x<Pin<'A', 1, Output<PushPull>>>,
-    pub adc1_cs: Pin<'A', 4, Output<PushPull>>,
-    pub adc2_cs: Pin<'A', 5, Output<PushPull>>,
+    pub spi: Spi<stm32h7xx_hal::pac::SPI4, stm32h7xx_hal::spi::Enabled, u8>,
+    pub adc1: Ads126x<Pin<'C', 11, Output<PushPull>>>,
+    pub adc2: Ads126x<Pin<'E', 0, Output<PushPull>>>,
+    pub adc1_cs: Pin<'C', 10, Output<PushPull>>,
+    pub adc2_cs: Pin<'D', 2, Output<PushPull>>,
 }
 
 impl AdcManager {
     pub fn new(
-        spi: Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled, u8>,
-        adc1_pin: Pin<'A', 0, Output<PushPull>>,
-        adc2_pin: Pin<'A', 1, Output<PushPull>>,
-        adc1_cs: Pin<'A', 4, Output<PushPull>>,
-        adc2_cs: Pin<'A', 5, Output<PushPull>>,
+        spi: Spi<stm32h7xx_hal::pac::SPI4, stm32h7xx_hal::spi::Enabled, u8>,
+        adc1_rst: Pin<'C', 11, Output<PushPull>>,
+        adc2_rst: Pin<'E', 0, Output<PushPull>>,
+        adc1_cs: Pin<'C', 10, Output<PushPull>>,
+        adc2_cs: Pin<'D', 2, Output<PushPull>>,
     ) -> Self {
         Self {
             spi,
-            adc1: Ads126x::new(adc1_pin),
-            adc2: Ads126x::new(adc2_pin),
+            adc1: Ads126x::new(adc1_rst),
+            adc2: Ads126x::new(adc2_rst),
             adc1_cs,
             adc2_cs,
         }
