@@ -3,6 +3,7 @@
 
 mod communication;
 mod data_manager;
+mod adc_manager;
 mod types;
 
 use chrono::NaiveDate;
@@ -320,6 +321,11 @@ mod app {
                 buzzer: c0,
             },
         )
+    }
+
+    #[task(priority = 3)]
+    async fn delay(_cx: delay::Context, delay: u32) {
+        Mono::delay(delay.millis()).await;
     }
 
     #[task(priority = 3, shared = [&em, rtc])]

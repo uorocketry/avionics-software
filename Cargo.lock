@@ -628,6 +628,7 @@ dependencies = [
 name = "pressure"
 version = "0.1.0"
 dependencies = [
+ "ads126x",
  "chrono",
  "common-arm",
  "cortex-m",
@@ -961,6 +962,7 @@ dependencies = [
 name = "strain"
 version = "0.1.0"
 dependencies = [
+ "ads126x",
  "chrono",
  "common-arm",
  "cortex-m",

@@ -18,6 +18,7 @@ use fdcan::{
     filter::{StandardFilter, StandardFilterSlot},
 };
 use messages::command::RadioRate;
+use messages::Message;
 use messages::{sensor, Data};
 use panic_probe as _;
 use rtic_monotonics::systick::prelude::*;
@@ -28,10 +29,13 @@ use stm32h7xx_hal::gpio::Speed;
 use stm32h7xx_hal::gpio::{Output, PushPull};
 use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::rtc;
+use stm32h7xx_hal::{
+    gpio::{Alternate, Pin},
+    hal::spi,
+};
 use stm32h7xx_hal::{rcc, rcc::rec};
-use messages::Message;
-use stm32h7xx_hal::{gpio::{Alternate, Pin}, hal::spi};
 use types::COM_ID; // global logger
+use adc_manager::AdcManager;
 
 const DATA_CHANNEL_CAPACITY: usize = 10;
 
@@ -46,10 +50,6 @@ fn panic() -> ! {
 
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
-
-
-    use adc_manager::AdcManager;
-
     use super::*;
 
     #[shared]
@@ -59,7 +59,7 @@ mod app {
         // sd_manager: SdManager<
         //     stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
         //     PA4<Output<PushPull>>,
-        // >, 
+        // >,
         radio_manager: RadioManager,
         can_command_manager: CanCommandManager,
         can_data_manager: CanDataManager,
@@ -256,7 +256,7 @@ mod app {
 
         // let sd_manager = SdManager::new(spi_sd, cs_sd);
 
-        // ADC setup 
+        // ADC setup
         let adc_spi: stm32h7xx_hal::spi::Spi<
             stm32h7xx_hal::stm32::SPI4,
             stm32h7xx_hal::spi::Enabled,
@@ -344,7 +344,7 @@ mod app {
                 can_data_manager,
                 sbg_power,
                 rtc,
-                adc_manager
+                adc_manager,
             },
             LocalResources {
                 led_red,
