@@ -3,6 +3,7 @@
 
 mod communication;
 mod data_manager;
+mod adc_manager;
 mod types;
 
 use chrono::NaiveDate;
@@ -322,14 +323,19 @@ mod app {
         )
     }
 
+    #[task(priority = 3)]
+    async fn delay(_cx: delay::Context, delay: u32) {
+        Mono::delay(delay.millis()).await;
+    }
+
     #[task(priority = 3, shared = [&em, rtc])]
     async fn generate_random_messages(mut cx: generate_random_messages::Context) {
         loop {
             cx.shared.em.run(|| {
                 let message = Message::new(
-                    cx.shared.rtc.lock(|rtc| {
-                        messages::FormattedNaiveDateTime(rtc.date_time().unwrap())
-                    }),
+                    cx.shared
+                        .rtc
+                        .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
                     COM_ID,
                     messages::state::State::new(messages::state::StateData::Initializing),
                 );
@@ -363,10 +369,13 @@ mod app {
                     stm32h7xx_hal::rcc::ResetReason::Unknown { rcc_rsr } => sensor::ResetReason::Unknown { rcc_rsr },
                     stm32h7xx_hal::rcc::ResetReason::WindowWatchdogReset => sensor::ResetReason::WindowWatchdogReset,
                 };
-                let message =
-                    messages::Message::new(cx.shared.rtc.lock(|rtc| {
-                        messages::FormattedNaiveDateTime(rtc.date_time().unwrap())
-                    }), COM_ID, sensor::Sensor::new(x));
+                let message = messages::Message::new(
+                    cx.shared
+                        .rtc
+                        .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
+                    COM_ID,
+                    sensor::Sensor::new(x),
+                );
 
                 cx.shared.em.run(|| {
                     spawn!(send_gs, message)?;
@@ -385,10 +394,13 @@ mod app {
             .lock(|data_manager| data_manager.state.clone());
         cx.shared.em.run(|| {
             if let Some(x) = state_data {
-                let message =
-                    Message::new(cx.shared.rtc.lock(|rtc| {
-                        messages::FormattedNaiveDateTime(rtc.date_time().unwrap())
-                    }), COM_ID, messages::state::State::new(x));
+                let message = Message::new(
+                    cx.shared
+                        .rtc
+                        .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
+                    COM_ID,
+                    messages::state::State::new(x),
+                );
                 spawn!(send_gs, message)?;
             } // if there is none we still return since we simply don't have data yet.
             Ok(())
@@ -442,8 +454,7 @@ mod app {
     }
 
     #[task(priority = 3, shared = [rtc, &em])]
-    async fn send_gs_intermediate(mut cx: send_gs_intermediate::Context, m: Data)
-    {
+    async fn send_gs_intermediate(mut cx: send_gs_intermediate::Context, m: Data) {
         cx.shared.em.run(|| {
             cx.shared.rtc.lock(|rtc| {
                 let message = messages::Message::new(
