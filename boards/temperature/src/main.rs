@@ -6,10 +6,10 @@ mod communication;
 mod data_manager;
 mod types;
 
+use adc_manager::AdcManager;
 use chrono::NaiveDate;
 use common_arm::*;
 use communication::{CanCommandManager, CanDataManager};
-use communication::{RadioDevice, RadioManager};
 use core::num::{NonZeroU16, NonZeroU8};
 use data_manager::DataManager;
 use defmt::info;
@@ -17,25 +17,19 @@ use fdcan::{
     config::NominalBitTiming,
     filter::{StandardFilter, StandardFilterSlot},
 };
-use messages::command::RadioRate;
 use messages::Message;
 use messages::{sensor, Data};
 use panic_probe as _;
 use rtic_monotonics::systick::prelude::*;
 use rtic_sync::{channel::*, make_channel};
 use stm32h7xx_hal::gpio::gpioa::{PA2, PA3};
-use stm32h7xx_hal::gpio::gpiob::PB4;
 use stm32h7xx_hal::gpio::Speed;
 use stm32h7xx_hal::gpio::{Output, PushPull};
 use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::rtc;
-use stm32h7xx_hal::{
-    gpio::{Alternate, Pin},
-    hal::spi,
-};
+use stm32h7xx_hal::hal::spi;
 use stm32h7xx_hal::{rcc, rcc::rec};
 use types::COM_ID; // global logger
-use adc_manager::AdcManager;
 
 const DATA_CHANNEL_CAPACITY: usize = 10;
 
@@ -50,22 +44,23 @@ fn panic() -> ! {
 
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
+    use stm32h7xx_hal::gpio::PA4;
+
     use super::*;
 
     #[shared]
     struct SharedResources {
         data_manager: DataManager,
         em: ErrorManager,
-        // sd_manager: SdManager<
-        //     stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
-        //     PA4<Output<PushPull>>,
-        // >,
-        radio_manager: RadioManager,
+        sd_manager: SdManager<
+            stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
+            PA4<Output<PushPull>>,
+        >,
         can_command_manager: CanCommandManager,
         can_data_manager: CanDataManager,
-        sbg_power: PB4<Output<PushPull>>,
         rtc: rtc::Rtc,
         adc_manager: AdcManager,
+        can_sender: Sender<'static, Message, DATA_CHANNEL_CAPACITY>,
     }
     #[local]
     struct LocalResources {
@@ -81,12 +76,12 @@ mod app {
     #[init]
     fn init(ctx: init::Context) -> (SharedResources, LocalResources) {
         // channel setup
-        let (_s, r) = make_channel!(Message, DATA_CHANNEL_CAPACITY);
+        let (can_sender, r) = make_channel!(Message, DATA_CHANNEL_CAPACITY);
 
         let core = ctx.core;
 
         /* Logging Setup */
-        HydraLogging::set_ground_station_callback(queue_gs_message);
+        HydraLogging::set_ground_station_callback(queue_log_message);
 
         let pwr = ctx.device.PWR.constrain();
         // We could use smps, but the board is not designed for it
@@ -236,25 +231,25 @@ mod app {
 
         let can_command_manager = CanCommandManager::new(can_command.into_normal());
 
-        // let spi_sd: stm32h7xx_hal::spi::Spi<
-        //     stm32h7xx_hal::stm32::SPI1,
-        //     stm32h7xx_hal::spi::Enabled,
-        //     u8,
-        // > = ctx.device.SPI1.spi(
-        //     (
-        //         gpioa.pa5.into_alternate::<5>(),
-        //         gpioa.pa6.into_alternate(),
-        //         gpioa.pa7.into_alternate(),
-        //     ),
-        //     spi::Config::new(spi::MODE_0),
-        //     16.MHz(),
-        //     ccdr.peripheral.SPI1,
-        //     &ccdr.clocks,
-        // );
+        let spi_sd: stm32h7xx_hal::spi::Spi<
+            stm32h7xx_hal::stm32::SPI1,
+            stm32h7xx_hal::spi::Enabled,
+            u8,
+        > = ctx.device.SPI1.spi(
+            (
+                gpioa.pa5.into_alternate::<5>(),
+                gpioa.pa6.into_alternate(),
+                gpioa.pa7.into_alternate(),
+            ),
+            stm32h7xx_hal::spi::Config::new(spi::MODE_0),
+            16.MHz(),
+            ccdr.peripheral.SPI1,
+            &ccdr.clocks,
+        );
 
-        // let cs_sd = gpioa.pa4.into_push_pull_output();
+        let cs_sd = gpioa.pa4.into_push_pull_output();
 
-        // let sd_manager = SdManager::new(spi_sd, cs_sd);
+        let sd_manager = SdManager::new(spi_sd, cs_sd);
 
         // ADC setup
         let adc_spi: stm32h7xx_hal::spi::Spi<
@@ -285,26 +280,6 @@ mod app {
         let led_red = gpioa.pa2.into_push_pull_output();
         let led_green = gpioa.pa3.into_push_pull_output();
 
-        // sbg power pin
-        let mut sbg_power = gpiob.pb4.into_push_pull_output();
-        sbg_power.set_high();
-
-        // UART for sbg
-        let tx: Pin<'D', 1, Alternate<8>> = gpiod.pd1.into_alternate();
-        let rx: Pin<'D', 0, Alternate<8>> = gpiod.pd0.into_alternate();
-
-        // let stream_tuple = StreamsTuple::new(ctx.device.DMA1, ccdr.peripheral.DMA1);
-        let uart_radio = ctx
-            .device
-            .UART4
-            .serial((tx, rx), 57600.bps(), ccdr.peripheral.UART4, &ccdr.clocks)
-            .unwrap();
-        // let mut sbg_manager = sbg_manager::SBGManager::new(uart_sbg, stream_tuple);
-
-        let radio = RadioDevice::new(uart_radio);
-
-        let radio_manager = RadioManager::new(radio);
-
         let mut rtc = stm32h7xx_hal::rtc::Rtc::open_or_init(
             ctx.device.RTC,
             backup.RTC,
@@ -312,7 +287,7 @@ mod app {
             &ccdr.clocks,
         );
 
-        // TODO: Get current time from some source
+        // TODO: Get current time from some source, this should be the responsibility of pheonix to sync the boards with GPS time.
         let now = NaiveDate::from_ymd_opt(2001, 1, 1)
             .unwrap()
             .and_hms_opt(0, 0, 0)
@@ -330,21 +305,18 @@ mod app {
         send_data_internal::spawn(r).ok();
         reset_reason_send::spawn().ok();
         state_send::spawn().ok();
-        // generate_random_messages::spawn().ok();
-        // sensor_send::spawn().ok();
         info!("Online");
 
         (
             SharedResources {
                 data_manager,
                 em,
-                // sd_manager,
-                radio_manager,
+                sd_manager,
                 can_command_manager,
                 can_data_manager,
-                sbg_power,
                 rtc,
                 adc_manager,
+                can_sender,
             },
             LocalResources {
                 led_red,
@@ -354,26 +326,7 @@ mod app {
         )
     }
 
-    #[task(priority = 3, shared = [&em, rtc])]
-    async fn generate_random_messages(mut cx: generate_random_messages::Context) {
-        loop {
-            cx.shared.em.run(|| {
-                let message = Message::new(
-                    cx.shared
-                        .rtc
-                        .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
-                    COM_ID,
-                    messages::state::State::new(messages::state::StateData::Initializing),
-                );
-                spawn!(send_gs, message.clone())?;
-                // spawn!(send_data_internal, message)?;
-                Ok(())
-            });
-            Mono::delay(1.secs()).await;
-        }
-    }
-
-    #[task(priority = 3, shared = [data_manager, &em, rtc])]
+    #[task(priority = 3, shared = [data_manager, &em, rtc, can_sender])]
     async fn reset_reason_send(mut cx: reset_reason_send::Context) {
         let reason = cx
             .shared
@@ -403,9 +356,11 @@ mod app {
                     sensor::Sensor::new(x),
                 );
 
-                cx.shared.em.run(|| {
-                    spawn!(send_gs, message)?;
-                    Ok(())
+                cx.shared.can_sender.lock(|s| {
+                    cx.shared.em.run(|| {
+                        s.send(message); // TODO: catch this error
+                        Ok(())
+                    });
                 })
             }
             None => return,
@@ -417,7 +372,7 @@ mod app {
         Mono::delay(delay.millis()).await;
     }
 
-    #[task(shared = [data_manager, &em, rtc])]
+    #[task(shared = [data_manager, &em, rtc, can_sender])]
     async fn state_send(mut cx: state_send::Context) {
         let state_data = cx
             .shared
@@ -432,7 +387,12 @@ mod app {
                     COM_ID,
                     messages::state::State::new(x),
                 );
-                spawn!(send_gs, message)?;
+                cx.shared.can_sender.lock(|s| {
+                    cx.shared.em.run(|| {
+                        s.send(message); // TODO: catch this error
+                        Ok(())
+                    });
+                })
             } // if there is none we still return since we simply don't have data yet.
             Ok(())
         });
@@ -443,20 +403,19 @@ mod app {
     /**
      * Sends information about the sensors.
      */
-    #[task(priority = 3, shared = [data_manager, &em])]
+    #[task(priority = 3, shared = [data_manager, &em, can_sender])]
     async fn sensor_send(mut cx: sensor_send::Context) {
-        loop {
-            let (sensors, logging_rate) = cx.shared.data_manager.lock(|data_manager| {
-                (data_manager.take_sensors(), data_manager.get_logging_rate())
-            });
+        let sensors = cx
+            .shared
+            .data_manager
+            .lock(|data_manager| data_manager.take_sensors());
 
-            cx.shared.em.run(|| {
+        cx.shared.em.run(|| {
+            cx.shared.can_sender.lock(|s| {
                 for msg in sensors {
                     match msg {
                         Some(x) => {
-                            // info!("Sending sensor data {}", x.clone());
-                            spawn!(send_gs, x)?;
-                            //                     spawn!(sd_dump, x)?;
+                            s.send(x); // TODO: catch this error
                         }
                         None => {
                             info!("No sensor data to send");
@@ -464,28 +423,19 @@ mod app {
                         }
                     }
                 }
-
-                Ok(())
             });
-            match logging_rate {
-                RadioRate::Fast => {
-                    Mono::delay(100.millis()).await;
-                }
-                RadioRate::Slow => {
-                    Mono::delay(250.millis()).await;
-                }
-            }
-        }
+
+            Ok(())
+        });
     }
 
-    /// Receives a log message from the custom logger so that it can be sent over the radio.
-    pub fn queue_gs_message(d: impl Into<Data>) {
-        info!("Queueing message");
-        send_gs_intermediate::spawn(d.into()).ok();
+    /// Callback for our logging library to access the needed resources.
+    pub fn queue_log_message(d: impl Into<Data>) {
+        send_log_intermediate::spawn(d.into()).ok();
     }
 
-    #[task(priority = 3, shared = [rtc, &em])]
-    async fn send_gs_intermediate(mut cx: send_gs_intermediate::Context, m: Data) {
+    #[task(priority = 3, shared = [rtc, &em, can_sender])]
+    async fn send_log_intermediate(mut cx: send_log_intermediate::Context, m: Data) {
         cx.shared.em.run(|| {
             cx.shared.rtc.lock(|rtc| {
                 let message = messages::Message::new(
@@ -493,7 +443,10 @@ mod app {
                     COM_ID,
                     m,
                 );
-                spawn!(send_gs, message)?;
+
+                cx.shared.can_sender.lock(|s| {
+                    s.send(message); // TODO: catch this error
+                });
                 Ok(())
             })
         });
@@ -509,42 +462,18 @@ mod app {
         })
     }
 
-    #[task(priority = 3, shared = [sbg_power])]
-    async fn sbg_power_on(mut cx: sbg_power_on::Context) {
-        loop {
-            cx.shared.sbg_power.lock(|sbg| {
-                sbg.set_high();
-            });
-            Mono::delay(10000.millis()).await;
-        }
-    }
-
-    /**
-     * Sends a message to the radio over UART.
-     */
-    #[task(priority = 3, shared = [&em, radio_manager])]
-    async fn send_gs(mut cx: send_gs::Context, m: Message) {
-        // info!("{}", m.clone());
-
-        cx.shared.radio_manager.lock(|radio_manager| {
-            cx.shared.em.run(|| {
-                // info!("Sending message {}", m);
-                let mut buf = [0; 255];
-                let data = postcard::to_slice(&m, &mut buf)?;
-                radio_manager.send_message(data)?;
-                Ok(())
-            })
-        });
-    }
-
     #[task( priority = 3, binds = FDCAN2_IT0, shared = [&em, can_data_manager, data_manager])]
     fn can_data(mut cx: can_data::Context) {
         cx.shared.can_data_manager.lock(|can| {
             {
+                cx.shared.data_manager.lock(|data_manager| {
+
                 cx.shared.em.run(|| {
-                    can.process_data()?;
+                    can.process_data(data_manager)?;
                     Ok(())
                 })
+            })
+
             }
         });
     }
@@ -583,35 +512,16 @@ mod app {
         loop {
             if cx.shared.em.has_error() {
                 cx.local.led_red.toggle();
-                if *cx.local.buzzed {
-                    cx.local.buzzer.set_duty(0);
-                    *cx.local.buzzed = false;
-                } else {
-                    let duty = cx.local.buzzer.get_max_duty() / 4;
-                    cx.local.buzzer.set_duty(duty);
-                    *cx.local.buzzed = true;
-                }
                 Mono::delay(500.millis()).await;
             } else {
                 cx.local.led_green.toggle();
-                if *cx.local.buzzed {
-                    cx.local.buzzer.set_duty(0);
-                    *cx.local.buzzed = false;
-                } else {
-                    let duty = cx.local.buzzer.get_max_duty() / 4;
-                    cx.local.buzzer.set_duty(duty);
-                    *cx.local.buzzed = true;
-                }
                 Mono::delay(2000.millis()).await;
             }
         }
     }
 
-    #[task(priority = 3, shared = [&em, sbg_power])]
-    async fn sleep_system(mut cx: sleep_system::Context) {
-        // Turn off the SBG and CAN, also start a timer to wake up the system. Put the chip in sleep mode.
-        cx.shared.sbg_power.lock(|sbg| {
-            sbg.set_low();
-        });
+    #[task(priority = 3, shared = [&em])]
+    async fn sleep_system(_cx: sleep_system::Context) {
+        // in here we can stop the ADCs.
     }
 }

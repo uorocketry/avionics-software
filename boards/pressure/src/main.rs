@@ -1,9 +1,9 @@
 #![no_std]
 #![no_main]
 
+mod adc_manager;
 mod communication;
 mod data_manager;
-mod adc_manager;
 mod types;
 
 use chrono::NaiveDate;
