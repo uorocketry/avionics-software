@@ -9,14 +9,9 @@ mod types;
 use adc_manager::AdcManager;
 use chrono::NaiveDate;
 use common_arm::*;
-use communication::{CanCommandManager, CanDataManager};
-use core::num::{NonZeroU16, NonZeroU8};
+use communication::CanManager;
 use data_manager::DataManager;
 use defmt::info;
-use fdcan::{
-    config::NominalBitTiming,
-    filter::{StandardFilter, StandardFilterSlot},
-};
 use messages::Message;
 use messages::{sensor, Data};
 use panic_probe as _;
@@ -29,6 +24,7 @@ use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::rtc;
 use stm32h7xx_hal::hal::spi;
 use stm32h7xx_hal::{rcc, rcc::rec};
+use stm32h7xx_hal::gpio::PA4;
 use types::COM_ID; // global logger
 
 const DATA_CHANNEL_CAPACITY: usize = 10;
@@ -44,7 +40,6 @@ fn panic() -> ! {
 
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
-    use stm32h7xx_hal::gpio::PA4;
 
     use super::*;
 
@@ -56,21 +51,16 @@ mod app {
             stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
             PA4<Output<PushPull>>,
         >,
-        can_command_manager: CanCommandManager,
-        can_data_manager: CanDataManager,
+        can_command_manager: CanManager<stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN1>>,
+        can_data_manager: CanManager<stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN2>>,
         rtc: rtc::Rtc,
         adc_manager: AdcManager,
-        can_sender: Sender<'static, Message, DATA_CHANNEL_CAPACITY>,
     }
     #[local]
     struct LocalResources {
+        can_sender: Sender<'static, Message, DATA_CHANNEL_CAPACITY>,
         led_red: PA2<Output<PushPull>>,
         led_green: PA3<Output<PushPull>>,
-        buzzer: stm32h7xx_hal::pwm::Pwm<
-            stm32h7xx_hal::pac::TIM12,
-            0,
-            stm32h7xx_hal::pwm::ComplementaryImpossible,
-        >,
     }
 
     #[init]
@@ -110,38 +100,12 @@ mod app {
             .FDCAN
             .kernel_clk_mux(rec::FdcanClkSel::Pll1Q);
 
-        let btr = NominalBitTiming {
-            prescaler: NonZeroU16::new(10).unwrap(),
-            seg1: NonZeroU8::new(13).unwrap(),
-            seg2: NonZeroU8::new(2).unwrap(),
-            sync_jump_width: NonZeroU8::new(1).unwrap(),
-        };
-
-        // let data_bit_timing = DataBitTiming {
-        //     prescaler: NonZeroU8::new(10).unwrap(),
-        //     seg1: NonZeroU8::new(13).unwrap(),
-        //     seg2: NonZeroU8::new(2).unwrap(),
-        //     sync_jump_width: NonZeroU8::new(4).unwrap(),
-        //     transceiver_delay_compensation: true,
-        // };
-
-        info!("CAN enabled");
         // GPIO
         let gpioa = ctx.device.GPIOA.split(ccdr.peripheral.GPIOA);
         let gpiod = ctx.device.GPIOD.split(ccdr.peripheral.GPIOD);
         let gpioc = ctx.device.GPIOC.split(ccdr.peripheral.GPIOC);
         let gpiob = ctx.device.GPIOB.split(ccdr.peripheral.GPIOB);
         let gpioe = ctx.device.GPIOE.split(ccdr.peripheral.GPIOE);
-
-        let pins = gpiob.pb14.into_alternate();
-        let mut c0 = ctx
-            .device
-            .TIM12
-            .pwm(pins, 4.kHz(), ccdr.peripheral.TIM12, &ccdr.clocks);
-
-        c0.set_duty(c0.get_max_duty() / 4);
-        // PWM outputs are disabled by default
-        // c0.enable();
 
         info!("PWM enabled");
         // assert_eq!(ccdr.clocks.pll1_q_ck().unwrap().raw(), 32_000_000);
@@ -156,40 +120,7 @@ mod app {
             ctx.device.FDCAN2.fdcan(tx, rx, fdcan_prec)
         };
 
-        let mut can_data = can2;
-        can_data.set_protocol_exception_handling(false);
-
-        can_data.set_nominal_bit_timing(btr);
-
-        // can_data.set_automatic_retransmit(false); // data can be dropped due to its volume.
-
-        // can_command.set_data_bit_timing(data_bit_timing);
-
-        can_data.set_standard_filter(
-            StandardFilterSlot::_0,
-            StandardFilter::accept_all_into_fifo0(),
-        );
-
-        can_data.set_standard_filter(
-            StandardFilterSlot::_1,
-            StandardFilter::accept_all_into_fifo0(),
-        );
-
-        can_data.set_standard_filter(
-            StandardFilterSlot::_2,
-            StandardFilter::accept_all_into_fifo0(),
-        );
-
-        can_data.enable_interrupt(fdcan::interrupt::Interrupt::RxFifo0NewMsg);
-
-        can_data.enable_interrupt_line(fdcan::interrupt::InterruptLine::_0, true);
-
-        let config = can_data
-            .get_config()
-            .set_frame_transmit(fdcan::config::FrameTransmissionConfig::AllowFdCanAndBRS);
-        can_data.apply_config(config);
-
-        let can_data_manager = CanDataManager::new(can_data.into_normal());
+        let can_data_manager = CanManager::new(can2);
 
         let can1: fdcan::FdCan<
             stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN1>,
@@ -200,36 +131,7 @@ mod app {
             ctx.device.FDCAN1.fdcan(tx, rx, fdcan_prec_unsafe)
         };
 
-        let mut can_command = can1;
-        can_command.set_protocol_exception_handling(false);
-
-        can_command.set_nominal_bit_timing(btr);
-        can_command.set_standard_filter(
-            StandardFilterSlot::_0,
-            StandardFilter::accept_all_into_fifo0(),
-        );
-
-        can_command.set_standard_filter(
-            StandardFilterSlot::_1,
-            StandardFilter::accept_all_into_fifo0(),
-        );
-
-        can_command.set_standard_filter(
-            StandardFilterSlot::_2,
-            StandardFilter::accept_all_into_fifo0(),
-        );
-
-        // can_data.set_data_bit_timing(data_bit_timing);
-        can_command.enable_interrupt(fdcan::interrupt::Interrupt::RxFifo0NewMsg);
-
-        can_command.enable_interrupt_line(fdcan::interrupt::InterruptLine::_0, true);
-
-        let config = can_command
-            .get_config()
-            .set_frame_transmit(fdcan::config::FrameTransmissionConfig::AllowFdCanAndBRS); // check this maybe don't bit switch allow.
-        can_command.apply_config(config);
-
-        let can_command_manager = CanCommandManager::new(can_command.into_normal());
+        let can_command_manager = CanManager::new(can1);
 
         let spi_sd: stm32h7xx_hal::spi::Spi<
             stm32h7xx_hal::stm32::SPI1,
@@ -316,17 +218,16 @@ mod app {
                 can_data_manager,
                 rtc,
                 adc_manager,
-                can_sender,
             },
             LocalResources {
+                can_sender,
                 led_red,
                 led_green,
-                buzzer: c0,
             },
         )
     }
 
-    #[task(priority = 3, shared = [data_manager, &em, rtc, can_sender])]
+    #[task(priority = 3, shared = [data_manager, &em, rtc])]
     async fn reset_reason_send(mut cx: reset_reason_send::Context) {
         let reason = cx
             .shared
@@ -356,12 +257,10 @@ mod app {
                     sensor::Sensor::new(x),
                 );
 
-                cx.shared.can_sender.lock(|s| {
                     cx.shared.em.run(|| {
-                        s.send(message); // TODO: catch this error
+                        spawn!(queue_data_internal, message)?;
                         Ok(())
                     });
-                })
             }
             None => return,
         }
@@ -372,7 +271,7 @@ mod app {
         Mono::delay(delay.millis()).await;
     }
 
-    #[task(shared = [data_manager, &em, rtc, can_sender])]
+    #[task(shared = [data_manager, &em, rtc])]
     async fn state_send(mut cx: state_send::Context) {
         let state_data = cx
             .shared
@@ -387,12 +286,10 @@ mod app {
                     COM_ID,
                     messages::state::State::new(x),
                 );
-                cx.shared.can_sender.lock(|s| {
                     cx.shared.em.run(|| {
-                        s.send(message); // TODO: catch this error
+                        spawn!(queue_data_internal, message)?;
                         Ok(())
                     });
-                })
             } // if there is none we still return since we simply don't have data yet.
             Ok(())
         });
@@ -403,7 +300,7 @@ mod app {
     /**
      * Sends information about the sensors.
      */
-    #[task(priority = 3, shared = [data_manager, &em, can_sender])]
+    #[task(priority = 3, shared = [data_manager, &em])]
     async fn sensor_send(mut cx: sensor_send::Context) {
         let sensors = cx
             .shared
@@ -411,11 +308,10 @@ mod app {
             .lock(|data_manager| data_manager.take_sensors());
 
         cx.shared.em.run(|| {
-            cx.shared.can_sender.lock(|s| {
                 for msg in sensors {
                     match msg {
                         Some(x) => {
-                            s.send(x); // TODO: catch this error
+                            spawn!(queue_data_internal, x)?;
                         }
                         None => {
                             info!("No sensor data to send");
@@ -423,7 +319,7 @@ mod app {
                         }
                     }
                 }
-            });
+            
 
             Ok(())
         });
@@ -434,7 +330,18 @@ mod app {
         send_log_intermediate::spawn(d.into()).ok();
     }
 
-    #[task(priority = 3, shared = [rtc, &em, can_sender])]
+    #[task(priority = 3, local = [can_sender], shared = [&em])]
+    async fn queue_data_internal(cx: queue_data_internal::Context, m: Message) {
+        match cx.local.can_sender.send(m).await {
+            // Preferably clean this up to be handled by the error manager. 
+            Ok(_) => {}
+            Err(_) => {
+                info!("Failed to send data");
+            }
+        }
+    }
+
+    #[task(priority = 3, shared = [rtc, &em])]
     async fn send_log_intermediate(mut cx: send_log_intermediate::Context, m: Data) {
         cx.shared.em.run(|| {
             cx.shared.rtc.lock(|rtc| {
@@ -444,9 +351,7 @@ mod app {
                     m,
                 );
 
-                cx.shared.can_sender.lock(|s| {
-                    s.send(message); // TODO: catch this error
-                });
+                spawn!(queue_data_internal, message)?;
                 Ok(())
             })
         });
@@ -497,17 +402,15 @@ mod app {
 
     #[task(priority = 2, shared = [&em, can_command_manager, data_manager])]
     async fn send_command_internal(mut cx: send_command_internal::Context, m: Message) {
-        // while let Ok(m) = receiver.recv().await {
         cx.shared.can_command_manager.lock(|can| {
             cx.shared.em.run(|| {
                 can.send_message(m)?;
                 Ok(())
             })
         });
-        // }
     }
 
-    #[task(priority = 1, local = [led_red, led_green, buzzer, buzzed: bool = false], shared = [&em])]
+    #[task(priority = 1, local = [led_red, led_green], shared = [&em])]
     async fn blink(cx: blink::Context) {
         loop {
             if cx.shared.em.has_error() {

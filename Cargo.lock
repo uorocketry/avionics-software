@@ -625,30 +625,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pressure"
-version = "0.1.0"
-dependencies = [
- "ads126x",
- "chrono",
- "common-arm",
- "cortex-m",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "defmt-test",
- "embedded-alloc",
- "fdcan",
- "heapless 0.7.17",
- "messages",
- "panic-probe",
- "postcard",
- "rtic",
- "rtic-monotonics",
- "rtic-sync",
- "stm32h7xx-hal",
-]
-
-[[package]]
 name = "proc-macro-error"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -956,30 +932,6 @@ dependencies = [
  "paste",
  "stm32h7",
  "void",
-]
-
-[[package]]
-name = "strain"
-version = "0.1.0"
-dependencies = [
- "ads126x",
- "chrono",
- "common-arm",
- "cortex-m",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "defmt-test",
- "embedded-alloc",
- "fdcan",
- "heapless 0.7.17",
- "messages",
- "panic-probe",
- "postcard",
- "rtic",
- "rtic-monotonics",
- "rtic-sync",
- "stm32h7xx-hal",
 ]
 
 [[package]]
