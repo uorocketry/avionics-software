@@ -19,12 +19,12 @@ use rtic_monotonics::systick::prelude::*;
 use rtic_sync::{channel::*, make_channel};
 use stm32h7xx_hal::gpio::gpioa::{PA2, PA3};
 use stm32h7xx_hal::gpio::Speed;
+use stm32h7xx_hal::gpio::PA4;
 use stm32h7xx_hal::gpio::{Output, PushPull};
+use stm32h7xx_hal::hal::spi;
 use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::rtc;
-use stm32h7xx_hal::hal::spi;
 use stm32h7xx_hal::{rcc, rcc::rec};
-use stm32h7xx_hal::gpio::PA4;
 use types::COM_ID; // global logger
 
 const DATA_CHANNEL_CAPACITY: usize = 10;
@@ -257,10 +257,10 @@ mod app {
                     sensor::Sensor::new(x),
                 );
 
-                    cx.shared.em.run(|| {
-                        spawn!(queue_data_internal, message)?;
-                        Ok(())
-                    });
+                cx.shared.em.run(|| {
+                    spawn!(queue_data_internal, message)?;
+                    Ok(())
+                });
             }
             None => return,
         }
@@ -286,10 +286,10 @@ mod app {
                     COM_ID,
                     messages::state::State::new(x),
                 );
-                    cx.shared.em.run(|| {
-                        spawn!(queue_data_internal, message)?;
-                        Ok(())
-                    });
+                cx.shared.em.run(|| {
+                    spawn!(queue_data_internal, message)?;
+                    Ok(())
+                });
             } // if there is none we still return since we simply don't have data yet.
             Ok(())
         });
@@ -308,18 +308,17 @@ mod app {
             .lock(|data_manager| data_manager.take_sensors());
 
         cx.shared.em.run(|| {
-                for msg in sensors {
-                    match msg {
-                        Some(x) => {
-                            spawn!(queue_data_internal, x)?;
-                        }
-                        None => {
-                            info!("No sensor data to send");
-                            continue;
-                        }
+            for msg in sensors {
+                match msg {
+                    Some(x) => {
+                        spawn!(queue_data_internal, x)?;
+                    }
+                    None => {
+                        info!("No sensor data to send");
+                        continue;
                     }
                 }
-            
+            }
 
             Ok(())
         });
@@ -333,7 +332,7 @@ mod app {
     #[task(priority = 3, local = [can_sender], shared = [&em])]
     async fn queue_data_internal(cx: queue_data_internal::Context, m: Message) {
         match cx.local.can_sender.send(m).await {
-            // Preferably clean this up to be handled by the error manager. 
+            // Preferably clean this up to be handled by the error manager.
             Ok(_) => {}
             Err(_) => {
                 info!("Failed to send data");
@@ -372,13 +371,11 @@ mod app {
         cx.shared.can_data_manager.lock(|can| {
             {
                 cx.shared.data_manager.lock(|data_manager| {
-
-                cx.shared.em.run(|| {
-                    can.process_data(data_manager)?;
-                    Ok(())
+                    cx.shared.em.run(|| {
+                        can.process_data(data_manager)?;
+                        Ok(())
+                    })
                 })
-            })
-
             }
         });
     }

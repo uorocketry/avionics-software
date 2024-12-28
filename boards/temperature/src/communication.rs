@@ -4,29 +4,24 @@ use crate::data_manager::DataManager;
 use crate::types::COM_ID;
 use common_arm::HydraError;
 use defmt::info;
+use fdcan::Instance;
 use fdcan::{
-    config::NominalBitTiming, filter::{StandardFilter, StandardFilterSlot}, frame::{FrameFormat, TxFrameHeader}, id::StandardId
+    config::NominalBitTiming,
+    filter::{StandardFilter, StandardFilterSlot},
+    frame::{FrameFormat, TxFrameHeader},
+    id::StandardId,
 };
 use messages::Message;
 use postcard::from_bytes;
-use fdcan::Instance;
 
 /// Clock configuration is out of scope for this builder
 /// easiest way to avoid alloc is to use no generics
 pub struct CanManager<I: Instance> {
-    can: fdcan::FdCan<
-        I,
-        fdcan::NormalOperationMode,
-    >,
+    can: fdcan::FdCan<I, fdcan::NormalOperationMode>,
 }
 
 impl<I: Instance> CanManager<I> {
-    pub fn new(
-        mut can: fdcan::FdCan<
-            I,
-            fdcan::ConfigMode,
-        >,
-    ) -> Self {
+    pub fn new(mut can: fdcan::FdCan<I, fdcan::ConfigMode>) -> Self {
         // let data_bit_timing = DataBitTiming {
         //     prescaler: NonZeroU8::new(10).unwrap(),
         //     seg1: NonZeroU8::new(13).unwrap(),
@@ -34,7 +29,7 @@ impl<I: Instance> CanManager<I> {
         //     sync_jump_width: NonZeroU8::new(4).unwrap(),
         //     transceiver_delay_compensation: true,
         // };
-                // can_data.set_automatic_retransmit(false); // data can be dropped due to its volume.
+        // can_data.set_automatic_retransmit(false); // data can be dropped due to its volume.
 
         // can_command.set_data_bit_timing(data_bit_timing);
         let btr = NominalBitTiming {
@@ -43,10 +38,10 @@ impl<I: Instance> CanManager<I> {
             seg2: NonZeroU8::new(2).unwrap(),
             sync_jump_width: NonZeroU8::new(1).unwrap(),
         };
-        
-        // Why? 
+
+        // Why?
         can.set_protocol_exception_handling(false);
-        
+
         can.set_nominal_bit_timing(btr);
         can.set_standard_filter(
             StandardFilterSlot::_0,
@@ -66,14 +61,16 @@ impl<I: Instance> CanManager<I> {
         can.enable_interrupt(fdcan::interrupt::Interrupt::RxFifo0NewMsg);
 
         can.enable_interrupt_line(fdcan::interrupt::InterruptLine::_0, true);
-        
+
         let config = can
             .get_config()
             .set_frame_transmit(fdcan::config::FrameTransmissionConfig::AllowFdCanAndBRS);
 
         can.apply_config(config);
-        
-        Self { can: can.into_normal() }
+
+        Self {
+            can: can.into_normal(),
+        }
     }
     pub fn send_message(&mut self, m: Message) -> Result<(), HydraError> {
         let mut buf = [0u8; 64];
