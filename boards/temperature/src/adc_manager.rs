@@ -42,7 +42,10 @@ impl AdcManager {
         self.adc1_cs.set_low();
         self.adc1.reset()?;
 
-        spawn!(delay, 1000);
+        match spawn!(delay, 1000) {
+            Ok(_) => (),
+            Err(_) => panic!("Failed ADC 1 init."),
+        }
 
         let mut mode1_cfg = Mode1Register::default();
         mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
@@ -63,7 +66,10 @@ impl AdcManager {
         self.adc2_cs.set_low();
         self.adc2.reset()?;
 
-        spawn!(delay, 1000);
+        match spawn!(delay, 1000) {
+            Ok(_) => (),
+            Err(_) => panic!("Failed ADC 2 init."),
+        }
 
         let mut mode1_cfg = Mode1Register::default();
         mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
