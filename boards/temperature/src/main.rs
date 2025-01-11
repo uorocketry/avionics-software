@@ -1,19 +1,18 @@
 #![no_std]
 #![no_main]
 
-mod adc_manager;
-mod communication;
-mod data_manager;
+mod managers;
 mod types;
 
-use adc_manager::AdcManager;
+use managers::AdcManager; 
+use managers::CanManager;
+use managers::DataManager;
+use managers::TimeManager;
 use chrono::NaiveDate;
 use common_arm::*;
-use communication::CanManager;
-use data_manager::DataManager;
 use defmt::info;
-use messages::Message;
-use messages::{sensor, Data};
+use messages::sensor;
+use messages::CanMessage;
 use panic_probe as _;
 use rtic_monotonics::systick::prelude::*;
 use rtic_sync::{channel::*, make_channel};
@@ -34,12 +33,12 @@ systick_monotonic!(Mono, 500);
 #[inline(never)]
 #[defmt::panic_handler]
 fn panic() -> ! {
-    // stm32h7xx_hal::pac::SCB::sys_reset()
     cortex_m::asm::udf()
 }
 
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
+    use messages::CanData;
 
     use super::*;
 
@@ -56,9 +55,10 @@ mod app {
         rtc: rtc::Rtc,
         adc_manager: AdcManager,
     }
+
     #[local]
     struct LocalResources {
-        can_sender: Sender<'static, Message, DATA_CHANNEL_CAPACITY>,
+        can_sender: Sender<'static, CanMessage, DATA_CHANNEL_CAPACITY>,
         led_red: PA2<Output<PushPull>>,
         led_green: PA3<Output<PushPull>>,
     }
@@ -66,12 +66,13 @@ mod app {
     #[init]
     fn init(ctx: init::Context) -> (SharedResources, LocalResources) {
         // channel setup
-        let (can_sender, r) = make_channel!(Message, DATA_CHANNEL_CAPACITY);
+        let (can_sender, r) = make_channel!(CanMessage, DATA_CHANNEL_CAPACITY);
 
         let core = ctx.core;
 
         /* Logging Setup */
-        HydraLogging::set_ground_station_callback(queue_log_message);
+        // turn off logging for the moment 
+        // HydraLogging::set_ground_station_callback(queue_log_message);
 
         let pwr = ctx.device.PWR.constrain();
         // We could use smps, but the board is not designed for it
@@ -232,29 +233,16 @@ mod app {
         let reason = cx
             .shared
             .data_manager
-            .lock(|data_manager| data_manager.clone_reset_reason());
+            .lock(|data_manager| data_manager.reset_reason.take());
         match reason {
             Some(reason) => {
-                let x = match reason {
-                    stm32h7xx_hal::rcc::ResetReason::BrownoutReset => sensor::ResetReason::BrownoutReset,
-                    stm32h7xx_hal::rcc::ResetReason::CpuReset => sensor::ResetReason::CpuReset,
-                    stm32h7xx_hal::rcc::ResetReason::D1EntersDStandbyErroneouslyOrCpuEntersCStopErroneously => sensor::ResetReason::D1EntersDStandbyErroneouslyOrCpuEntersCStopErroneously,
-                    stm32h7xx_hal::rcc::ResetReason::D1ExitsDStandbyMode => sensor::ResetReason::D1ExitsDStandbyMode,
-                    stm32h7xx_hal::rcc::ResetReason::D2ExitsDStandbyMode => sensor::ResetReason::D2ExitsDStandbyMode,
-                    stm32h7xx_hal::rcc::ResetReason::GenericWatchdogReset => sensor::ResetReason::GenericWatchdogReset,
-                    stm32h7xx_hal::rcc::ResetReason::IndependentWatchdogReset => sensor::ResetReason::IndependentWatchdogReset,
-                    stm32h7xx_hal::rcc::ResetReason::PinReset => sensor::ResetReason::PinReset,
-                    stm32h7xx_hal::rcc::ResetReason::PowerOnReset => sensor::ResetReason::PowerOnReset,
-                    stm32h7xx_hal::rcc::ResetReason::SystemReset => sensor::ResetReason::SystemReset,
-                    stm32h7xx_hal::rcc::ResetReason::Unknown { rcc_rsr } => sensor::ResetReason::Unknown { rcc_rsr },
-                    stm32h7xx_hal::rcc::ResetReason::WindowWatchdogReset => sensor::ResetReason::WindowWatchdogReset,
-                };
-                let message = messages::Message::new(
+
+                let message = messages::CanMessage::new(
                     cx.shared
                         .rtc
                         .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
                     COM_ID,
-                    sensor::Sensor::new(x),
+                    CanData::Common(reason.into()),
                 );
 
                 cx.shared.em.run(|| {
@@ -279,16 +267,17 @@ mod app {
             .lock(|data_manager| data_manager.state.clone());
         cx.shared.em.run(|| {
             if let Some(x) = state_data {
-                let message = Message::new(
+                let can_data: CanData = CanData::Common(x.into());
+                let message = CanMessage::new(
                     cx.shared
                         .rtc
                         .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
                     COM_ID,
-                    messages::state::State::new(x),
+                    can_data,
                 );
                 cx.shared.em.run(|| {
                     spawn!(queue_data_internal, message)?;
-                    Ok(())
+                    Ok(())  
                 });
             } // if there is none we still return since we simply don't have data yet.
             Ok(())
@@ -300,37 +289,40 @@ mod app {
     /**
      * Sends information about the sensors.
      */
-    #[task(priority = 3, shared = [data_manager, &em])]
+    #[task(priority = 3, shared = [data_manager, rtc, &em])]
     async fn sensor_send(mut cx: sensor_send::Context) {
         let sensors = cx
             .shared
             .data_manager
-            .lock(|data_manager| data_manager.take_sensors());
+            .lock(|data_manager| data_manager.temperature.take());
 
         cx.shared.em.run(|| {
-            for msg in sensors {
-                match msg {
-                    Some(x) => {
-                        spawn!(queue_data_internal, x)?;
-                    }
-                    None => {
-                        info!("No sensor data to send");
-                        continue;
+            match sensors {
+                Some(x) => {
+                    for sensor in x.iter() {
+                        let message = CanMessage::new(
+                            messages::FormattedNaiveDateTime(cx.shared.rtc.lock(|rtc| rtc.date_time().unwrap())),
+                            COM_ID,
+                            CanData::Temperature(*sensor),
+                        );
+                        spawn!(queue_data_internal, message)?;
                     }
                 }
+                None => {
+                    info!("No sensor data to send");
+                }
             }
-
             Ok(())
         });
     }
 
     /// Callback for our logging library to access the needed resources.
-    pub fn queue_log_message(d: impl Into<Data>) {
+    pub fn queue_log_message(d: impl Into<CanData>) {
         send_log_intermediate::spawn(d.into()).ok();
     }
 
     #[task(priority = 3, local = [can_sender], shared = [&em])]
-    async fn queue_data_internal(cx: queue_data_internal::Context, m: Message) {
+    async fn queue_data_internal(cx: queue_data_internal::Context, m: CanMessage) {
         match cx.local.can_sender.send(m).await {
             // Preferably clean this up to be handled by the error manager.
             Ok(_) => {}
@@ -341,10 +333,10 @@ mod app {
     }
 
     #[task(priority = 3, shared = [rtc, &em])]
-    async fn send_log_intermediate(mut cx: send_log_intermediate::Context, m: Data) {
+    async fn send_log_intermediate(mut cx: send_log_intermediate::Context, m: CanData) {
         cx.shared.em.run(|| {
             cx.shared.rtc.lock(|rtc| {
-                let message = messages::Message::new(
+                let message = messages::CanMessage::new(
                     messages::FormattedNaiveDateTime(rtc.date_time().unwrap()),
                     COM_ID,
                     m,
@@ -383,7 +375,7 @@ mod app {
     #[task(priority = 2, shared = [&em, can_data_manager, data_manager])]
     async fn send_data_internal(
         mut cx: send_data_internal::Context,
-        mut receiver: Receiver<'static, Message, DATA_CHANNEL_CAPACITY>,
+        mut receiver: Receiver<'static, CanMessage, DATA_CHANNEL_CAPACITY>,
     ) {
         loop {
             if let Ok(m) = receiver.recv().await {
@@ -398,7 +390,7 @@ mod app {
     }
 
     #[task(priority = 2, shared = [&em, can_command_manager, data_manager])]
-    async fn send_command_internal(mut cx: send_command_internal::Context, m: Message) {
+    async fn send_command_internal(mut cx: send_command_internal::Context, m: CanMessage) {
         cx.shared.can_command_manager.lock(|can| {
             cx.shared.em.run(|| {
                 can.send_message(m)?;
