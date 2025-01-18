@@ -1,12 +1,15 @@
 #![no_std]
 #![no_main]
 
+use common_arm::ErrorManager;
 use defmt::info;
 use panic_probe as _;
 use rtic_monotonics::systick::prelude::*;
 use stm32h7xx_hal::prelude::*;
-use common_arm::ErrorManager;
-use stm32h7xx_hal::{gpio::{Output, PushPull, PA2, PA3}, rcc};
+use stm32h7xx_hal::{
+    gpio::{Output, PushPull, PA2, PA3},
+    rcc,
+};
 
 systick_monotonic!(Mono, 500);
 
@@ -18,7 +21,6 @@ fn panic() -> ! {
 
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
-
 
     use super::*;
 
@@ -68,20 +70,15 @@ mod app {
         info!("Online");
 
         (
-            SharedResources {
-                em,
-            },
-            LocalResources {
-                led_red,
-                led_green,
-            },
+            SharedResources { em },
+            LocalResources { led_red, led_green },
         )
     }
 
     #[task(priority = 1, local = [led_red, led_green], shared = [&em])]
     async fn blink(cx: blink::Context) {
         loop {
-            // check for errors. 
+            // check for errors.
             if cx.shared.em.has_error() {
                 cx.local.led_red.toggle();
                 Mono::delay(500.millis()).await;

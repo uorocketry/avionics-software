@@ -2,15 +2,16 @@
 #![no_main]
 
 mod managers;
+mod state_machine;
 mod types;
 
-use managers::AdcManager; 
-use managers::CanManager;
-use managers::DataManager;
-use managers::TimeManager;
 use chrono::NaiveDate;
 use common_arm::*;
 use defmt::info;
+use managers::AdcManager;
+use managers::CanManager;
+use managers::DataManager;
+use managers::TimeManager;
 use messages::sensor;
 use messages::CanMessage;
 use panic_probe as _;
@@ -39,6 +40,7 @@ fn panic() -> ! {
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
     use messages::CanData;
+    use state_machine::{StateMachine, StateMachineContext};
 
     use super::*;
 
@@ -58,6 +60,7 @@ mod app {
 
     #[local]
     struct LocalResources {
+        state_machine: StateMachine,
         can_sender: Sender<'static, CanMessage, DATA_CHANNEL_CAPACITY>,
         led_red: PA2<Output<PushPull>>,
         led_green: PA3<Output<PushPull>>,
@@ -66,12 +69,12 @@ mod app {
     #[init]
     fn init(ctx: init::Context) -> (SharedResources, LocalResources) {
         // channel setup
-        let (can_sender, r) = make_channel!(CanMessage, DATA_CHANNEL_CAPACITY);
+        let (can_sender, can_receiver) = make_channel!(CanMessage, DATA_CHANNEL_CAPACITY);
 
         let core = ctx.core;
 
         /* Logging Setup */
-        // turn off logging for the moment 
+        // turn off logging for the moment
         // HydraLogging::set_ground_station_callback(queue_log_message);
 
         let pwr = ctx.device.PWR.constrain();
@@ -205,7 +208,8 @@ mod app {
         data_manager.set_reset_reason(reset);
         let em = ErrorManager::new();
         blink::spawn().ok();
-        send_data_internal::spawn(r).ok();
+        run_sm::spawn().ok();
+        send_data_internal::spawn(can_receiver).ok();
         reset_reason_send::spawn().ok();
         state_send::spawn().ok();
         info!("Online");
@@ -224,8 +228,18 @@ mod app {
                 can_sender,
                 led_red,
                 led_green,
+                state_machine: StateMachine::new(),
             },
         )
+    }
+
+    #[task(priority = 3, local = [state_machine], shared = [data_manager, &em, rtc])]
+    async fn run_sm(mut cx: run_sm::Context) {
+        loop {
+            cx.local.state_machine.run(&mut StateMachineContext {
+                shared_resources: &mut cx.shared,
+            });
+        }
     }
 
     #[task(priority = 3, shared = [data_manager, &em, rtc])]
@@ -236,7 +250,6 @@ mod app {
             .lock(|data_manager| data_manager.reset_reason.take());
         match reason {
             Some(reason) => {
-
                 let message = messages::CanMessage::new(
                     cx.shared
                         .rtc
@@ -277,7 +290,7 @@ mod app {
                 );
                 cx.shared.em.run(|| {
                     spawn!(queue_data_internal, message)?;
-                    Ok(())  
+                    Ok(())
                 });
             } // if there is none we still return since we simply don't have data yet.
             Ok(())
@@ -301,7 +314,9 @@ mod app {
                 Some(x) => {
                     for sensor in x.iter() {
                         let message = CanMessage::new(
-                            messages::FormattedNaiveDateTime(cx.shared.rtc.lock(|rtc| rtc.date_time().unwrap())),
+                            messages::FormattedNaiveDateTime(
+                                cx.shared.rtc.lock(|rtc| rtc.date_time().unwrap()),
+                            ),
                             COM_ID,
                             CanData::Temperature(*sensor),
                         );

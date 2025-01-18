@@ -1,10 +1,10 @@
 use common_arm::HydraError;
 use messages::command::RadioRate;
-use messages::CanMessage;
+use messages::state::State;
 use messages::CanData;
-use stm32h7xx_hal::rcc::ResetReason;
-use messages::state::State; 
+use messages::CanMessage;
 use messages::Temperature;
+use stm32h7xx_hal::rcc::ResetReason;
 
 #[derive(Clone)]
 pub struct DataManager {
@@ -40,24 +40,21 @@ impl DataManager {
         self.reset_reason = Some(reset);
     }
 
-    /// Handle an incomming command from the network. 
+    /// Handle an incomming command from the network.
     pub fn handle_command(&mut self, data: CanMessage) -> Result<(), HydraError> {
         match data.data {
             messages::CanData::Common(common) => match common {
                 messages::Common::Command(command) => match command {
                     messages::command::Command::RadioRateChange(rate) => {
                         self.logging_rate = Some(rate.rate);
-                    },
-                    _ => {
                     }
-                }, 
-                _ => {
-                }
+                    _ => {}
+                },
+                _ => {}
             },
-            _ => {
-            }
+            _ => {}
         }
-        
+
         Ok(())
     }
 }

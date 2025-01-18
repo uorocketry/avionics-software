@@ -9,10 +9,7 @@ use messages::command::{Command, RadioRate, RadioRateChange};
 use messages::Message;
 use rtic::mutex::Mutex;
 
-#[derive(Debug, Clone)]
-pub struct Calibration {}
-
-impl State for Calibration {
+impl State for messages::state::DeviceState::Ascent {
     fn enter(&self, context: &mut StateMachineContext) {
         let radio_rate_change = RadioRateChange {
             rate: RadioRate::Fast,
@@ -44,14 +41,14 @@ impl State for Calibration {
     }
 }
 
-impl TransitionInto<Calibration> for WaitForTakeoff {
-    fn transition(&self) -> Calibration {
-        Calibration {}
+impl TransitionInto<Ascent> for WaitForTakeoff {
+    fn transition(&self) -> Ascent {
+        Ascent {}
     }
 }
 
-impl Format for Calibration {
+impl Format for Ascent {
     fn format(&self, f: Formatter) {
-        write!(f, "Calibration")
+        write!(f, "Ascent")
     }
 }

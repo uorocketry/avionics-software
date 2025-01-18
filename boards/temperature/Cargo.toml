@@ -21,6 +21,7 @@ rtic-sync = { workspace = true }
 defmt-rtt = { workspace = true }
 panic-probe = { workspace = true }
 chrono = { workspace = true }
+enum_dispatch = {workspace = true}
 messages = {workspace = true}
 ads126x = {path = "../../crates/ads126x"}
 
@@ -30,6 +31,12 @@ defmt-test = { workspace = true }
 [[test]]
 name = "sd"
 harness = false
+path = "tests/sd.rs"
+
+[[test]]
+name = "adc"
+harness = false
+path = "tests/adc.rs"
 
 [[bin]]
 name = "temperature"

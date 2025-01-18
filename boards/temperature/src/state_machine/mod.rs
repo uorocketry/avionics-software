@@ -11,8 +11,8 @@ use core::fmt::Debug;
 use defmt::Format;
 use enum_dispatch::enum_dispatch;
 use messages::state::State;
+pub use messages::state::State::Initializing;
 use rtic::Mutex;
-pub use states::Initializing;
 
 pub trait StateMachineSharedResources {
     fn lock_can(&mut self, f: &dyn Fn(&mut CanDevice0));
@@ -40,7 +40,7 @@ pub struct StateMachineContext<'a, 'b> {
     pub shared_resources: &'b mut crate::app::__rtic_internal_run_smSharedResources<'a>,
 }
 pub struct StateMachine {
-    state: RocketStates,
+    state: State,
 }
 
 // Define some functions to interact with the state machine
@@ -61,7 +61,7 @@ impl StateMachine {
         }
     }
 
-    pub fn get_state(&self) -> RocketStates {
+    pub fn get_state(&self) -> State {
         self.state.clone()
     }
 }
@@ -72,11 +72,11 @@ impl Default for StateMachine {
     }
 }
 
-// All events are found here
-pub enum RocketEvents {
-    DeployDrogue,
-    DeployMain,
-}
+// // All events are found here
+// pub enum RocketEvents {
+//     DeployDrogue,
+//     DeployMain,
+// }
 
 // // All states are defined here. Another struct must be defined for the actual state, and that struct
 // // must implement the State trait
@@ -92,32 +92,32 @@ pub enum RocketEvents {
 //     Abort,
 // }
 
-// Not a fan of this.
-// Should be able to put this is a shared library.
-impl From<state::StateData> for RocketStates {
-    fn from(state: state::StateData) -> Self {
-        match state {
-            state::StateData::Initializing => RocketStates::Initializing(Initializing {}),
-            state::StateData::WaitForTakeoff => RocketStates::WaitForTakeoff(WaitForTakeoff {}),
-            state::StateData::Ascent => RocketStates::Ascent(Ascent {}),
-            state::StateData::Descent => RocketStates::Descent(Descent {}),
-            state::StateData::TerminalDescent => RocketStates::TerminalDescent(TerminalDescent {}),
-            state::StateData::WaitForRecovery => RocketStates::WaitForTakeoff(WaitForTakeoff {}),
-            state::StateData::Abort => RocketStates::Abort(Abort {}),
-        }
-    }
-}
-// Linter: an implementation of From is preferred since it gives you Into<_> for free where the reverse isn't true
-impl From<RocketStates> for state::StateData {
-    fn from(val: RocketStates) -> Self {
-        match val {
-            RocketStates::Initializing(_) => state::StateData::Initializing,
-            RocketStates::WaitForTakeoff(_) => state::StateData::WaitForTakeoff,
-            RocketStates::Ascent(_) => state::StateData::Ascent,
-            RocketStates::Descent(_) => state::StateData::Descent,
-            RocketStates::TerminalDescent(_) => state::StateData::TerminalDescent,
-            RocketStates::WaitForRecovery(_) => state::StateData::WaitForRecovery,
-            RocketStates::Abort(_) => state::StateData::Abort,
-        }
-    }
-}
+// // Not a fan of this.
+// // Should be able to put this is a shared library.
+// impl From<messages::state::State> for RocketStates {
+//     fn from(state: messages::state::State) -> Self {
+//         match state {
+//             state::StateData::Initializing => RocketStates::Initializing(Initializing {}),
+//             state::StateData::WaitForTakeoff => RocketStates::WaitForTakeoff(WaitForTakeoff {}),
+//             state::StateData::Ascent => RocketStates::Ascent(Ascent {}),
+//             state::StateData::Descent => RocketStates::Descent(Descent {}),
+//             state::StateData::TerminalDescent => RocketStates::TerminalDescent(TerminalDescent {}),
+//             state::StateData::WaitForRecovery => RocketStates::WaitForTakeoff(WaitForTakeoff {}),
+//             state::StateData::Abort => RocketStates::Abort(Abort {}),
+//         }
+//     }
+// }
+// // Linter: an implementation of From is preferred since it gives you Into<_> for free where the reverse isn't true
+// impl From<RocketStates> for state::StateData {
+//     fn from(val: RocketStates) -> Self {
+//         match val {
+//             RocketStates::Initializing(_) => state::StateData::Initializing,
+//             RocketStates::WaitForTakeoff(_) => state::StateData::WaitForTakeoff,
+//             RocketStates::Ascent(_) => state::StateData::Ascent,
+//             RocketStates::Descent(_) => state::StateData::Descent,
+//             RocketStates::TerminalDescent(_) => state::StateData::TerminalDescent,
+//             RocketStates::WaitForRecovery(_) => state::StateData::WaitForRecovery,
+//             RocketStates::Abort(_) => state::StateData::Abort,
+//         }
+//     }
+// }
