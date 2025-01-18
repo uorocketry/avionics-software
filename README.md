@@ -5,7 +5,7 @@ uORocketry's rocket instrumentation system.
 
 - Install Rust using downloader or script https://www.rust-lang.org/tools/install
 - `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-- `cargo install probe-rs --version 0.23.0`
+- `curl --proto '=https' --tlsv1.2 -LsSf https://github.com/probe-rs/probe-rs/releases/latest/download/probe-rs-tools-installer.sh | sh`
 - `cargo install cargo-make`
 - `git clone https://github.com/uorocketry/argus.git`
 - `cargo b`
