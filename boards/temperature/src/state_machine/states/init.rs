@@ -1,18 +1,14 @@
-use crate::state_machine::states::descent::Descent;
-use crate::state_machine::states::wait_for_takeoff::WaitForTakeoff;
 use crate::state_machine::{RocketStates, State, StateMachineContext, TransitionInto};
 use crate::types::COM_ID;
-use crate::RTC;
 use crate::{no_transition, transition};
 use defmt::{write, Format, Formatter};
 use messages::command::{Command, RadioRate, RadioRateChange};
-use messages::Message;
 use rtic::mutex::Mutex;
 
 #[derive(Debug, Clone)]
-pub struct Ascent {}
+pub struct Init {}
 
-impl State for Ascent {
+impl State for Init {
     fn enter(&self, context: &mut StateMachineContext) {
         let radio_rate_change = RadioRateChange {
             rate: RadioRate::Fast,
@@ -26,6 +22,9 @@ impl State for Ascent {
             COM_ID,
             Command::new(radio_rate_change),
         );
+        context.shared_resources.shared.data_manager.lock(|data| {
+
+        }); 
         context.shared_resources.can0.lock(|can| {
             context.shared_resources.em.run(|| {
                 can.send_message(message_com)?;
@@ -44,14 +43,14 @@ impl State for Ascent {
     }
 }
 
-impl TransitionInto<Ascent> for WaitForTakeoff {
-    fn transition(&self) -> Ascent {
-        Ascent {}
+impl TransitionInto<Init> for WaitForTakeoff {
+    fn transition(&self) -> Init {
+        Init {}
     }
 }
 
-impl Format for Ascent {
+impl Format for Init {
     fn format(&self, f: Formatter) {
-        write!(f, "Ascent")
+        write!(f, "Init")
     }
 }

@@ -1,6 +1,6 @@
 use crate::state_machine::states::descent::Descent;
 use crate::state_machine::states::wait_for_takeoff::WaitForTakeoff;
-use crate::state_machine::{RocketStates, State, StateMachineContext, TransitionInto};
+use crate::state_machine::{RocketStates, State, StateMachineContext, TemperatureBoardState, TransitionInto};
 use crate::types::COM_ID;
 use crate::RTC;
 use crate::{no_transition, transition};
@@ -9,7 +9,10 @@ use messages::command::{Command, RadioRate, RadioRateChange};
 use messages::Message;
 use rtic::mutex::Mutex;
 
-impl State for messages::state::DeviceState::Ascent {
+#[derive(Debug, Clone)]
+pub struct Discovery {}
+
+impl State for Discovery {
     fn enter(&self, context: &mut StateMachineContext) {
         let radio_rate_change = RadioRateChange {
             rate: RadioRate::Fast,
@@ -41,14 +44,14 @@ impl State for messages::state::DeviceState::Ascent {
     }
 }
 
-impl TransitionInto<Ascent> for WaitForTakeoff {
-    fn transition(&self) -> Ascent {
-        Ascent {}
+impl TransitionInto<Discovery> for WaitForTakeoff {
+    fn transition(&self) -> Discovery {
+        Discovery {}
     }
 }
 
-impl Format for Ascent {
+impl Format for Discovery {
     fn format(&self, f: Formatter) {
-        write!(f, "Ascent")
+        write!(f, "Discovery")
     }
 }

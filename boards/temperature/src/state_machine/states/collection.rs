@@ -10,9 +10,9 @@ use messages::Message;
 use rtic::mutex::Mutex;
 
 #[derive(Debug, Clone)]
-pub struct Ascent {}
+pub struct Collection {}
 
-impl State for Ascent {
+impl State for Collection {
     fn enter(&self, context: &mut StateMachineContext) {
         let radio_rate_change = RadioRateChange {
             rate: RadioRate::Fast,
@@ -44,14 +44,14 @@ impl State for Ascent {
     }
 }
 
-impl TransitionInto<Ascent> for WaitForTakeoff {
-    fn transition(&self) -> Ascent {
-        Ascent {}
+impl TransitionInto<Collection> for WaitForTakeoff {
+    fn transition(&self) -> Collection {
+        Collection {}
     }
 }
 
-impl Format for Ascent {
+impl Format for Collection {
     fn format(&self, f: Formatter) {
-        write!(f, "Ascent")
+        write!(f, "Collection")
     }
 }

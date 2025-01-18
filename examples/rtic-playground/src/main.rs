@@ -78,6 +78,7 @@ mod app {
     #[task(priority = 1, local = [led_red, led_green], shared = [&em])]
     async fn blink(cx: blink::Context) {
         loop {
+            info!("Blinking");
             // check for errors.
             if cx.shared.em.has_error() {
                 cx.local.led_red.toggle();

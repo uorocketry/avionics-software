@@ -6,7 +6,9 @@ mod idle;
 mod init;
 mod terminal_descent;
 
-pub use crate::state_machine::state::idle::Idle;
+pub use crate::state_machine::states::idle::Idle;
 pub use crate::state_machine::states::ascent::Ascent;
-pub use crate::state_machine::states::wait_for_recovery::WaitForRecovery;
-pub use crate::state_machine::states::wait_for_takeoff::WaitForTakeoff;
+pub use crate::state_machine::states::init::Init;
+pub use crate::state_machine::states::calibration::Calibration;
+pub use crate::state_machine::states::collection::Collection;
+pub use crate::state_machine::states::discovery::Discovery;

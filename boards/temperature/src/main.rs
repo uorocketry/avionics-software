@@ -40,7 +40,7 @@ fn panic() -> ! {
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
     use messages::CanData;
-    use state_machine::{StateMachine, StateMachineContext};
+    use state_machine::{StateMachine};
 
     use super::*;
 
@@ -236,9 +236,7 @@ mod app {
     #[task(priority = 3, local = [state_machine], shared = [data_manager, &em, rtc])]
     async fn run_sm(mut cx: run_sm::Context) {
         loop {
-            cx.local.state_machine.run(&mut StateMachineContext {
-                shared_resources: &mut cx.shared,
-            });
+            cx.local.state_machine.run(cx);
         }
     }
 
