@@ -1,14 +1,13 @@
 use common_arm::HydraError;
 use messages::command::RadioRate;
-use messages::state::State;
-use messages::CanData;
+use messages::state::DeviceState;
 use messages::CanMessage;
 use messages::Temperature;
 use stm32h7xx_hal::rcc::ResetReason;
 
 #[derive(Clone)]
 pub struct DataManager {
-    pub state: Option<State>,
+    pub state: Option<DeviceState>,
     pub reset_reason: Option<ResetReason>,
     pub logging_rate: Option<RadioRate>,
     pub recovery_sensing: Option<CanMessage>,

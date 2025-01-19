@@ -1,22 +1,25 @@
 #![no_std]
 #![no_main]
 
-mod managers;
-mod state_machine;
+// mod state_machine;
+mod adc_manager;
+mod can_manager;
+mod data_manager;
+mod time_manager;
+mod traits;
 mod types;
 
+use adc_manager::AdcManager;
+use can_manager::CanManager;
 use chrono::NaiveDate;
 use common_arm::*;
+use data_manager::DataManager;
 use defmt::info;
-use managers::AdcManager;
-use managers::CanManager;
-use managers::DataManager;
-use managers::TimeManager;
-use messages::sensor;
 use messages::CanMessage;
 use panic_probe as _;
 use rtic_monotonics::systick::prelude::*;
 use rtic_sync::{channel::*, make_channel};
+use smlang::statemachine;
 use stm32h7xx_hal::gpio::gpioa::{PA2, PA3};
 use stm32h7xx_hal::gpio::Speed;
 use stm32h7xx_hal::gpio::PA4;
@@ -31,6 +34,18 @@ const DATA_CHANNEL_CAPACITY: usize = 10;
 
 systick_monotonic!(Mono, 500);
 
+statemachine! {
+    transitions: {
+        *Init + Start = Idle,
+        Idle + WantsCollection = Collection,
+        Idle + NoConfig = Calibration,
+        Collection + WantsProcessing = Processing,
+        Recovery + StorageError = Discovery, // we need to find another board to store the data.
+        Calibration + Configured = Idle,
+
+    }
+}
+
 #[inline(never)]
 #[defmt::panic_handler]
 fn panic() -> ! {
@@ -40,7 +55,6 @@ fn panic() -> ! {
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI1, EXTI2, SPI3, SPI2])]
 mod app {
     use messages::CanData;
-    use state_machine::{StateMachine};
 
     use super::*;
 
@@ -60,7 +74,7 @@ mod app {
 
     #[local]
     struct LocalResources {
-        state_machine: StateMachine,
+        state_machine: StateMachine<traits::Context>,
         can_sender: Sender<'static, CanMessage, DATA_CHANNEL_CAPACITY>,
         led_red: PA2<Output<PushPull>>,
         led_green: PA3<Output<PushPull>>,
@@ -207,6 +221,8 @@ mod app {
         let mut data_manager = DataManager::new();
         data_manager.set_reset_reason(reset);
         let em = ErrorManager::new();
+        let state_machine = StateMachine::new(traits::Context { num_transitions: 0 });
+
         blink::spawn().ok();
         run_sm::spawn().ok();
         send_data_internal::spawn(can_receiver).ok();
@@ -228,15 +244,15 @@ mod app {
                 can_sender,
                 led_red,
                 led_green,
-                state_machine: StateMachine::new(),
+                state_machine,
             },
         )
     }
 
     #[task(priority = 3, local = [state_machine], shared = [data_manager, &em, rtc])]
-    async fn run_sm(mut cx: run_sm::Context) {
+    async fn run_sm(cx: run_sm::Context) {
         loop {
-            cx.local.state_machine.run(cx);
+            // cx.local.state_machine.run(cx);
         }
     }
 

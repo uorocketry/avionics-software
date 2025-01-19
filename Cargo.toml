@@ -68,11 +68,15 @@ version = "0.7.16"
 version = "0.5.0"
 
 [workspace.dependencies.messages]
-git = "https://github.com/uorocketry/messages"
-branch = "state-update"
+#git = "https://github.com/uorocketry/messages"
+#branch = "state-update"
+path = "/home/bonjour/Rocketry/messages"
 
 [workspace.dependencies.defmt-test]
 version = "0.3.2"
 
 [workspace.dependencies.enum_dispatch]
 version = "0.3.11"
+
+[workspace.dependencies.smlang]
+version = "0.8.0"

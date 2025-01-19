@@ -533,17 +533,18 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 [[package]]
 name = "messages"
 version = "0.1.0"
-source = "git+https://github.com/uorocketry/messages?branch=state-update#3210cf3b5cd2b884b3585ed40cf241917ac6426c"
 dependencies = [
  "bitflags 2.7.0",
  "chrono",
  "defmt",
  "derive_more",
+ "enum_dispatch",
  "fugit",
  "heapless 0.7.17",
  "mavlink",
  "messages-proc-macros-lib",
  "serde",
+ "smlang",
  "stm32h7xx-hal",
  "ublox",
 ]
@@ -551,7 +552,6 @@ dependencies = [
 [[package]]
 name = "messages-proc-macros-lib"
 version = "0.1.0"
-source = "git+https://github.com/uorocketry/messages?branch=state-update#3210cf3b5cd2b884b3585ed40cf241917ac6426c"
 dependencies = [
  "quote",
  "serde",
@@ -890,6 +890,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "smlang"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1de84f9f80bbe6272174e2bfdb8cf7ce4815b218038a42161c2f21c1d872c215"
+dependencies = [
+ "smlang-macros",
+]
+
+[[package]]
+name = "smlang-macros"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "231b4425dcc43afc7e18c34e7c6738cd252d42d91d909c948df14107c9ae79f1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "string_morph",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -954,6 +975,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "string_morph"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "183aaf7fa637cc7b5f54c45b8f7cb6e8d73831f9f75a56b6defa5bf8c51d1699"
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -997,6 +1024,7 @@ dependencies = [
  "rtic",
  "rtic-monotonics",
  "rtic-sync",
+ "smlang",
  "stm32h7xx-hal",
 ]
 

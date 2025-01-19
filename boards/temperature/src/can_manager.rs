@@ -1,6 +1,6 @@
 use core::num::{NonZeroU16, NonZeroU8};
 
-use crate::managers::data_manager::DataManager;
+use crate::data_manager::DataManager;
 use crate::types::COM_ID;
 use common_arm::HydraError;
 use defmt::info;

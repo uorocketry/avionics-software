@@ -24,6 +24,7 @@ chrono = { workspace = true }
 enum_dispatch = {workspace = true}
 messages = {workspace = true}
 ads126x = {path = "../../crates/ads126x"}
+smlang = {workspace = true}
 
 [dev-dependencies]
 defmt-test = { workspace = true }
