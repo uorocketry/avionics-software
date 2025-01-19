@@ -37,12 +37,12 @@ systick_monotonic!(Mono, 500);
 statemachine! {
     transitions: {
         *Init + Start = Idle,
-        Idle + WantsCollection = Collection,
+        Idle | Recovery + WantsCollection = Collection,
         Idle + NoConfig = Calibration,
         Collection + WantsProcessing = Processing,
-        Recovery + StorageError = Discovery, // we need to find another board to store the data.
         Calibration + Configured = Idle,
-
+        Fault + FaultCleared = Idle, 
+        _ + FaultDetected = Fault, 
     }
 }
 
@@ -221,7 +221,7 @@ mod app {
         let mut data_manager = DataManager::new();
         data_manager.set_reset_reason(reset);
         let em = ErrorManager::new();
-        let state_machine = StateMachine::new(traits::Context { num_transitions: 0 });
+        let state_machine = StateMachine::new(traits::Context {});
 
         blink::spawn().ok();
         run_sm::spawn().ok();

@@ -4,9 +4,7 @@ use messages::state::DeviceState;
 
 use crate::StateMachineContext;
 
-pub struct Context {
-    pub num_transitions: usize,
-}
+pub struct Context {}
 
 impl StateMachineContext for Context {}
 
@@ -15,11 +13,11 @@ impl From<States> for DeviceState {
         match value {
             States::Idle => DeviceState::Idle,
             States::Calibration => DeviceState::Calibration,
-            States::Discovery => DeviceState::Discovery,
             States::Recovery => DeviceState::Recovery,
             States::Collection => DeviceState::Collection,
             States::Init => DeviceState::Init,
             States::Processing => DeviceState::Processing,
+            States::Fault => DeviceState::Fault,
         }
     }
 }
