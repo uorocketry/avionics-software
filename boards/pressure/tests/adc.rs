@@ -7,10 +7,10 @@ use common_arm::SdManager;
 use defmt::info;
 use panic_probe as _;
 use stm32h7xx_hal::gpio::{Output, Pin, PushPull, PA4};
+use stm32h7xx_hal::nb;
 use stm32h7xx_hal::pac;
 use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::spi::{self, Spi};
-use stm32h7xx_hal::nb;
 
 // There is an option to use interrupts using the data ready pins, but for now we will poll.
 pub struct AdcManager {
@@ -41,7 +41,7 @@ impl AdcManager {
     pub fn init_adc1(&mut self) -> Result<(), ads126x::error::ADS126xError> {
         self.adc2_cs.set_high();
         self.adc1_cs.set_low();
-        self.adc1.reset()?;
+        self.adc1.set_reset_high()?;
 
         // 2^16 cycles of delay
         cortex_m::asm::delay(65536);
@@ -57,11 +57,11 @@ impl AdcManager {
         let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;
         let mode2_cfg_real = self.adc1.get_mode2(&mut self.spi)?;
 
-        // verify 
+        // verify
         info!("Mode1: {:#010b}", mode1_cfg_real.bits());
         info!("Mode2: {:#010b}", mode2_cfg_real.bits());
-        assert!(mode1_cfg.difference(mode1_cfg_real).is_empty()); 
-        assert!(mode2_cfg.difference(mode2_cfg_real).is_empty()); 
+        assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
+        assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
 
         self.adc1.send_command(ADCCommand::START1, &mut self.spi)?;
         // self.adc1.send_command(ADCCommand::START2, &mut self.spi)?;
@@ -72,7 +72,7 @@ impl AdcManager {
     pub fn init_adc2(&mut self) -> Result<(), ads126x::error::ADS126xError> {
         self.adc1_cs.set_high();
         self.adc2_cs.set_low();
-        self.adc2.reset()?;
+        self.adc2.set_reset_high()?;
         info!("ADC2 reset");
 
         cortex_m::asm::delay(65536);
@@ -94,34 +94,40 @@ impl AdcManager {
         Ok(())
     }
 
-    pub fn read_adc1_data(&mut self, negative: ads126x::register::NegativeInpMux, positive: ads126x::register::PositiveInpMux) -> Result<[u8; 4], ads126x::error::ADS126xError> {
+    pub fn read_adc1_data(
+        &mut self,
+        negative: ads126x::register::NegativeInpMux,
+        positive: ads126x::register::PositiveInpMux,
+    ) -> Result<[u8; 4], ads126x::error::ADS126xError> {
         info!("setting pins");
-        // check if our inputmux is set to use the right pins. 
-        self.adc2_cs.set_high(); // disable adc 2 
+        // check if our inputmux is set to use the right pins.
+        self.adc2_cs.set_high(); // disable adc 2
         self.adc1_cs.set_low(); // enable adc 1
         info!("Pins set");
-        // configure the input mux 
+        // configure the input mux
         let mut reg = ads126x::register::InpMuxRegister::default();
         reg.set_muxn(negative);
         reg.set_muxp(positive);
         self.adc1.set_inpmux(&reg, &mut self.spi)?;
         info!("Input mux set");
-        // ask for data 
+        // ask for data
         self.adc1.send_command(ADCCommand::RDATA1, &mut self.spi)?;
         cortex_m::asm::delay(240_000_000);
-        
+
         info!("Data requested");
         // read 4 bytes of data from the spi
         let mut data = [0; 4];
         for i in 0..4 {
-            data[i] = self.spi.read().map_err(|_| ads126x::error::ADS126xError::IO)?;
+            data[i] = self
+                .spi
+                .read()
+                .map_err(|_| ads126x::error::ADS126xError::IO)?;
             info!("Data read");
-        }        
+        }
 
         Ok(data)
     }
 }
-
 
 #[defmt_test::tests]
 mod tests {
@@ -181,7 +187,7 @@ mod tests {
         let adc2_rst = gpiod.pd1.into_push_pull_output();
 
         let mut adc_manager = AdcManager::new(adc_spi, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
-        
+
         adc_manager.init_adc1().ok();
 
         // adc_manager.init_adc2().ok();
@@ -194,7 +200,10 @@ mod tests {
         adc_manager.adc2_cs.set_high();
         adc_manager.adc1_cs.set_low();
 
-        let data = adc_manager.read_adc1_data(ads126x::register::NegativeInpMux::AIN1, ads126x::register::PositiveInpMux::AIN0); 
+        let data = adc_manager.read_adc1_data(
+            ads126x::register::NegativeInpMux::AIN1,
+            ads126x::register::PositiveInpMux::AIN0,
+        );
         if let Ok(data) = data {
             info!("Data: {:?}", data);
         } else {

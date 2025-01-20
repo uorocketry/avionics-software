@@ -5,12 +5,17 @@ pub mod error;
 pub mod register;
 
 use bitflags::Flags;
+use cortex_m::asm::delay;
+use cortex_m::prelude::_embedded_hal_blocking_spi_Transfer;
 use defmt::info;
+use embedded_hal::blocking::spi::Transactional;
 use error::ADS126xError;
 use register::{
-    Adc2CfgRegister, Adc2MuxRegister, GpioConRegister, GpioDatRegister, GpioDirRegister, IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register, Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, StatusRegister, TdacnRegister, TdacpRegister
+    Adc2CfgRegister, Adc2MuxRegister, GpioConRegister, GpioDatRegister, GpioDirRegister,
+    IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register,
+    Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, StatusRegister,
+    TdacnRegister, TdacpRegister,
 };
-use cortex_m::asm::delay;
 
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::spi::FullDuplex;
@@ -53,17 +58,19 @@ where
         Self { reset_pin }
     }
 
-    pub fn reset(&mut self) -> Result<()> {
-        // self.reset_pin.set_high().map_err(|_| ADS126xError::IO)?;
-        // delay(50_000_000);
-        self.reset_pin.set_low().map_err(|_| ADS126xError::IO)?;
-        delay(50_000_000);
+    // consolidate this logic to one function.
+    pub fn set_reset_high(&mut self) -> Result<()> {
         self.reset_pin.set_high().map_err(|_| ADS126xError::IO)?;
-        delay(50_000_000);
         Ok(())
     }
 
-    pub fn send_command<SPI>(&mut self, command: ADCCommand, spi: &mut SPI) -> Result<StatusRegister>
+    pub fn set_reset_low(&mut self) -> Result<()> {
+        self.reset_pin.set_low().map_err(|_| ADS126xError::IO)?;
+        Ok(())
+    }
+
+    /// to issue read data command call read_data1 or read_data2.
+    pub fn send_command<SPI>(&mut self, command: ADCCommand, spi: &mut SPI) -> Result<()>
     where
         SPI: FullDuplex<u8>,
     {
@@ -87,18 +94,25 @@ where
         };
         info!("Sending opcode 1: {:#04x}", opcode1);
 
-        nb::block!(spi.send(opcode1)).map_err(|_| ADS126xError::IO)?;
-        let data = spi.read().map_err(|_| ADS126xError::IO)?;
-        let status = StatusRegister::from_bits_retain(data);
-        if let Some(op2) = opcode2 {
-            info!("Sending opcode 2: {:#04x}", opcode2);
-            spi.send(op2).map_err(|_| ADS126xError::IO)?;
-        } else {
-            info!("Sending opcode2 zerod: {:#04x}", opcode2);
-            spi.send(0).map_err(|_| ADS126xError::IO)?;
+        spi.send(opcode1).map_err(|_| ADS126xError::IO)?;
+        if let Some(opcode2) = opcode2 {
+            spi.send(opcode2).map_err(|_| ADS126xError::IO)?;
         }
 
-        Ok(status)
+        Ok(())
+    }
+
+    pub fn read_data1<SPI>(&mut self, spi: &mut SPI) -> Result<i32>
+    where
+        SPI: FullDuplex<u8> + _embedded_hal_blocking_spi_Transfer<u8>,
+    {
+        self.send_command(ADCCommand::RDATA1, spi)?;
+        let mut buffer: [u8; 4] = [0; 4];
+        for i in 0..4 {
+            buffer[i] = nb::block!(spi.read()).map_err(|_| ADS126xError::IO)?;
+        }
+        let data: i32 = i32::from_be_bytes(buffer);
+        Ok(data)
     }
 
     /// Reads data from multiple registers starting at the provided register.

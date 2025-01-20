@@ -3,16 +3,15 @@ use ads126x::{
     ADCCommand, Ads126x,
 };
 
+use crate::app::delay;
 use common_arm::spawn;
+use defmt::info;
+use stm32h7xx_hal::nb;
+use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::{
     gpio::{Output, Pin, PushPull},
     spi::Spi,
 };
-use stm32h7xx_hal::prelude::*;
-use defmt::info;
-use crate::app::delay;
-use stm32h7xx_hal::nb;
-
 
 // There is an option to use interrupts using the data ready pins, but for now we will poll.
 pub struct AdcManager {
@@ -40,107 +39,125 @@ impl AdcManager {
         }
     }
 
-    pub fn init_adc1(&mut self, negative: ads126x::register::NegativeInpMux, positive: ads126x::register::PositiveInpMux) -> Result<(), ads126x::error::ADS126xError> {
-        self.adc2_cs.set_high();
-        self.adc1_cs.set_low();
-        self.adc1.reset()?;
-        self.adc1_cs.set_high();
-        self.adc1_cs.set_low();
+    pub fn init_adc1(&mut self) -> Result<(), ads126x::error::ADS126xError> {
+        self.select_adc1();
+        self.adc1.set_reset_high()?;
 
         // 2^16 cycles of delay
-        // cortex_m::asm::delay(65536);
-        cortex_m::asm::delay(250_000_000);
-
-
-        let mut mode1_cfg = Mode1Register::default();
-        mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
-        self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
-
-        let mut mode2_cfg = Mode2Register::default();
-        mode2_cfg.set_dr(DataRate::SPS1200);
-        self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
-
-        let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;
-        let mode2_cfg_real = self.adc1.get_mode2(&mut self.spi)?;
-
-        // verify 
-        info!("Mode1: {:#010b}", mode1_cfg_real.bits());
-        info!("Mode2: {:#010b}", mode2_cfg_real.bits());
-        assert!(mode1_cfg.difference(mode1_cfg_real).is_empty()); 
-        assert!(mode2_cfg.difference(mode2_cfg_real).is_empty()); 
-
-        let mut reg = ads126x::register::InpMuxRegister::default();
-        reg.set_muxn(negative);
-        reg.set_muxp(positive);
-        self.adc1.set_inpmux(&reg, &mut self.spi)?;
-
-        self.adc1.send_command(ADCCommand::START1, &mut self.spi)?;
-        self.adc1.send_command(ADCCommand::START2, &mut self.spi)?;
-        cortex_m::asm::delay(250_000_000);
-
-        Ok(())
-    }
-
-    pub fn init_adc2(&mut self) -> Result<(), ads126x::error::ADS126xError> {
-        self.adc1_cs.set_high();
-        self.adc2_cs.set_low();
-        self.adc2.reset()?;
-        info!("ADC2 reset");
-
         cortex_m::asm::delay(65536);
 
-        let mut mode1_cfg = Mode1Register::default();
-        mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
-        self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
-        info!("ADC2 mode1 set");
+        // stop conversions
+        self.adc1.send_command(ADCCommand::STOP1, &mut self.spi)?;
+        self.adc1.send_command(ADCCommand::STOP2, &mut self.spi)?;
 
-        let mut mode2_cfg = Mode2Register::default();
-        mode2_cfg.set_dr(DataRate::SPS1200);
-        self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
-        info!("ADC2 mode2 set");
+        // setup the Power register
+        let mut power_cfg = ads126x::register::PowerRegister::default();
+        power_cfg.clear_reset();
+        self.adc1.set_power(&power_cfg, &mut self.spi)?;
 
+        // Verify none custom config works first
+        // setup mode 1 and mode 2 registers
+        // let mut mode1_cfg = Mode1Register::default();
+        // mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
+        // self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
+
+        // let mut mode2_cfg = Mode2Register::default();
+        // mode2_cfg.set_dr(DataRate::SPS1200);
+        // self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
+
+        // // read back the mode1 and mode2 registers to verify
+        // let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;
+        // let mode2_cfg_real = self.adc1.get_mode2(&mut self.spi)?;
+
+        // // verify
+        // info!("Mode1: {:#010b}", mode1_cfg_real.bits());
+        // info!("Mode2: {:#010b}", mode2_cfg_real.bits());
+        // assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
+        // assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
+
+        // start conversions
         self.adc1.send_command(ADCCommand::START1, &mut self.spi)?;
-        info!("ADC2 start1");
         self.adc1.send_command(ADCCommand::START2, &mut self.spi)?;
-        info!("ADC2 start2");
+
         Ok(())
     }
 
-    pub fn read_adc1_data(&mut self, negative: ads126x::register::NegativeInpMux, positive: ads126x::register::PositiveInpMux) -> Result<[u8; 4], ads126x::error::ADS126xError> {
-        // check if our inputmux is set to use the right pins. 
-        self.adc2_cs.set_high(); // disable adc 2 
-        self.adc1_cs.set_low(); // enable adc 1
-        // self.adc1.send_command(ads126x::ADCCommand::STOP1, &mut self.spi)?;
-        // configure the input mux 
+    // pub fn init_adc2(&mut self) -> Result<(), ads126x::error::ADS126xError> {
+    //     self.select_adc2();
+    //     self.adc2.set_reset_high()?;
+    //     info!("ADC2 reset");
+
+    //     cortex_m::asm::delay(65536);
+
+    //     let mut mode1_cfg = Mode1Register::default();
+    //     mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
+    //     self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
+    //     info!("ADC2 mode1 set");
+
+    //     let mut mode2_cfg = Mode2Register::default();
+    //     mode2_cfg.set_dr(DataRate::SPS1200);
+    //     self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
+    //     info!("ADC2 mode2 set");
+
+    //     self.adc1.send_command(ADCCommand::START1, &mut self.spi)?;
+    //     info!("ADC2 start1");
+    //     self.adc1.send_command(ADCCommand::START2, &mut self.spi)?;
+    //     info!("ADC2 start2");
+    //     Ok(())
+    // }
+
+    pub fn select_adc1(&mut self) {
+        self.adc2_cs.set_high();
+        self.adc1_cs.set_low();
+    }
+
+    // pub fn select_adc2(&mut self) {
+    //     self.adc1_cs.set_high();
+    //     self.adc2_cs.set_low();
+    // }
+
+    pub fn set_adc1_inpmux(
+        &mut self,
+        negative: ads126x::register::NegativeInpMux,
+        positive: ads126x::register::PositiveInpMux,
+    ) -> Result<(), ads126x::error::ADS126xError> {
+        self.select_adc1();
         let mut reg = ads126x::register::InpMuxRegister::default();
         reg.set_muxn(negative);
         reg.set_muxp(positive);
-        self.adc1.set_inpmux(&reg, &mut self.spi)?;
+        self.adc1.set_inpmux(&reg, &mut self.spi)
+    }
+
+    /*
+    There are possibly 4,5, or 6 bytes of data to read from ADC1. There is an optonal status byte first and an optional CRC/CHK byte last.
+    There are possibly 3,4, or 5 bytes of data to read from ADC2. There is an optonal status byte first and a fixed-value byte equal to 00h (zero pad byte) and an optional CRC/CHK byte.
+    We can poll and just keep checking the ADC1 or ADC2 new data bit.
+    ADC does not respond to commands until the read operation is complete, or terminated by CS going high.
+    The data bytes are from the 32-bit conversion word.
+
+     */
+
+    pub fn read_adc1_data(
+        &mut self,
+        negative: ads126x::register::NegativeInpMux,
+        positive: ads126x::register::PositiveInpMux,
+    ) -> Result<i32, ads126x::error::ADS126xError> {
+        self.select_adc1();
+        // configure the input mux, buf first read the current config
+        let inpmux_reg = self.adc1.get_inpmux(&mut self.spi)?;
+        if inpmux_reg.get_muxn() != negative || inpmux_reg.get_muxp() != positive {
+            let mut reg = ads126x::register::InpMuxRegister::default();
+            reg.set_muxn(negative);
+            reg.set_muxp(positive);
+            self.adc1.set_inpmux(&reg, &mut self.spi)?;
+        }
 
         info!("Input mux set");
-        // ask for data 
-        let status = self.adc1.send_command(ADCCommand::RDATA1, &mut self.spi)?;
-
-        // if status.get_adc1_new() {
-            info!("Data requested");
-            // read 4 bytes of data from the spi
-            let mut data = [0; 4];
-            for i in 0..4 {
-                data[i] = self.spi.read().map_err(|_| ads126x::error::ADS126xError::IO)?;
-                info!("Data read");
-            }        
-
-            return Ok(data);
-        // }
-        
-        // info!("Data requested");
-        // // read 4 bytes of data from the spi
-        // let mut data = [0; 4];
-        // for i in 0..2 {
-        //     data[i] = self.spi.read().map_err(|_| ads126x::error::ADS126xError::IO)?;
-        //     info!("Data read");
-        // }        
-
-        Err(ads126x::error::ADS126xError::IO)
+        // ask for data
+        /*
+        If no command is intended, keep the DIN pin low during readback. If an input command is
+        sent during readback, the ADC executes the command, and data interruption may result.
+         */
+        self.adc1.read_data1(&mut self.spi)
     }
 }

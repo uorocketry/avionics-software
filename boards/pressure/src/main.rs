@@ -41,8 +41,8 @@ statemachine! {
         Idle + NoConfig = Calibration,
         Collection + WantsProcessing = Processing,
         Calibration + Configured = Idle,
-        Fault + FaultCleared = Idle, 
-        _ + FaultDetected = Fault, 
+        Fault + FaultCleared = Idle,
+        _ + FaultDetected = Fault,
     }
 }
 
@@ -55,7 +55,10 @@ fn panic() -> ! {
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI2, SPI3, SPI2])]
 mod app {
     use messages::CanData;
-    use stm32h7xx_hal::{gpio::{Edge, ExtiPin, Pin}, hal::adc};
+    use stm32h7xx_hal::{
+        gpio::{Edge, ExtiPin, Pin},
+        hal::adc,
+    };
 
     use super::*;
 
@@ -184,8 +187,8 @@ mod app {
                 gpioe.pe5.into_alternate(),
                 gpioe.pe6.into_alternate(),
             ),
-            stm32h7xx_hal::spi::Config::new(spi::MODE_0),
-            16.MHz(),
+            stm32h7xx_hal::spi::Config::new(spi::MODE_1), // mode 1 per datasheet
+            8.MHz(),                                      // 125 ns
             ccdr.peripheral.SPI4,
             &ccdr.clocks,
         );
@@ -197,7 +200,7 @@ mod app {
         let adc2_rst = gpiod.pd1.into_push_pull_output();
 
         let mut adc_manager = AdcManager::new(adc_spi, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
-        adc_manager.init_adc1(ads126x::register::NegativeInpMux::AIN1, ads126x::register::PositiveInpMux::AIN0).ok();
+        adc_manager.init_adc1().ok();
 
         // leds
         let led_red = gpioa.pa2.into_push_pull_output();
@@ -263,7 +266,10 @@ mod app {
     fn adc1_data_ready(mut cx: adc1_data_ready::Context) {
         info!("new data available come through");
         cx.shared.adc_manager.lock(|adc_manager| {
-            let data = adc_manager.read_adc1_data(ads126x::register::NegativeInpMux::AIN1, ads126x::register::PositiveInpMux::AIN0);
+            let data = adc_manager.read_adc1_data(
+                ads126x::register::NegativeInpMux::AIN1,
+                ads126x::register::PositiveInpMux::AIN0,
+            );
             match data {
                 Ok(data) => {
                     info!("data: {:?}", data);
@@ -272,18 +278,19 @@ mod app {
                     info!("Error reading data");
                 }
             }
-        }); 
+        });
         cx.local.adc1_int.clear_interrupt_pending_bit();
     }
-
-
 
     #[task(priority = 3, shared = [adc_manager, &em, rtc])]
     async fn read_adc1(mut cx: read_adc1::Context) {
         loop {
             info!("Reading ADC1");
-            cx.shared.adc_manager.lock(|adc_manager|{
-                let data = adc_manager.read_adc1_data(ads126x::register::NegativeInpMux::AIN1, ads126x::register::PositiveInpMux::AIN0);
+            cx.shared.adc_manager.lock(|adc_manager| {
+                let data = adc_manager.read_adc1_data(
+                    ads126x::register::NegativeInpMux::AIN1,
+                    ads126x::register::PositiveInpMux::AIN0,
+                );
                 match data {
                     Ok(data) => {
                         info!("data: {:?}", data);

@@ -41,8 +41,8 @@ statemachine! {
         Idle + NoConfig = Calibration,
         Collection + WantsProcessing = Processing,
         Calibration + Configured = Idle,
-        Fault + FaultCleared = Idle, 
-        _ + FaultDetected = Fault, 
+        Fault + FaultCleared = Idle,
+        _ + FaultDetected = Fault,
     }
 }
 
