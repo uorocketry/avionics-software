@@ -47,6 +47,15 @@ bitflags! {
     }
 }
 
+impl StatusRegister {
+    pub fn get_adc1_new(&self) -> bool {
+        self.contains(StatusRegister::ADC1)
+    }
+    pub fn get_adc2_new(&self) -> bool {
+        self.contains(StatusRegister::ADC2)
+    }
+}
+
 bitflags! {
     pub struct IdRegister: u8 {
         const _ = !0; // Source may set any bits

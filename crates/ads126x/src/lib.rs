@@ -4,13 +4,13 @@
 pub mod error;
 pub mod register;
 
+use bitflags::Flags;
+use defmt::info;
 use error::ADS126xError;
 use register::{
-    Adc2CfgRegister, Adc2MuxRegister, GpioConRegister, GpioDatRegister, GpioDirRegister,
-    IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register,
-    Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, TdacnRegister,
-    TdacpRegister,
+    Adc2CfgRegister, Adc2MuxRegister, GpioConRegister, GpioDatRegister, GpioDirRegister, IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register, Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, StatusRegister, TdacnRegister, TdacpRegister
 };
+use cortex_m::asm::delay;
 
 use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::spi::FullDuplex;
@@ -45,12 +45,6 @@ pub enum ADCCommand {
     WREG(Register, u8), // (register address, number of registers)
 }
 
-fn delay(delay: u32) {
-    for _ in 0..delay {
-        cortex_m::asm::nop();
-    }
-}
-
 impl<GpioPin> Ads126x<GpioPin>
 where
     GpioPin: OutputPin,
@@ -60,16 +54,16 @@ where
     }
 
     pub fn reset(&mut self) -> Result<()> {
-        self.reset_pin.set_high().map_err(|_| ADS126xError::IO)?;
-        delay(1000);
+        // self.reset_pin.set_high().map_err(|_| ADS126xError::IO)?;
+        // delay(50_000_000);
         self.reset_pin.set_low().map_err(|_| ADS126xError::IO)?;
-        delay(1000);
+        delay(50_000_000);
         self.reset_pin.set_high().map_err(|_| ADS126xError::IO)?;
-        delay(1000);
+        delay(50_000_000);
         Ok(())
     }
 
-    pub fn send_command<SPI>(&mut self, command: ADCCommand, spi: &mut SPI) -> Result<()>
+    pub fn send_command<SPI>(&mut self, command: ADCCommand, spi: &mut SPI) -> Result<StatusRegister>
     where
         SPI: FullDuplex<u8>,
     {
@@ -91,12 +85,20 @@ where
             ADCCommand::RREG(addr, num) => (0x20 | addr as u8, Some(num)),
             ADCCommand::WREG(addr, num) => (0x40 | addr as u8, Some(num)),
         };
+        info!("Sending opcode 1: {:#04x}", opcode1);
 
-        spi.send(opcode1).map_err(|_| ADS126xError::IO)?;
+        nb::block!(spi.send(opcode1)).map_err(|_| ADS126xError::IO)?;
+        let data = spi.read().map_err(|_| ADS126xError::IO)?;
+        let status = StatusRegister::from_bits_retain(data);
         if let Some(op2) = opcode2 {
+            info!("Sending opcode 2: {:#04x}", opcode2);
             spi.send(op2).map_err(|_| ADS126xError::IO)?;
+        } else {
+            info!("Sending opcode2 zerod: {:#04x}", opcode2);
+            spi.send(0).map_err(|_| ADS126xError::IO)?;
         }
-        Ok(())
+
+        Ok(status)
     }
 
     /// Reads data from multiple registers starting at the provided register.
@@ -166,7 +168,9 @@ where
         SPI: FullDuplex<u8>,
     {
         self.send_command(ADCCommand::WREG(reg, 0), spi)?;
-        spi.send(data).map_err(|_| ADS126xError::IO)
+        info!("Writing {:#010b} ", data);
+        // panic!();
+        nb::block!(spi.send(data)).map_err(|_| ADS126xError::IO)
     }
 
     pub fn get_id<SPI>(&mut self, spi: &mut SPI) -> Result<IdRegister>
@@ -254,6 +258,7 @@ where
     where
         SPI: FullDuplex<u8>,
     {
+        info!("Setting register to {:#010b}", reg.bits());
         self.write_register(Register::MODE1, reg.bits(), spi)
     }
 
