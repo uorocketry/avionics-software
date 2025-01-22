@@ -72,7 +72,7 @@ where
     /// to issue read data command call read_data1 or read_data2.
     pub fn send_command<SPI>(&mut self, command: ADCCommand, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let (opcode1, opcode2) = match command {
             ADCCommand::NOP => (0x00, None),
@@ -94,23 +94,26 @@ where
         };
         info!("Sending opcode 1: {:#04x}", opcode1);
 
-        spi.send(opcode1).map_err(|_| ADS126xError::IO)?;
-        if let Some(opcode2) = opcode2 {
-            spi.send(opcode2).map_err(|_| ADS126xError::IO)?;
-        }
+        let mut opcodes = [
+            opcode1,
+            if Some(opcode2) != None {
+                opcode2.unwrap()
+            } else {
+                0x00
+            },
+        ];
 
+        spi.transfer(&mut opcodes).map_err(|_| ADS126xError::IO)?; // this ?)?; is weird, why can't I just ? on the block result.
         Ok(())
     }
 
     pub fn read_data1<SPI>(&mut self, spi: &mut SPI) -> Result<i32>
     where
-        SPI: FullDuplex<u8> + _embedded_hal_blocking_spi_Transfer<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
-        self.send_command(ADCCommand::RDATA1, spi)?;
-        let mut buffer: [u8; 4] = [0; 4];
-        for i in 0..4 {
-            buffer[i] = nb::block!(spi.read()).map_err(|_| ADS126xError::IO)?;
-        }
+        // 0x00 gets interpretted as NOP command
+        let mut buffer: [u8; 4] = [0x00, 0x00, 0x00, 0x12];
+        spi.transfer(&mut buffer).map_err(|_| ADS126xError::IO)?;
         let data: i32 = i32::from_be_bytes(buffer);
         Ok(data)
     }
@@ -124,32 +127,64 @@ where
         reg: Register,
         num: u8,
         spi: &mut SPI,
-    ) -> Result<Vec<u8, 27>>
+    ) -> Result<[u8; 27]>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         if num > 27 {
             return Err(ADS126xError::InvalidInputData);
         }
-        self.send_command(ADCCommand::RREG(reg, num - 1), spi)?;
-        let mut buffer: Vec<u8, 27> = Vec::new();
-        for _ in 0..num {
-            buffer
-                .push(spi.read().map_err(|_| ADS126xError::IO)?)
-                .map_err(|_| ADS126xError::InvalidInputData)?;
-        }
+        // self.send_command(ADCCommand::RREG(reg, num - 1), spi)?;
+        let buffer: [u8; 27] = [
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x20 | reg as u8,
+            num,
+        ];
+        // let mut buffer: Vec<u8, 27> = Vec::new();
+        // for _ in 0..num {
+        // buffer
+        // .push(spi.read().map_err(|_| ADS126xError::IO)?)
+        // .map_err(|_| ADS126xError::InvalidInputData)?;
+        // }
         Ok(buffer)
     }
     /// Reads data from only the single provided register.
     /// To read multiple registers, see [`ADS126x::read_multiple_registers`].
     pub fn read_register<SPI>(&mut self, reg: Register, spi: &mut SPI) -> Result<u8>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         // zero since number of registers read - 1, so 1-1=0.
-        self.send_command(ADCCommand::RREG(reg, 0), spi)?;
-        let data = spi.read().map_err(|_| ADS126xError::IO)?;
-        Ok(data)
+        // self.send_command(ADCCommand::RREG(reg, 0), spi)?;
+        // let data = spi.read().map_err(|_| ADS126xError::IO)?;
+        let mut buffer = [reg as u8 | 0x20];
+        spi.transfer(&mut buffer).map_err(|_| ADS126xError::IO)?;
+
+        Ok(buffer[0])
     }
 
     /// Writes data to multiple registers starting at the provided register.
@@ -163,14 +198,14 @@ where
         spi: &mut SPI,
     ) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         if data.len() > 27 {
             return Err(ADS126xError::InvalidInputData);
         }
         self.send_command(ADCCommand::WREG(reg, data.len() as u8 - 1), spi)?;
         for &byte in data {
-            spi.send(byte).map_err(|_| ADS126xError::IO)?;
+            spi.write(&[byte]).map_err(|_| ADS126xError::IO)?;
         }
         Ok(())
     }
@@ -179,17 +214,17 @@ where
     /// To write data to multiple registers, see [`ADS126x::write_multiple_registers`].
     pub fn write_register<SPI>(&mut self, reg: Register, data: u8, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.send_command(ADCCommand::WREG(reg, 0), spi)?;
         info!("Writing {:#010b} ", data);
         // panic!();
-        nb::block!(spi.send(data)).map_err(|_| ADS126xError::IO)
+        spi.write(&[data]).map_err(|_| ADS126xError::IO)
     }
 
     pub fn get_id<SPI>(&mut self, spi: &mut SPI) -> Result<IdRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::ID, spi)?;
         let data = IdRegister::from_bits(bits);
@@ -201,7 +236,7 @@ where
 
     pub fn get_power<SPI>(&mut self, spi: &mut SPI) -> Result<PowerRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::POWER, spi)?;
         let data = PowerRegister::from_bits(bits);
@@ -213,14 +248,14 @@ where
 
     pub fn set_power<SPI>(&mut self, reg: &PowerRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::POWER, reg.bits(), spi)
     }
 
     pub fn get_interface<SPI>(&mut self, spi: &mut SPI) -> Result<InterfaceRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::INTERFACE, spi)?;
         let data = InterfaceRegister::from_bits(bits);
@@ -232,14 +267,14 @@ where
 
     pub fn set_interface<SPI>(&mut self, reg: &InterfaceRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::INTERFACE, reg.bits(), spi)
     }
 
     pub fn get_mode0<SPI>(&mut self, spi: &mut SPI) -> Result<Mode0Register>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::MODE0, spi)?;
         let data = Mode0Register::from_bits(bits);
@@ -251,14 +286,14 @@ where
 
     pub fn set_mode0<SPI>(&mut self, reg: &Mode0Register, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::MODE0, reg.bits(), spi)
     }
 
     pub fn get_mode1<SPI>(&mut self, spi: &mut SPI) -> Result<Mode1Register>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::MODE1, spi)?;
         let data = Mode1Register::from_bits(bits);
@@ -270,7 +305,7 @@ where
 
     pub fn set_mode1<SPI>(&mut self, reg: &Mode1Register, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         info!("Setting register to {:#010b}", reg.bits());
         self.write_register(Register::MODE1, reg.bits(), spi)
@@ -278,7 +313,7 @@ where
 
     pub fn get_mode2<SPI>(&mut self, spi: &mut SPI) -> Result<Mode2Register>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::MODE2, spi)?;
         let data = Mode2Register::from_bits(bits);
@@ -290,14 +325,14 @@ where
 
     pub fn set_mode2<SPI>(&mut self, reg: &Mode2Register, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::MODE2, reg.bits(), spi)
     }
 
     pub fn get_inpmux<SPI>(&mut self, spi: &mut SPI) -> Result<InpMuxRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::INPMUX, spi)?;
         let data = InpMuxRegister::from_bits(bits);
@@ -309,14 +344,14 @@ where
 
     pub fn set_inpmux<SPI>(&mut self, reg: &InpMuxRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::INPMUX, reg.bits(), spi)
     }
 
     pub fn get_ofcal<SPI>(&mut self, spi: &mut SPI) -> Result<u32>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bytes = self.read_multiple_registers(Register::OFCAL0, 3, spi)?; // [OFCAL0, OFCAL1, OFCAL2]
         let res = (bytes[2] as u32) << 16 | (bytes[1] as u32) << 8 | (bytes[0] as u32);
@@ -325,7 +360,7 @@ where
 
     pub fn set_ofcal<SPI>(&mut self, ofcal: u32, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         // Will not panic as & 0xFF ensures values are u8
         let res: [u8; 3] = [
@@ -338,7 +373,7 @@ where
 
     pub fn get_fscal<SPI>(&mut self, spi: &mut SPI) -> Result<u32>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bytes = self.read_multiple_registers(Register::FSCAL0, 3, spi)?; // [FSCAL0, FSCAL1, FSCAL2]
         let res = (bytes[2] as u32) << 16 | (bytes[1] as u32) << 8 | (bytes[0] as u32);
@@ -347,7 +382,7 @@ where
 
     pub fn set_fscal<SPI>(&mut self, fscal: u32, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         // Will not panic as & 0xFF ensures values are u8
         let res: [u8; 3] = [
@@ -360,7 +395,7 @@ where
 
     pub fn get_idacmux<SPI>(&mut self, spi: &mut SPI) -> Result<IdacMuxRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::IDACMUX, spi)?;
         let data = IdacMuxRegister::from_bits(bits);
@@ -372,14 +407,14 @@ where
 
     pub fn set_idacmux<SPI>(&mut self, reg: &IdacMuxRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::IDACMUX, reg.bits(), spi)
     }
 
     pub fn get_idacmag<SPI>(&mut self, spi: &mut SPI) -> Result<IdacMagRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::IDACMAG, spi)?;
         let data = IdacMagRegister::from_bits(bits);
@@ -391,14 +426,14 @@ where
 
     pub fn set_idacmag<SPI>(&mut self, reg: &IdacMagRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::IDACMAG, reg.bits(), spi)
     }
 
     pub fn get_refmux<SPI>(&mut self, spi: &mut SPI) -> Result<RefMuxRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::REFMUX, spi)?;
         let data = RefMuxRegister::from_bits(bits);
@@ -410,14 +445,14 @@ where
 
     pub fn set_refmux<SPI>(&mut self, reg: &RefMuxRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::REFMUX, reg.bits(), spi)
     }
 
     pub fn get_tdacp<SPI>(&mut self, spi: &mut SPI) -> Result<TdacpRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::TDACP, spi)?;
         let data = TdacpRegister::from_bits(bits);
@@ -429,14 +464,14 @@ where
 
     pub fn set_tdacp<SPI>(&mut self, reg: &TdacpRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::TDACP, reg.bits(), spi)
     }
 
     pub fn get_tdacn<SPI>(&mut self, spi: &mut SPI) -> Result<TdacnRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::TDACN, spi)?;
         let data = TdacnRegister::from_bits(bits);
@@ -448,14 +483,14 @@ where
 
     pub fn set_tdacn<SPI>(&mut self, reg: &TdacnRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::TDACN, reg.bits(), spi)
     }
 
     pub fn get_gpiocon<SPI>(&mut self, spi: &mut SPI) -> Result<GpioConRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::GPIOCON, spi)?;
         let data = GpioConRegister::from_bits(bits);
@@ -467,14 +502,14 @@ where
 
     pub fn set_gpiocon<SPI>(&mut self, reg: &GpioConRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::GPIOCON, reg.bits(), spi)
     }
 
     pub fn get_gpiodir<SPI>(&mut self, spi: &mut SPI) -> Result<GpioDirRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::GPIODIR, spi)?;
         let data = GpioDirRegister::from_bits(bits);
@@ -486,14 +521,14 @@ where
 
     pub fn set_gpiodir<SPI>(&mut self, reg: &GpioDirRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::GPIODIR, reg.bits(), spi)
     }
 
     pub fn get_gpiodat<SPI>(&mut self, spi: &mut SPI) -> Result<GpioDatRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::GPIODAT, spi)?;
         let data = GpioDatRegister::from_bits(bits);
@@ -505,14 +540,14 @@ where
 
     pub fn set_gpiodat<SPI>(&mut self, reg: &GpioDatRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::GPIODAT, reg.bits(), spi)
     }
 
     pub fn get_adc2cfg<SPI>(&mut self, spi: &mut SPI) -> Result<Adc2CfgRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::ADC2CFG, spi)?;
         let data = Adc2CfgRegister::from_bits(bits);
@@ -524,14 +559,14 @@ where
 
     pub fn set_adc2cfg<SPI>(&mut self, reg: &Adc2CfgRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::ADC2CFG, reg.bits(), spi)
     }
 
     pub fn get_adc2mux<SPI>(&mut self, spi: &mut SPI) -> Result<Adc2MuxRegister>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bits = self.read_register(Register::ADC2MUX, spi)?;
         let data = Adc2MuxRegister::from_bits(bits);
@@ -543,14 +578,14 @@ where
 
     pub fn set_adc2mux<SPI>(&mut self, reg: &Adc2MuxRegister, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         self.write_register(Register::ADC2MUX, reg.bits(), spi)
     }
 
     pub fn get_adc2ofc<SPI>(&mut self, spi: &mut SPI) -> Result<u16>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bytes = self.read_multiple_registers(Register::ADC2OFC0, 2, spi)?; // [ADC2OFC0, ADC2OFC1]
         let res = (bytes[1] as u16) << 8 | (bytes[0] as u16);
@@ -559,7 +594,7 @@ where
 
     pub fn set_adc2ofc<SPI>(&mut self, ofc2: u16, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         // Will not panic as & 0xFF ensures values are u8
         let res: [u8; 2] = [
@@ -571,7 +606,7 @@ where
 
     pub fn get_adc2fsc<SPI>(&mut self, spi: &mut SPI) -> Result<u16>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         let bytes = self.read_multiple_registers(Register::ADC2FSC0, 2, spi)?; // [ADC2FSC0, ADC2FSC1]
         let res = (bytes[1] as u16) << 8 | (bytes[0] as u16);
@@ -580,7 +615,7 @@ where
 
     pub fn set_adc2fsc<SPI>(&mut self, fsc2: u32, spi: &mut SPI) -> Result<()>
     where
-        SPI: FullDuplex<u8>,
+        SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         // Will not panic as & 0xFF ensures values are u8
         let res: [u8; 2] = [

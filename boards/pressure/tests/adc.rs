@@ -188,7 +188,7 @@ mod tests {
 
         let mut adc_manager = AdcManager::new(adc_spi, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
 
-        adc_manager.init_adc1().ok();
+        adc_manager.init_adc1().unwrap();
 
         // adc_manager.init_adc2().ok();
 

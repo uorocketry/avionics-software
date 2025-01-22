@@ -3,10 +3,7 @@ use ads126x::{
     ADCCommand, Ads126x,
 };
 
-use crate::app::delay;
-use common_arm::spawn;
 use defmt::info;
-use stm32h7xx_hal::nb;
 use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::{
     gpio::{Output, Pin, PushPull},
@@ -57,23 +54,23 @@ impl AdcManager {
 
         // Verify none custom config works first
         // setup mode 1 and mode 2 registers
-        // let mut mode1_cfg = Mode1Register::default();
-        // mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
-        // self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
+        let mut mode1_cfg = Mode1Register::default();
+        mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
+        self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
 
-        // let mut mode2_cfg = Mode2Register::default();
-        // mode2_cfg.set_dr(DataRate::SPS1200);
-        // self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
+        let mut mode2_cfg = Mode2Register::default();
+        mode2_cfg.set_dr(DataRate::SPS1200);
+        self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
 
-        // // read back the mode1 and mode2 registers to verify
-        // let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;
-        // let mode2_cfg_real = self.adc1.get_mode2(&mut self.spi)?;
+        // read back the mode1 and mode2 registers to verify
+        let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;
+        let mode2_cfg_real = self.adc1.get_mode2(&mut self.spi)?;
 
-        // // verify
-        // info!("Mode1: {:#010b}", mode1_cfg_real.bits());
-        // info!("Mode2: {:#010b}", mode2_cfg_real.bits());
-        // assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
-        // assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
+        // verify
+        info!("Mode1: {:#010b}", mode1_cfg_real.bits());
+        info!("Mode2: {:#010b}", mode2_cfg_real.bits());
+        assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
+        assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
 
         // start conversions
         self.adc1.send_command(ADCCommand::START1, &mut self.spi)?;
@@ -144,13 +141,13 @@ impl AdcManager {
     ) -> Result<i32, ads126x::error::ADS126xError> {
         self.select_adc1();
         // configure the input mux, buf first read the current config
-        let inpmux_reg = self.adc1.get_inpmux(&mut self.spi)?;
-        if inpmux_reg.get_muxn() != negative || inpmux_reg.get_muxp() != positive {
-            let mut reg = ads126x::register::InpMuxRegister::default();
-            reg.set_muxn(negative);
-            reg.set_muxp(positive);
-            self.adc1.set_inpmux(&reg, &mut self.spi)?;
-        }
+        // let inpmux_reg = self.adc1.get_inpmux(&mut self.spi)?;
+        // if inpmux_reg.get_muxn() != negative || inpmux_reg.get_muxp() != positive {
+        //     let mut reg = ads126x::register::InpMuxRegister::default();
+        //     reg.set_muxn(negative);
+        //     reg.set_muxp(positive);
+        //     self.adc1.set_inpmux(&reg, &mut self.spi)?;
+        // }
 
         info!("Input mux set");
         // ask for data

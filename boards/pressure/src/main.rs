@@ -10,7 +10,6 @@ mod traits;
 mod types;
 
 use adc_manager::AdcManager;
-use can_manager::CanManager;
 use chrono::NaiveDate;
 use common_arm::*;
 use data_manager::DataManager;
@@ -21,8 +20,6 @@ use rtic_monotonics::systick::prelude::*;
 use rtic_sync::{channel::*, make_channel};
 use smlang::statemachine;
 use stm32h7xx_hal::gpio::gpioa::{PA2, PA3};
-use stm32h7xx_hal::gpio::Speed;
-use stm32h7xx_hal::gpio::PA4;
 use stm32h7xx_hal::gpio::{Output, PushPull};
 use stm32h7xx_hal::hal::spi;
 use stm32h7xx_hal::prelude::*;
@@ -55,10 +52,7 @@ fn panic() -> ! {
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI2, SPI3, SPI2])]
 mod app {
     use messages::CanData;
-    use stm32h7xx_hal::{
-        gpio::{Edge, ExtiPin, Pin},
-        hal::adc,
-    };
+    use stm32h7xx_hal::gpio::{Edge, ExtiPin, Pin};
 
     use super::*;
 
