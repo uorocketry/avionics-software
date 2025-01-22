@@ -161,8 +161,8 @@ where
             0x00,
             0x00,
             0x00,
-            0x20 | reg as u8,
             num,
+            0x20 | reg as u8,
         ];
         // let mut buffer: Vec<u8, 27> = Vec::new();
         // for _ in 0..num {
