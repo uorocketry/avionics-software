@@ -52,6 +52,7 @@ fn panic() -> ! {
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI2, SPI3, SPI2])]
 mod app {
     use messages::CanData;
+    use rec::Spi45ClkSelGetter;
     use stm32h7xx_hal::gpio::{Edge, ExtiPin, Pin};
 
     use super::*;
@@ -107,9 +108,9 @@ mod app {
 
         let ccdr = rcc
             // .use_hse(48.MHz()) // check the clock hardware
-            // .sys_ck(200.MHz())
+            .sys_ck(96.MHz())
             .pll1_strategy(rcc::PllConfigStrategy::Iterative)
-            .pll1_q_ck(32.MHz())
+            .pll1_q_ck(48.MHz())
             .freeze(pwrcfg, &ctx.device.SYSCFG);
         info!("RCC configured");
         let fdcan_prec = ccdr
@@ -156,12 +157,12 @@ mod app {
             u8,
         > = ctx.device.SPI1.spi(
             (
-                gpioa.pa5.into_alternate::<5>(),
-                gpioa.pa6.into_alternate(),
-                gpioa.pa7.into_alternate(),
+                gpioa.pa5.into_alternate::<5>(), // sck 
+                gpioa.pa6.into_alternate(), // miso
+                gpioa.pa7.into_alternate(), // mosi
             ),
             stm32h7xx_hal::spi::Config::new(spi::MODE_1),
-            6.MHz(),
+            16.MHz(),
             ccdr.peripheral.SPI1,
             &ccdr.clocks,
         );

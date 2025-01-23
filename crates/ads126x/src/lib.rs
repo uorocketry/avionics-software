@@ -112,9 +112,10 @@ where
         SPI: embedded_hal::blocking::spi::Write<u8> + embedded_hal::blocking::spi::Transfer<u8>,
     {
         // 0x00 gets interpretted as NOP command
-        let mut buffer: [u8; 4] = [0x00, 0x00, 0x00, 0x12];
+        let mut buffer: [u8; 6] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x12];
         spi.transfer(&mut buffer).map_err(|_| ADS126xError::IO)?;
-        let data: i32 = i32::from_be_bytes(buffer);
+        let data_buffer: [u8; 4] = [buffer[1], buffer[2], buffer[3], buffer[4]]; 
+        let data: i32 = i32::from_be_bytes(data_buffer);
         Ok(data)
     }
 
