@@ -111,6 +111,10 @@ mod app {
             .sys_ck(96.MHz())
             .pll1_strategy(rcc::PllConfigStrategy::Iterative)
             .pll1_q_ck(48.MHz())
+            .pclk1(48.MHz())
+            .pclk2(48.MHz())
+            .pclk3(48.MHz())
+            .pclk4(48.MHz())
             .freeze(pwrcfg, &ctx.device.SYSCFG);
         info!("RCC configured");
         let fdcan_prec = ccdr
