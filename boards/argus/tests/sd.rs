@@ -18,6 +18,8 @@ struct State {
 
 #[defmt_test::tests]
 mod tests {
+    use stm32h7xx_hal::rcc::{self, rec};
+
     use super::*;
 
     #[init]
@@ -33,13 +35,14 @@ mod tests {
         let mut rcc = dp.RCC.constrain();
         let reset = rcc.get_reset_reason();
 
-        info!("Reset reason: {:?}", reset);
-
         let ccdr = rcc
-            .use_hse(48.MHz()) // check the clock hardware
+            // .use_hse(48.MHz()) // check the clock hardware
             .sys_ck(200.MHz())
+            .pll1_strategy(rcc::PllConfigStrategy::Iterative)
+            .pll1_q_ck(32.MHz())
             .freeze(pwrcfg, &dp.SYSCFG);
-        info!("RCC configured");
+
+        info!("Reset reason: {:?}", reset);
 
         let gpioa = dp.GPIOA.split(ccdr.peripheral.GPIOA);
 
