@@ -2,7 +2,9 @@
 #![no_main]
 
 #[cfg(not(any(feature = "pressure", feature = "temperature", feature = "strain")))]
-compile_error!("You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'.");
+compile_error!(
+    "You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'."
+);
 
 // mod state_machine;
 pub mod adc_manager;
@@ -17,21 +19,21 @@ use chrono::NaiveDate;
 use common_arm::*;
 use data_manager::DataManager;
 use defmt::info;
+use messages::CanData;
 use messages::CanMessage;
 use panic_probe as _;
 use rtic_monotonics::systick::prelude::*;
 use rtic_sync::{channel::*, make_channel};
 use smlang::statemachine;
 use stm32h7xx_hal::gpio::gpioa::{PA2, PA3};
+use stm32h7xx_hal::gpio::PA4;
+use stm32h7xx_hal::gpio::{Edge, ExtiPin, Pin};
 use stm32h7xx_hal::gpio::{Output, PushPull};
 use stm32h7xx_hal::hal::spi;
 use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::rtc;
 use stm32h7xx_hal::{rcc, rcc::rec};
 use types::COM_ID; // global logger
-use messages::CanData;
-use stm32h7xx_hal::gpio::{Edge, ExtiPin, Pin};
-use stm32h7xx_hal::gpio::PA4;
 
 use crate::types::{ADC2_RST_PIN_ID, ADC2_RST_PIN_PORT};
 
@@ -87,7 +89,7 @@ mod app {
         led_red: PA2<Output<PushPull>>,
         led_green: PA3<Output<PushPull>>,
         adc1_int: Pin<'A', 15, stm32h7xx_hal::gpio::Input>,
-        adc2_int: Pin<'D', 3, stm32h7xx_hal::gpio::Input>, 
+        adc2_int: Pin<'D', 3, stm32h7xx_hal::gpio::Input>,
     }
 
     #[init]
@@ -170,9 +172,9 @@ mod app {
             u8,
         > = ctx.device.SPI1.spi(
             (
-                gpioa.pa5.into_alternate::<5>(), // sck 
-                gpioa.pa6.into_alternate(), // miso
-                gpioa.pa7.into_alternate(), // mosi
+                gpioa.pa5.into_alternate::<5>(), // sck
+                gpioa.pa6.into_alternate(),      // miso
+                gpioa.pa7.into_alternate(),      // mosi
             ),
             stm32h7xx_hal::spi::Config::new(spi::MODE_0),
             16.MHz(),
@@ -208,10 +210,10 @@ mod app {
 
         #[cfg(feature = "temperature")]
         let adc2_rst = gpioe.pe0.into_push_pull_output();
-        
+
         #[cfg(feature = "pressure")]
         let adc2_rst = gpiod.pd1.into_push_pull_output();
-        
+
         #[cfg(feature = "strain")]
         let adc2_rst = gpiob.pb9.into_push_pull_output();
 
@@ -236,7 +238,7 @@ mod app {
             .unwrap();
         rtc.set_date_time(now.clone());
 
-        let time_manager = TimeManager::new(Some(FormattedNaiveDateTime(now))); 
+        let time_manager = TimeManager::new(Some(FormattedNaiveDateTime(now)));
 
         let mut syscfg = ctx.device.SYSCFG;
         let mut exti = ctx.device.EXTI;
@@ -246,9 +248,9 @@ mod app {
         adc1_int.trigger_on_edge(&mut exti, Edge::Rising);
         adc1_int.enable_interrupt(&mut exti);
 
-        let mut adc2_int = gpiod.pd3.into_pull_down_input(); 
-        adc2_int.make_interrupt_source(&mut syscfg); 
-        adc2_int.trigger_on_edge(&mut exti, Edge::Rising); 
+        let mut adc2_int = gpiod.pd3.into_pull_down_input();
+        adc2_int.make_interrupt_source(&mut syscfg);
+        adc2_int.trigger_on_edge(&mut exti, Edge::Rising);
         adc2_int.enable_interrupt(&mut exti);
 
         /* Monotonic clock */
@@ -274,11 +276,11 @@ mod app {
                 // can_data_manager,
                 rtc,
                 adc_manager,
-                time_manager
+                time_manager,
             },
             LocalResources {
                 adc1_int,
-                adc2_int, 
+                adc2_int,
                 can_sender,
                 led_red,
                 led_green,
@@ -304,7 +306,7 @@ mod app {
             adc_manager.set_adc1_inpmux(
                 ads126x::register::NegativeInpMux::AIN1,
                 ads126x::register::PositiveInpMux::AIN0,
-            ); 
+            );
         });
         cx.local.adc1_int.clear_interrupt_pending_bit();
     }
@@ -325,7 +327,7 @@ mod app {
             adc_manager.set_adc2_inpmux(
                 ads126x::register::NegativeInpMux::AIN1,
                 ads126x::register::PositiveInpMux::AIN0,
-            ); 
+            );
         });
         cx.local.adc2_int.clear_interrupt_pending_bit();
     }

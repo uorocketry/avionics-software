@@ -9,8 +9,8 @@ use error::ADS126xError;
 use register::{
     Adc2CfgRegister, Adc2MuxRegister, GpioConRegister, GpioDatRegister, GpioDirRegister,
     IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register,
-    Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register,
-    TdacnRegister, TdacpRegister,
+    Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, TdacnRegister,
+    TdacpRegister,
 };
 
 use embedded_hal::digital::v2::OutputPin;
@@ -108,7 +108,7 @@ where
         // 0x00 gets interpretted as NOP command
         let mut buffer: [u8; 6] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x12];
         spi.transfer(&mut buffer).map_err(|_| ADS126xError::IO)?;
-        let data_buffer: [u8; 4] = [buffer[1], buffer[2], buffer[3], buffer[4]]; 
+        let data_buffer: [u8; 4] = [buffer[1], buffer[2], buffer[3], buffer[4]];
         let data: i32 = i32::from_be_bytes(data_buffer);
         Ok(data)
     }

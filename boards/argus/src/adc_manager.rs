@@ -10,12 +10,11 @@ use stm32h7xx_hal::{
     spi::Spi,
 };
 
-
 // There is an option to use interrupts using the data ready pins, but for now we will poll.
 pub struct AdcManager<GpioPin>
-where 
-    GpioPin: OutputPin
- {
+where
+    GpioPin: OutputPin,
+{
     pub spi: Spi<stm32h7xx_hal::pac::SPI4, stm32h7xx_hal::spi::Enabled, u8>,
     pub adc1: Ads126x<Pin<'C', 11, Output<PushPull>>>,
     pub adc2: Ads126x<GpioPin>,
@@ -24,8 +23,8 @@ where
 }
 
 impl<GpioPin> AdcManager<GpioPin>
-where  
-    GpioPin: OutputPin
+where
+    GpioPin: OutputPin,
 {
     pub fn new(
         spi: Spi<stm32h7xx_hal::pac::SPI4, stm32h7xx_hal::spi::Enabled, u8>,

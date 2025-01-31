@@ -8,8 +8,6 @@ pub struct TimeManager {
 
 impl TimeManager {
     pub fn new(time: Option<FormattedNaiveDateTime>) -> Self {
-        TimeManager { 
-            time
-        }
+        TimeManager { time }
     }
 }
