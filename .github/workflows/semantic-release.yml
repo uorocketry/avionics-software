@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master # or main
-      - sem
 
 permissions:
   contents: read # for checkout
