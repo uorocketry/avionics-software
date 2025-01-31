@@ -29,6 +29,11 @@ use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::rtc;
 use stm32h7xx_hal::{rcc, rcc::rec};
 use types::COM_ID; // global logger
+use messages::CanData;
+use stm32h7xx_hal::gpio::{Edge, ExtiPin, Pin};
+use stm32h7xx_hal::gpio::PA4;
+
+use crate::types::{ADC2_RST_PIN_ID, ADC2_RST_PIN_PORT};
 
 const DATA_CHANNEL_CAPACITY: usize = 10;
 
@@ -54,12 +59,9 @@ fn panic() -> ! {
 
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI2, SPI3, SPI2])]
 mod app {
-    use messages::CanData;
-    use rec::Spi45ClkSelGetter;
-    use rtic_monotonics::rtic_time::embedded_hal;
-    use stm32h7xx_hal::gpio::{Edge, ExtiPin, Pin};
+    use messages::FormattedNaiveDateTime;
 
-    use crate::types::{ADC2_RST_PIN_ID, ADC2_RST_PIN_PORT};
+    use crate::time_manager::TimeManager;
 
     use super::*;
 
@@ -67,14 +69,15 @@ mod app {
     struct SharedResources {
         data_manager: DataManager,
         em: ErrorManager,
-        // sd_manager: SdManager<
-        //     stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
-        //     PA4<Output<PushPull>>,
-        // >,
+        sd_manager: SdManager<
+            stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
+            PA4<Output<PushPull>>,
+        >,
         // can_command_manager: CanManager<stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN1>>,
         // can_data_manager: CanManager<stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN2>>,
         rtc: rtc::Rtc,
         adc_manager: AdcManager<Pin<ADC2_RST_PIN_PORT, ADC2_RST_PIN_ID, Output<PushPull>>>,
+        time_manager: TimeManager,
     }
 
     #[local]
@@ -84,6 +87,7 @@ mod app {
         led_red: PA2<Output<PushPull>>,
         led_green: PA3<Output<PushPull>>,
         adc1_int: Pin<'A', 15, stm32h7xx_hal::gpio::Input>,
+        adc2_int: Pin<'D', 3, stm32h7xx_hal::gpio::Input>, 
     }
 
     #[init]
@@ -178,7 +182,7 @@ mod app {
 
         let cs_sd = gpioa.pa4.into_push_pull_output();
 
-        // let sd_manager = SdManager::new(spi_sd, cs_sd);
+        let sd_manager = SdManager::new(spi_sd, cs_sd);
 
         // ADC setup
         let adc_spi: stm32h7xx_hal::spi::Spi<
@@ -202,14 +206,6 @@ mod app {
 
         let adc1_rst = gpioc.pc11.into_push_pull_output();
 
-        
-        // let adc2_rst = if cfg!(feature = "temperature") {
-        //     gpioe.pe0.into_push_pull_output()           
-        // } else if cfg!(feature = "pressure") {
-        //     gpiod.pd1.into_push_pull_output()           
-        // } else if cfg!(feature = "strain") { // strain
-        //     gpiob.pb9.into_push_pull_output()
-        // };
         #[cfg(feature = "temperature")]
         let adc2_rst = gpioe.pe0.into_push_pull_output();
         
@@ -238,14 +234,22 @@ mod app {
             .unwrap()
             .and_hms_opt(0, 0, 0)
             .unwrap();
-        rtc.set_date_time(now);
+        rtc.set_date_time(now.clone());
+
+        let time_manager = TimeManager::new(Some(FormattedNaiveDateTime(now))); 
+
         let mut syscfg = ctx.device.SYSCFG;
         let mut exti = ctx.device.EXTI;
         // setup interupt drdy pins
-        let mut adc1_int = gpioa.pa15.into_pull_up_input();
+        let mut adc1_int = gpioa.pa15.into_pull_down_input();
         adc1_int.make_interrupt_source(&mut syscfg);
         adc1_int.trigger_on_edge(&mut exti, Edge::Rising);
         adc1_int.enable_interrupt(&mut exti);
+
+        let mut adc2_int = gpiod.pd3.into_pull_down_input(); 
+        adc2_int.make_interrupt_source(&mut syscfg); 
+        adc2_int.trigger_on_edge(&mut exti, Edge::Rising); 
+        adc2_int.enable_interrupt(&mut exti);
 
         /* Monotonic clock */
         Mono::start(core.SYST, 200_000_000);
@@ -259,21 +263,22 @@ mod app {
         // send_data_internal::spawn(can_receiver).ok();
         reset_reason_send::spawn().ok();
         state_send::spawn().ok();
-        read_adc1::spawn().ok();
         info!("Online");
 
         (
             SharedResources {
                 data_manager,
                 em,
-                // sd_manager,
+                sd_manager,
                 // can_command_manager,
                 // can_data_manager,
                 rtc,
                 adc_manager,
+                time_manager
             },
             LocalResources {
                 adc1_int,
+                adc2_int, 
                 can_sender,
                 led_red,
                 led_green,
@@ -286,10 +291,7 @@ mod app {
     fn adc1_data_ready(mut cx: adc1_data_ready::Context) {
         info!("new data available come through");
         cx.shared.adc_manager.lock(|adc_manager| {
-            let data = adc_manager.read_adc1_data(
-                ads126x::register::NegativeInpMux::AIN1,
-                ads126x::register::PositiveInpMux::AIN0,
-            );
+            let data = adc_manager.read_adc1_data();
             match data {
                 Ok(data) => {
                     info!("data: {:?}", data);
@@ -298,30 +300,34 @@ mod app {
                     info!("Error reading data");
                 }
             }
+            // change the inpmux
+            adc_manager.set_adc1_inpmux(
+                ads126x::register::NegativeInpMux::AIN1,
+                ads126x::register::PositiveInpMux::AIN0,
+            ); 
         });
         cx.local.adc1_int.clear_interrupt_pending_bit();
     }
 
-    #[task(priority = 3, shared = [adc_manager, &em, rtc])]
-    async fn read_adc1(mut cx: read_adc1::Context) {
-        loop {
-            info!("Reading ADC1");
-            cx.shared.adc_manager.lock(|adc_manager| {
-                let data = adc_manager.read_adc1_data(
-                    ads126x::register::NegativeInpMux::AIN1,
-                    ads126x::register::PositiveInpMux::AIN0,
-                );
-                match data {
-                    Ok(data) => {
-                        info!("data: {:?}", data);
-                    }
-                    Err(_) => {
-                        info!("Error reading data");
-                    }
+    #[task(priority = 3, binds = EXTI3, shared = [adc_manager], local = [adc2_int])]
+    fn adc2_data_ready(mut cx: adc2_data_ready::Context) {
+        info!("new data available come through");
+        cx.shared.adc_manager.lock(|adc_manager| {
+            let data = adc_manager.read_adc2_data();
+            match data {
+                Ok(data) => {
+                    info!("data: {:?}", data);
                 }
-            });
-            Mono::delay(10.millis()).await
-        }
+                Err(_) => {
+                    info!("Error reading data");
+                }
+            }
+            adc_manager.set_adc2_inpmux(
+                ads126x::register::NegativeInpMux::AIN1,
+                ads126x::register::PositiveInpMux::AIN0,
+            ); 
+        });
+        cx.local.adc2_int.clear_interrupt_pending_bit();
     }
 
     #[task(priority = 3, shared = [data_manager, &em, rtc])]

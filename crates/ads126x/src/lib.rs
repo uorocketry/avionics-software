@@ -4,22 +4,16 @@
 pub mod error;
 pub mod register;
 
-use bitflags::Flags;
-use cortex_m::asm::delay;
-use cortex_m::prelude::_embedded_hal_blocking_spi_Transfer;
 use defmt::info;
-use embedded_hal::blocking::spi::Transactional;
 use error::ADS126xError;
 use register::{
     Adc2CfgRegister, Adc2MuxRegister, GpioConRegister, GpioDatRegister, GpioDirRegister,
     IdRegister, IdacMagRegister, IdacMuxRegister, InpMuxRegister, InterfaceRegister, Mode0Register,
-    Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register, StatusRegister,
+    Mode1Register, Mode2Register, PowerRegister, RefMuxRegister, Register,
     TdacnRegister, TdacpRegister,
 };
 
 use embedded_hal::digital::v2::OutputPin;
-use embedded_hal::spi::FullDuplex;
-use heapless::Vec;
 
 /// The [`Result`] type for ADS126x operations.
 pub type Result<T> = core::result::Result<T, ADS126xError>;
@@ -136,7 +130,7 @@ where
             return Err(ADS126xError::InvalidInputData);
         }
         // self.send_command(ADCCommand::RREG(reg, num - 1), spi)?;
-        let buffer: [u8; 27] = [
+        let mut buffer: [u8; 27] = [
             0x00,
             0x00,
             0x00,
@@ -165,6 +159,9 @@ where
             num,
             0x20 | reg as u8,
         ];
+
+        spi.transfer(&mut buffer).map_err(|_| ADS126xError::IO)?;
+
         // let mut buffer: Vec<u8, 27> = Vec::new();
         // for _ in 0..num {
         // buffer

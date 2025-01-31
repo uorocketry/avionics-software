@@ -1,5 +1,4 @@
 use messages::node::{Node, Node::TemperatureBoard, Node::PressureBoard, Node::StrainBoard};
-use stm32h7xx_hal::gpio::{Output, Pin, PushPull};
 
 pub enum Feature {
     Temperature,
