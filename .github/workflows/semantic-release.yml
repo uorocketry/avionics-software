@@ -1,28 +1,68 @@
 name: Release
-
 on:
   push:
     branches:
-      - master
+      - master # or main
+
+permissions:
+  contents: read # for checkout
 
 jobs:
   release:
-    name: Release
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+      id-token: write # to enable use of OIDC for npm provenance
     runs-on: ubuntu-latest
-
+    
     steps:
+      
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: '20.8.1'
 
       - name: Install dependencies
         run: npm install
+  
+      - name: Replace branch name in branches array
+        run: sed -i 's|currentbranch|${{ github.ref_name }}|' .releaserc.yaml
+
+      - name: Build project with Pressure Feature
+        run: cargo build --release --features pressure
+
+      - name: Build project with Temperature Feature
+        run: cargo build --release --features temperature
+
+      - name: Build project with Strain Feature
+        run: cargo build --release --features strain
 
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
+      - name: Upload Pressure Release Asset
+        id: semantic-release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.semantic-release.outputs.upload_url }}
+          asset_path: ./target/thumbv7em-none-eabihf/release/argus
+          asset_name: argus-pressure
+          asset_content_type: application/octet-stream
+
+      - name: Upload Temperature Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.semantic-release.outputs.upload_url }}
+          asset_path: ./target/thumbv7em-none-eabihf/release/argus
+          asset_name: argus-temperature
+          asset_content_type: application/octet-stream
