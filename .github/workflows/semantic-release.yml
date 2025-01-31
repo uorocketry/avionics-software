@@ -1,12 +1,9 @@
 name: Release
 
 on: [push]
-
 jobs:
   release:
-    name: Release
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -16,22 +13,8 @@ jobs:
         with:
           node-version: '14'
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install packages
-        run: sudo apt update && sudo apt install -y cmake
-
-      - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
-        uses: carlosperate/arm-none-eabi-gcc-action@v1
-        with:
-          release: '12.2.Rel1'
-
-      - name: Set up Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: thumbv7em-none-eabihf
+      - name: Replace branch name in branches array
+        run: sed -i 's|currentbranch|${{ github.ref_name }}|' .releaserc.yaml
 
       - name: Build project with Pressure Feature
         run: cargo build --release --features pressure
@@ -65,14 +48,4 @@ jobs:
           upload_url: ${{ steps.semantic-release.outputs.upload_url }}
           asset_path: ./target/thumbv7em-none-eabihf/release/argus
           asset_name: argus-temperature
-          asset_content_type: application/octet-stream
-
-      - name: Upload Strain Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.semantic-release.outputs.upload_url }}
-          asset_path: ./target/thumbv7em-none-eabihf/release/argus
-          asset_name: argus-strain
           asset_content_type: application/octet-stream
