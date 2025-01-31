@@ -12,6 +12,8 @@
   },
   "release": {
     "branches": [
+      "master",
+      "main",
       "sem-ver"
     ],
     "plugins": [
