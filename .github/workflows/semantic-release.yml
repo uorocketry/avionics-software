@@ -1,6 +1,7 @@
 name: Release
 
 on: [push]
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -11,7 +12,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: '16'
 
       - name: Replace branch name in branches array
         run: sed -i 's|currentbranch|${{ github.ref_name }}|' .releaserc.yaml
