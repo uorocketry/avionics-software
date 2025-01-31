@@ -1,0 +1,26 @@
+{
+    "name": "your-project-name",
+    "version": "1.0.0",
+    "devDependencies": {
+      "semantic-release": "^19.0.0",
+      "@semantic-release/changelog": "^6.0.0",
+      "@semantic-release/git": "^10.0.0",
+      "@semantic-release/github": "^8.0.0"
+    },
+    "release": {
+      "branches": ["sem-ver"],
+      "plugins": [
+        "@semantic-release/commit-analyzer",
+        "@semantic-release/release-notes-generator",
+        "@semantic-release/changelog",
+        "@semantic-release/github",
+        [
+          "@semantic-release/git",
+          {
+            "assets": ["CHANGELOG.md", "package.json"],
+            "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+          }
+        ]
+      ]
+    }
+  }
