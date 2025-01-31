@@ -14,7 +14,7 @@
     "branches": [
       "master",
       "main",
-      "sem-ver"
+      "sem"
     ],
     "plugins": [
       "@semantic-release/commit-analyzer",
