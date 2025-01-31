@@ -49,8 +49,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
-        with:
-          branches: ['sem']
 
       - name: Upload Pressure Release Asset
         uses: actions/upload-release-asset@v1
