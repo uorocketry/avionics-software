@@ -1,5 +1,5 @@
 [package]
-name = "temperature"
+name = "argus"
 version = "0.1.0"
 edition = "2021"
 
@@ -25,6 +25,7 @@ enum_dispatch = {workspace = true}
 messages = {workspace = true}
 ads126x = {path = "../../crates/ads126x"}
 smlang = {workspace = true}
+embedded-hal = {workspace = true}
 
 [dev-dependencies]
 defmt-test = { workspace = true }
@@ -40,5 +41,10 @@ harness = false
 path = "tests/adc.rs"
 
 [[bin]]
-name = "temperature"
+name = "argus"
 harness = false
+
+[features]
+pressure = []
+temperature = []
+strain = []

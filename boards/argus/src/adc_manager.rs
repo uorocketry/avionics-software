@@ -4,26 +4,34 @@ use ads126x::{
 };
 
 use defmt::info;
+use embedded_hal::digital::v2::OutputPin;
 use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::{
     gpio::{Output, Pin, PushPull},
     spi::Spi,
 };
 
+
 // There is an option to use interrupts using the data ready pins, but for now we will poll.
-pub struct AdcManager {
+pub struct AdcManager<GpioPin>
+where 
+    GpioPin: OutputPin
+ {
     pub spi: Spi<stm32h7xx_hal::pac::SPI4, stm32h7xx_hal::spi::Enabled, u8>,
     pub adc1: Ads126x<Pin<'C', 11, Output<PushPull>>>,
-    pub adc2: Ads126x<Pin<'D', 1, Output<PushPull>>>,
+    pub adc2: Ads126x<GpioPin>,
     pub adc1_cs: Pin<'C', 10, Output<PushPull>>,
     pub adc2_cs: Pin<'D', 2, Output<PushPull>>,
 }
 
-impl AdcManager {
+impl<GpioPin> AdcManager<GpioPin>
+where  
+    GpioPin: OutputPin
+{
     pub fn new(
         spi: Spi<stm32h7xx_hal::pac::SPI4, stm32h7xx_hal::spi::Enabled, u8>,
         adc1_rst: Pin<'C', 11, Output<PushPull>>,
-        adc2_rst: Pin<'D', 1, Output<PushPull>>,
+        adc2_rst: GpioPin,
         adc1_cs: Pin<'C', 10, Output<PushPull>>,
         adc2_cs: Pin<'D', 2, Output<PushPull>>,
     ) -> Self {

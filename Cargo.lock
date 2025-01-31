@@ -16,6 +16,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "argus"
+version = "0.1.0"
+dependencies = [
+ "ads126x",
+ "chrono",
+ "common-arm",
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "defmt-test",
+ "embedded-alloc",
+ "embedded-hal 0.2.7",
+ "enum_dispatch",
+ "fdcan",
+ "heapless 0.7.17",
+ "messages",
+ "panic-probe",
+ "postcard",
+ "rtic",
+ "rtic-monotonics",
+ "rtic-sync",
+ "smlang",
+ "stm32h7xx-hal",
+]
+
+[[package]]
 name = "atomic-polyfill"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -731,32 +758,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pressure"
-version = "0.1.0"
-dependencies = [
- "ads126x",
- "chrono",
- "common-arm",
- "cortex-m",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "defmt-test",
- "embedded-alloc",
- "enum_dispatch",
- "fdcan",
- "heapless 0.7.17",
- "messages",
- "panic-probe",
- "postcard",
- "rtic",
- "rtic-monotonics",
- "rtic-sync",
- "smlang",
- "stm32h7xx-hal",
-]
-
-[[package]]
 name = "proc-macro-error-attr2"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1112,32 +1113,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "temperature"
-version = "0.1.0"
-dependencies = [
- "ads126x",
- "chrono",
- "common-arm",
- "cortex-m",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "defmt-test",
- "embedded-alloc",
- "enum_dispatch",
- "fdcan",
- "heapless 0.7.17",
- "messages",
- "panic-probe",
- "postcard",
- "rtic",
- "rtic-monotonics",
- "rtic-sync",
- "smlang",
- "stm32h7xx-hal",
 ]
 
 [[package]]

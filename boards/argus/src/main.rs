@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 
+#[cfg(not(any(feature = "pressure", feature = "temperature", feature = "strain")))]
+compile_error!("You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'.");
+
 // mod state_machine;
 pub mod adc_manager;
 mod can_manager;
@@ -53,7 +56,10 @@ fn panic() -> ! {
 mod app {
     use messages::CanData;
     use rec::Spi45ClkSelGetter;
+    use rtic_monotonics::rtic_time::embedded_hal;
     use stm32h7xx_hal::gpio::{Edge, ExtiPin, Pin};
+
+    use crate::types::{ADC2_RST_PIN_ID, ADC2_RST_PIN_PORT};
 
     use super::*;
 
@@ -68,7 +74,7 @@ mod app {
         // can_command_manager: CanManager<stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN1>>,
         // can_data_manager: CanManager<stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN2>>,
         rtc: rtc::Rtc,
-        adc_manager: AdcManager,
+        adc_manager: AdcManager<Pin<ADC2_RST_PIN_PORT, ADC2_RST_PIN_ID, Output<PushPull>>>,
     }
 
     #[local]
@@ -129,7 +135,6 @@ mod app {
         let gpiob = ctx.device.GPIOB.split(ccdr.peripheral.GPIOB);
         let gpioe = ctx.device.GPIOE.split(ccdr.peripheral.GPIOE);
 
-        info!("PWM enabled");
         // assert_eq!(ccdr.clocks.pll1_q_ck().unwrap().raw(), 32_000_000);
         info!("PLL1Q:");
         // https://github.com/stm32-rs/stm32h7xx-hal/issues/369 This needs to be stolen. Grrr I hate the imaturity of the stm32-hal
@@ -165,7 +170,7 @@ mod app {
                 gpioa.pa6.into_alternate(), // miso
                 gpioa.pa7.into_alternate(), // mosi
             ),
-            stm32h7xx_hal::spi::Config::new(spi::MODE_1),
+            stm32h7xx_hal::spi::Config::new(spi::MODE_0),
             16.MHz(),
             ccdr.peripheral.SPI1,
             &ccdr.clocks,
@@ -186,7 +191,7 @@ mod app {
                 gpioe.pe5.into_alternate(),
                 gpioe.pe6.into_alternate(),
             ),
-            stm32h7xx_hal::spi::Config::new(spi::MODE_1), // mode 1 per datasheet
+            stm32h7xx_hal::spi::Config::new(spi::MODE_1), // datasheet mentioned a mode 1 per datasheet
             8.MHz(),                                      // 125 ns
             ccdr.peripheral.SPI4,
             &ccdr.clocks,
@@ -196,7 +201,23 @@ mod app {
         let adc2_cs = gpiod.pd2.into_push_pull_output();
 
         let adc1_rst = gpioc.pc11.into_push_pull_output();
+
+        
+        // let adc2_rst = if cfg!(feature = "temperature") {
+        //     gpioe.pe0.into_push_pull_output()           
+        // } else if cfg!(feature = "pressure") {
+        //     gpiod.pd1.into_push_pull_output()           
+        // } else if cfg!(feature = "strain") { // strain
+        //     gpiob.pb9.into_push_pull_output()
+        // };
+        #[cfg(feature = "temperature")]
+        let adc2_rst = gpioe.pe0.into_push_pull_output();
+        
+        #[cfg(feature = "pressure")]
         let adc2_rst = gpiod.pd1.into_push_pull_output();
+        
+        #[cfg(feature = "strain")]
+        let adc2_rst = gpiob.pb9.into_push_pull_output();
 
         let mut adc_manager = AdcManager::new(adc_spi, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
         adc_manager.init_adc1().ok();
