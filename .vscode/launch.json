@@ -12,7 +12,10 @@
             "coreConfigs": [
                 {
                     "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/strain",
-                }
+                },
+            ],
+            "runtimeArgs": [
+                "--features strain"
             ]
         },
         {
@@ -33,9 +36,11 @@
             "chip": "STM32H733VGTx",
             "coreConfigs": [
                 {
-                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/pressure",
+                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/argus",
                 }
-            ]
+            ],
+            "connectUnderReset": true, 
+            "consoleLogLevel": "Info"
         },
     ]
 }
