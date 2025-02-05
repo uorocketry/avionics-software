@@ -26,6 +26,7 @@ messages = {workspace = true}
 ads126x = { workspace = true }
 smlang = {workspace = true}
 embedded-hal = {workspace = true}
+thermocouple-converter = { path = "../../crates/thermocouple-converter" }
 
 [dev-dependencies]
 defmt-test = { workspace = true }

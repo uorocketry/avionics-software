@@ -41,6 +41,7 @@ dependencies = [
  "rtic-sync",
  "smlang",
  "stm32h7xx-hal",
+ "thermocouple-converter",
 ]
 
 [[package]]

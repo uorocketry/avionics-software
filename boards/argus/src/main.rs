@@ -228,7 +228,9 @@ mod app {
         );
 
         let mut cs_sd = gpioa.pa4.into_push_pull_output();
-        cs_sd.set_low();
+        cs_sd.set_high();
+
+        // let sd_manager = SdManager::new(spi_sd, cs_sd);
 
         let mut adc_spi = ctx.device.SPI4.spi(
             (
@@ -283,9 +285,8 @@ mod app {
 
         let mut adc_manager = AdcManager::new(adc_spi, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
         adc_manager.init_adc1().unwrap();
-        // adc_manager.init_adc2().ok();
+        adc_manager.init_adc2().ok();
 
-        // let sd_manager = SdManager::new(spi_sd, cs_sd);
 
         // leds
         let led_red = gpioa.pa2.into_push_pull_output();
@@ -378,6 +379,14 @@ mod app {
             match data {
                 Ok(data) => {
                     info!("data: {:?}", data.1);
+                    let reference_voltage = 2.5;
+                    let max_adc_value: u32 = 4_294_967_295;
+                    let volts = (data.1 as f64 * reference_voltage) / max_adc_value as f64;
+                    info!("volatage: {}", volts);
+                    #[cfg(feature = "temperature")]
+                    info!("volatage: {}", thermocouple_converter::adc_to_voltage(data.1));
+                    // let celsius = thermocouple_converter::adc_to_celsius(data.1);
+                    // info!("Celcius: {}", celsius);
                 }
                 Err(_) => {
                     info!("Error reading data");
