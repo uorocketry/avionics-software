@@ -1,5 +1,5 @@
 use ads126x::{
-    register::{DataRate, Mode1Register, Mode2Register, NegativeInpMux, PositiveInpMux},
+    register::{Mode2Register, NegativeInpMux, PositiveInpMux},
     ADCCommand, Ads126x,
 };
 
@@ -22,8 +22,7 @@ where
     pub adc2: Ads126x<GpioPin>,
     pub adc1_cs: Pin<'C', 10, Output<PushPull>>,
     pub adc2_cs: Pin<'D', 2, Output<PushPull>>,
-    // pub adc1_sensors: (u8, Vec<AdcSensor, 4>), // (index, sensors)
-    pub adc1_sensors: (u8, Vec<AdcSensor, 1>),
+    pub adc1_sensors: (u8, Vec<AdcSensor, 4>), // (index, sensors)
     pub adc2_sensors: (u8, Vec<AdcSensor, 4>),
 }
 
@@ -38,59 +37,59 @@ where
         adc1_cs: Pin<'C', 10, Output<PushPull>>,
         adc2_cs: Pin<'D', 2, Output<PushPull>>,
     ) -> Self {
-        let pressure_p1 = AdcSensor {
+        let sensor1 = AdcSensor {
             adc: 1,
             positive_input: PositiveInpMux::AIN0,
             negative_input: NegativeInpMux::AIN1,
         };
 
-        let pressure_p2 = AdcSensor {
+        let sensor2 = AdcSensor {
             adc: 1,
             positive_input: PositiveInpMux::AIN2,
             negative_input: NegativeInpMux::AIN3,
         };
 
-        let pressure_p3 = AdcSensor {
+        let sensor3 = AdcSensor {
             adc: 1,
             positive_input: PositiveInpMux::AIN4,
             negative_input: NegativeInpMux::AIN5,
         };
 
-        let pressure_p4 = AdcSensor {
+        let sensor4 = AdcSensor {
             adc: 1,
             positive_input: PositiveInpMux::AIN6,
             negative_input: NegativeInpMux::AIN7,
         };
 
-        let pressure_p5 = AdcSensor {
+        let sensor5 = AdcSensor {
             adc: 2,
             positive_input: PositiveInpMux::AIN0,
             negative_input: NegativeInpMux::AIN1,
         };
 
-        let pressure_p6 = AdcSensor {
+        let sensor6 = AdcSensor {
             adc: 2,
             positive_input: PositiveInpMux::AIN2,
             negative_input: NegativeInpMux::AIN3,
         };
 
-        let pressure_p7 = AdcSensor {
+        let sensor7 = AdcSensor {
             adc: 2,
             positive_input: PositiveInpMux::AIN4,
             negative_input: NegativeInpMux::AIN5,
         };
 
-        let pressure_p8 = AdcSensor {
+        let sensor8 = AdcSensor {
             adc: 2,
             positive_input: PositiveInpMux::AIN6,
             negative_input: NegativeInpMux::AIN7,
         };
 
         // insert the sensors
-        let adc1_sensors = Vec::from_slice(&[pressure_p1, pressure_p2, pressure_p3, pressure_p4])
+        let adc1_sensors = Vec::from_slice(&[sensor1, sensor2, sensor3, sensor4])
             .expect("Cannot create adc1_sensors vector.");
         
-        let adc2_sensors = Vec::from_slice(&[pressure_p5, pressure_p6, pressure_p7, pressure_p8])
+        let adc2_sensors = Vec::from_slice(&[sensor5, sensor6, sensor7, sensor8])
             .expect("Cannot create adc2_sensors vector.");
 
         Self {
@@ -108,18 +107,23 @@ where
         self.select_adc1();
         self.adc1.set_reset_high().unwrap();
 
-        // 2^16 cycles of delay
-        cortex_m::asm::delay(65536 * (96_000_000 / 6_000_000));
+        // TODO: move these values to const, or pass in as a parameter (preferably pass as parameter)
+        cortex_m::asm::delay(65536 * (96_000_000 / 6_000_000)); // delay 2^16 cycles of the ADC 
 
         // self.adc1.send_command(ADCCommand::RESET, &mut self.spi)?;
 
         // // setup the Power register
-        let mut power_cfg = ads126x::register::PowerRegister::default();
-        power_cfg.set_vbias(true);
-        #[cfg(feature = "temperature")]
-        self.adc1.set_power(&power_cfg, &mut self.spi)?;
-        cortex_m::asm::delay(65536 * (96_000_000 / 6_000_000));
-
+        #[cfg(any(feature = "temperature", feature = "pressure"))]
+        {
+            // We need to enable vbias
+            let mut power_cfg = ads126x::register::PowerRegister::default();
+            power_cfg.set_vbias(true);
+            self.adc1.set_power(&power_cfg, &mut self.spi)?;
+            // Set gain
+            let mut mode2_cfg = Mode2Register::default();
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV8);
+            self.adc1.set_mode2(&mode2_cfg, &mut self.spi);
+        }
         // let mut mode0_cfg = ads126x::register::Mode0Register::default();
 
         // Verify none custom config works first
@@ -161,7 +165,18 @@ where
 
         // 2^16 cycles of delay
         cortex_m::asm::delay(65536 * (96_000_000 / 6_000_000));
-
+        
+        #[cfg(feature = "temperature")]
+        {
+            // We need to enable vbias
+            let mut power_cfg = ads126x::register::PowerRegister::default();
+            power_cfg.set_vbias(true);
+            self.adc2.set_power(&power_cfg, &mut self.spi)?;
+            // Set gain
+            let mut mode2_cfg = Mode2Register::default();
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV8);
+            self.adc2.set_mode2(&mode2_cfg, &mut self.spi);
+        }
         // // stop conversions
         // self.adc2.send_command(ADCCommand::STOP1, &mut self.spi)?;
         // self.adc2.send_command(ADCCommand::STOP2, &mut self.spi)?;

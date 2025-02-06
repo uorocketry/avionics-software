@@ -37,6 +37,10 @@ use types::COM_ID; // global logger
 
 use crate::types::{ADC2_RST_PIN_ID, ADC2_RST_PIN_PORT};
 
+use messages::FormattedNaiveDateTime;
+
+use crate::time_manager::TimeManager;
+
 const DATA_CHANNEL_CAPACITY: usize = 10;
 
 systick_monotonic!(Mono);
@@ -61,17 +65,6 @@ fn panic() -> ! {
 
 #[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI2, SPI3, SPI2])]
 mod app {
-    use cortex_m::asm;
-    use messages::FormattedNaiveDateTime;
-    use stm32h7xx_hal::{
-        gpio::Speed,
-        nb,
-        pac::{rcc::d2ccip1r::SPI45SEL_A, SPI4},
-        rcc::{rec::Spi45ClkSelGetter, ResetEnable},
-    };
-
-    use crate::{can_manager::CanManager, time_manager::TimeManager};
-
     use super::*;
 
     #[shared]
@@ -355,22 +348,6 @@ mod app {
             },
         )
     }
-
-    // #[task(priority = 3, shared = [adc_manager, &em])]
-    // async fn poll_adc1(mut cx: poll_adc1::Context) {
-    //     loop {
-    //         cx.shared.adc_manager.lock(|adc_manager| {
-    //                 adc_manager.select_adc1();
-    //                 cx.shared.em.run(|| {
-    //                     let res = adc_manager.read_adc1_data()?;
-    //                     info!("Data: {:?}", res.1);
-    //                     info!("CRC Status: {:?}", res.2);
-    //                     Ok(())
-    //                 });
-    //             });
-    //         Mono::delay(10.millis()).await;
-    //     }
-    // }
 
     #[task(priority = 3, binds = EXTI15_10, shared = [adc_manager], local = [adc1_int])]
     fn adc1_data_ready(mut cx: adc1_data_ready::Context) {
