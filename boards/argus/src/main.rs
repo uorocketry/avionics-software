@@ -6,13 +6,7 @@ compile_error!(
     "You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'."
 );
 
-mod state_machine;
-pub mod adc_manager;
-mod can_manager;
-mod data_manager;
-mod time_manager;
-mod traits;
-mod types;
+use argus::*;
 
 use adc_manager::AdcManager;
 use chrono::NaiveDate;
@@ -24,7 +18,6 @@ use messages::CanMessage;
 use panic_probe as _;
 use rtic_monotonics::systick::prelude::*;
 use rtic_sync::{channel::*, make_channel};
-use smlang::statemachine;
 use state_machine as sm;
 use stm32h7xx_hal::gpio::gpioa::{PA2, PA3};
 use stm32h7xx_hal::gpio::PA4;
@@ -42,17 +35,17 @@ const DATA_CHANNEL_CAPACITY: usize = 10;
 
 systick_monotonic!(Mono, 500);
 
-statemachine! {
-    transitions: {
-        *Init + Start = Idle,
-        Idle | Recovery + WantsCollection = Collection,
-        Idle + NoConfig = Calibration,
-        Collection + WantsProcessing = Processing,
-        Calibration + Configured = Idle,
-        Fault + FaultCleared = Idle,
-        _ + FaultDetected = Fault,
-    }
-}
+// statemachine! {
+//     transitions: {
+//         *Init + Start = Idle,
+//         Idle | Recovery + WantsCollection = Collection,
+//         Idle + NoConfig = Calibration,
+//         Collection + WantsProcessing = Processing,
+//         Calibration + Configured = Idle,
+//         Fault + FaultCleared = Idle,
+//         _ + FaultDetected = Fault,
+//     }
+// }
 
 #[inline(never)]
 #[defmt::panic_handler]
@@ -85,7 +78,7 @@ mod app {
 
     #[local]
     struct LocalResources {
-        state_machine: StateMachine<traits::Context>,
+        state_machine: sm::StateMachine<traits::Context>,
         can_sender: Sender<'static, CanMessage, DATA_CHANNEL_CAPACITY>,
         led_red: PA2<Output<PushPull>>,
         led_green: PA3<Output<PushPull>>,
@@ -260,7 +253,7 @@ mod app {
         let mut data_manager = DataManager::new();
         data_manager.set_reset_reason(reset);
         let em = ErrorManager::new();
-        let state_machine = StateMachine::new(traits::Context {});
+        let state_machine = sm::StateMachine::new(traits::Context {});
 
         blink::spawn().ok();
         // send_data_internal::spawn(can_receiver).ok();
@@ -294,14 +287,14 @@ mod app {
     /// Handles the current state of the ARGUS system.
     #[task(priority = 2, local = [state_machine])]
     async fn sm_orchestrate(cx: sm_orchestrate::Context) {
-        match cx.local.state_machine.state {
-            States::Calibration => sm::calibrate().await,
-            States::Collection => sm::collect().await,
-            States::Fault => sm::fault().await,
-            States::Idle => sm::idle().await,
-            States::Init => sm::init().await,
-            States::Processing => sm::process().await,
-            States::Recovery => sm::recover().await,
+        match cx.local.state_machine.state() {
+            sm::States::Calibration => sm::calibrate().await,
+            sm::States::Collection => sm::collect().await,
+            sm::States::Fault => sm::fault().await,
+            sm::States::Idle => sm::idle().await,
+            sm::States::Init => sm::init().await,
+            sm::States::Processing => sm::process().await,
+            sm::States::Recovery => sm::recover().await,
         }
     }
 
