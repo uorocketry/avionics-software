@@ -6,7 +6,7 @@ compile_error!(
     "You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'."
 );
 
-// mod state_machine;
+mod state_machine;
 pub mod adc_manager;
 mod can_manager;
 mod data_manager;
@@ -25,6 +25,7 @@ use panic_probe as _;
 use rtic_monotonics::systick::prelude::*;
 use rtic_sync::{channel::*, make_channel};
 use smlang::statemachine;
+use state_machine as sm;
 use stm32h7xx_hal::gpio::gpioa::{PA2, PA3};
 use stm32h7xx_hal::gpio::PA4;
 use stm32h7xx_hal::gpio::{Edge, ExtiPin, Pin};
@@ -287,6 +288,21 @@ mod app {
                 state_machine,
             },
         )
+    }
+
+    /// The state machine orchestrator.
+    /// Handles the current state of the ARGUS system.
+    #[task(priority = 2, local = [state_machine])]
+    async fn sm_orchestrate(cx: sm_orchestrate::Context) {
+        match cx.local.state_machine.state {
+            States::Calibration => sm::calibrate().await,
+            States::Collection => sm::collect().await,
+            States::Fault => sm::fault().await,
+            States::Idle => sm::idle().await,
+            States::Init => sm::init().await,
+            States::Processing => sm::process().await,
+            States::Recovery => sm::recover().await,
+        }
     }
 
     #[task(priority = 3, binds = EXTI15_10, shared = [adc_manager], local = [adc1_int])]
