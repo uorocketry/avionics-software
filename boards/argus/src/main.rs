@@ -274,19 +274,27 @@ mod app {
 
     /// The state machine orchestrator.
     /// Handles the current state of the ARGUS system.
-    #[task(priority = 2, shared = [state_machine])]
-    async fn sm_orchestrate(mut cx: sm_orchestrate::Context) {
-        cx.shared.state_machine.lock(|sm| {
-            match sm.state() {
-                sm::States::Calibration => todo!(),
-                sm::States::Collection => todo!(),
-                sm::States::Fault => todo!(),
-                sm::States::Idle => todo!(),
-                sm::States::Init => todo!(),
-                sm::States::Processing => todo!(),
-                sm::States::Recovery => todo!(),
+    #[task(priority = 2, shared = [&state_machine])]
+    async fn sm_orchestrate(cx: sm_orchestrate::Context) {
+        let mut last_state = cx.shared.state_machine.state();
+        loop {
+            let state = cx.shared.state_machine.state();
+            if state != last_state {
+                match state {
+                    sm::States::Calibration => todo!(),
+                    sm::States::Collection => todo!(),
+                    sm::States::Fault => todo!(),
+                    sm::States::Idle => todo!(),
+                    sm::States::Init => todo!(),
+                    sm::States::Processing => todo!(),
+                    sm::States::Recovery => todo!(),
+                }
+                
+                last_state = state;
             }
-        })
+
+            Mono::delay(100.millis()).await;
+        }
     }
 
     #[task(priority = 3, binds = EXTI15_10, shared = [adc_manager], local = [adc1_int])]
