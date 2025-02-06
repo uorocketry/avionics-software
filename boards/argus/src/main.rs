@@ -35,18 +35,6 @@ const DATA_CHANNEL_CAPACITY: usize = 10;
 
 systick_monotonic!(Mono, 500);
 
-// statemachine! {
-//     transitions: {
-//         *Init + Start = Idle,
-//         Idle | Recovery + WantsCollection = Collection,
-//         Idle + NoConfig = Calibration,
-//         Collection + WantsProcessing = Processing,
-//         Calibration + Configured = Idle,
-//         Fault + FaultCleared = Idle,
-//         _ + FaultDetected = Fault,
-//     }
-// }
-
 #[inline(never)]
 #[defmt::panic_handler]
 fn panic() -> ! {
@@ -74,11 +62,11 @@ mod app {
         rtc: rtc::Rtc,
         adc_manager: AdcManager<Pin<ADC2_RST_PIN_PORT, ADC2_RST_PIN_ID, Output<PushPull>>>,
         time_manager: TimeManager,
+        state_machine: sm::StateMachine<traits::Context>,
     }
 
     #[local]
     struct LocalResources {
-        state_machine: sm::StateMachine<traits::Context>,
         can_sender: Sender<'static, CanMessage, DATA_CHANNEL_CAPACITY>,
         led_red: PA2<Output<PushPull>>,
         led_green: PA3<Output<PushPull>>,
@@ -259,6 +247,7 @@ mod app {
         // send_data_internal::spawn(can_receiver).ok();
         reset_reason_send::spawn().ok();
         state_send::spawn().ok();
+        sm_orchestrate::spawn().ok();
         info!("Online");
 
         (
@@ -271,6 +260,7 @@ mod app {
                 rtc,
                 adc_manager,
                 time_manager,
+                state_machine,
             },
             LocalResources {
                 adc1_int,
@@ -278,24 +268,25 @@ mod app {
                 can_sender,
                 led_red,
                 led_green,
-                state_machine,
             },
         )
     }
 
     /// The state machine orchestrator.
     /// Handles the current state of the ARGUS system.
-    #[task(priority = 2, local = [state_machine])]
-    async fn sm_orchestrate(cx: sm_orchestrate::Context) {
-        match cx.local.state_machine.state() {
-            sm::States::Calibration => sm::calibrate().await,
-            sm::States::Collection => sm::collect().await,
-            sm::States::Fault => sm::fault().await,
-            sm::States::Idle => sm::idle().await,
-            sm::States::Init => sm::init().await,
-            sm::States::Processing => sm::process().await,
-            sm::States::Recovery => sm::recover().await,
-        }
+    #[task(priority = 2, shared = [state_machine])]
+    async fn sm_orchestrate(mut cx: sm_orchestrate::Context) {
+        cx.shared.state_machine.lock(|sm| {
+            match sm.state() {
+                sm::States::Calibration => todo!(),
+                sm::States::Collection => todo!(),
+                sm::States::Fault => todo!(),
+                sm::States::Idle => todo!(),
+                sm::States::Init => todo!(),
+                sm::States::Processing => todo!(),
+                sm::States::Recovery => todo!(),
+            }
+        })
     }
 
     #[task(priority = 3, binds = EXTI15_10, shared = [adc_manager], local = [adc1_int])]
