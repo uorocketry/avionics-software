@@ -22,7 +22,7 @@ where
     pub adc2: Ads126x<GpioPin>,
     pub adc1_cs: Pin<'C', 10, Output<PushPull>>,
     pub adc2_cs: Pin<'D', 2, Output<PushPull>>,
-    pub adc1_sensors: (u8, Vec<AdcSensor, 4>), // (index, sensors)
+    pub adc1_sensors: (u8, Vec<AdcSensor, 1>), // (index, sensors)
     pub adc2_sensors: (u8, Vec<AdcSensor, 4>),
 }
 
@@ -61,6 +61,12 @@ where
             negative_input: NegativeInpMux::AIN7,
         };
 
+        let adc1_temp_sensor = AdcSensor {
+            adc: 1, 
+            positive_input: PositiveInpMux::TempSensMonPos,
+            negative_input: NegativeInpMux::TempSensMonNeg,
+        };
+
         let sensor5 = AdcSensor {
             adc: 2,
             positive_input: PositiveInpMux::AIN0,
@@ -86,7 +92,10 @@ where
         };
 
         // insert the sensors
-        let adc1_sensors = Vec::from_slice(&[sensor1, sensor2, sensor3, sensor4])
+        // let adc1_sensors = Vec::from_slice(&[sensor1, sensor2, sensor3, sensor4])
+        //     .expect("Cannot create adc1_sensors vector.");
+        
+        let adc1_sensors = Vec::from_slice(&[sensor4])
             .expect("Cannot create adc1_sensors vector.");
         
         let adc2_sensors = Vec::from_slice(&[sensor5, sensor6, sensor7, sensor8])
@@ -118,11 +127,13 @@ where
             // We need to enable vbias
             let mut power_cfg = ads126x::register::PowerRegister::default();
             power_cfg.set_vbias(true);
-            self.adc1.set_power(&power_cfg, &mut self.spi)?;
+            self.adc1.set_power(&power_cfg, &mut self.spi).unwrap();
             // Set gain
             let mut mode2_cfg = Mode2Register::default();
-            mode2_cfg.set_gain(ads126x::register::PGAGain::VV8);
-            self.adc1.set_mode2(&mode2_cfg, &mut self.spi);
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV32); // this needs to be 1 if wanting to read internal temp sensor. 
+            self.adc1.set_mode2(&mode2_cfg, &mut self.spi).unwrap();
+            let mode2_cfg_real: Mode2Register = self.adc1.get_mode2(&mut self.spi).unwrap();
+            assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
         }
         // let mut mode0_cfg = ads126x::register::Mode0Register::default();
 
@@ -169,13 +180,16 @@ where
         #[cfg(feature = "temperature")]
         {
             // We need to enable vbias
-            let mut power_cfg = ads126x::register::PowerRegister::default();
-            power_cfg.set_vbias(true);
-            self.adc2.set_power(&power_cfg, &mut self.spi)?;
-            // Set gain
-            let mut mode2_cfg = Mode2Register::default();
-            mode2_cfg.set_gain(ads126x::register::PGAGain::VV8);
-            self.adc2.set_mode2(&mode2_cfg, &mut self.spi);
+            // let mut power_cfg = ads126x::register::PowerRegister::default();
+            // power_cfg.set_vbias(true);
+            // self.adc2.set_power(&power_cfg, &mut self.spi).unwrap();
+            // // Set gain
+            // let mut mode2_cfg = Mode2Register::default();
+            // mode2_cfg.set_gain(ads126x::register::PGAGain::VV1);
+            // self.adc2.set_mode2(&mode2_cfg, &mut self.spi);
+            // let mode2_cfg_real: Mode2Register = self.adc2.get_mode2(&mut self.spi).unwrap();
+            // info!("Mode2: {:#010b}", mode2_cfg_real.bits());
+            // assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
         }
         // // stop conversions
         // self.adc2.send_command(ADCCommand::STOP1, &mut self.spi)?;
@@ -241,6 +255,7 @@ where
         let mut reg_real = self.adc1.get_inpmux(&mut self.spi)?;
 
         info!("Real ADC1 InpMux: {:#010b}", reg_real.bits());
+
         // assert_eq!(reg.bits(), reg_real.bits());
         Ok(())
     }
@@ -284,6 +299,7 @@ where
     // abstract these functions
 
     pub fn select_next_adc1_sensor(&mut self) {
+        self.adc2_cs.set_high();
         self.adc1_cs.set_high();
         self.adc1_cs.set_low();
         // select the next sensor based on round robin
@@ -300,4 +316,23 @@ where
     pub fn select_next_adc2_sensor(&mut self) {
         // select the next sensor
     }
+
+    // pub fn read_adc1_temperature(&mut self) -> f64 {
+    //     // set gain back to 1 
+    //     let mut mode2_cfg = Mode2Register::default();
+    //     mode2_cfg.set_gain(ads126x::register::PGAGain::VV1);
+    //     self.adc1.set_mode2(&mode2_cfg, &mut self.spi).unwrap();
+
+    //     let mut sensor = AdcSensor {
+    //         adc: 1, 
+    //         positive_input: PositiveInpMux::TempSensMonPos,
+    //         negative_input: NegativeInpMux::TempSensMonNeg,
+    //     };
+
+    //     self.set_adc1_inpmux(&mut sensor).unwrap();
+
+    //     let data = self.read_adc1_data().unwrap(); 
+
+    //     ((data.1 - 122_400) / 420) as f64 + 25.0
+    // }
 }
