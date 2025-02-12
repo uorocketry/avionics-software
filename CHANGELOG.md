@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/uorocketry/argus/compare/v1.0.0...v1.0.1) (2025-02-12)
+
+
+### Bug Fixes
+
+* semantic-release.yml ([c737edf](https://github.com/uorocketry/argus/commit/c737edf60fcad4b1a22d2d86faf4d9cbdc2d08bf))
+
 # 1.0.0 (2025-01-31)
 
 
