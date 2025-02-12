@@ -360,22 +360,16 @@ mod app {
                     // let celsius = ((data.1 - 122_400) / 420)as f32 + 25.0;
                     // info!("Celcius: {}", celsius);
                     
-                    
-                    info!("data: {:?}", data.1);
-                    let reference_voltage = 5.0;
-                    let max_adc_value: f64 = 4_294_967_296.0;
-                    let v_scale = reference_voltage / max_adc_value; 
-                    info!("v_div: {}", v_scale);
-                    let mut volts = data.1 as f64 * v_scale;
-                    // volts /= 32.0; // PGA gain 
-                    // let volts = (data.1 as f64 * reference_voltage) / max_adc_value as f64;
-                    info!("volatage: {}", volts);
+                    info!("ADC1 reading: {:?}", data.1);
                     #[cfg(feature = "temperature")]
                     {
-                        // info!("volatage: {}", thermocouple_converter::adc_to_voltage(data.1));
-                        let celsius = thermocouple_converter::voltage_to_celsius(volts);
+                        let volts = thermocouple_converter::adc_to_voltage(data.1);
+                        info!("volatage: {}", volts);
+
+                        let celsius = thermocouple_converter::adc_to_celsius(data.1);
                         info!("Celcius: {}", celsius);
                     }
+                    
                     // let temp_adc = adc_manager.read_adc1_temperature(); 
                     // info!("Temp ADC: {:?}", temp_adc);
                 }
