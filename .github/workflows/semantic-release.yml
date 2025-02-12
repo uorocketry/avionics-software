@@ -46,23 +46,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
-
-      - name: Upload Pressure Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.semantic-release.outputs.upload_url }}
-          asset_path: ./target/thumbv7em-none-eabihf/release/argus
-          asset_name: argus-pressure
-          asset_content_type: application/octet-stream
-
-      - name: Upload Temperature Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.semantic-release.outputs.upload_url }}
-          asset_path: ./target/thumbv7em-none-eabihf/release/argus
-          asset_name: argus-temperature
-          asset_content_type: application/octet-stream
