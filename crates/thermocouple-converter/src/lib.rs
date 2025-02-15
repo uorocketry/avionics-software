@@ -54,13 +54,15 @@ pub fn adc_to_celsius(adc_reading: i32) -> f64 {
 pub fn adc_to_voltage(adc_reading: i32) -> f64 {
     const REFERENCE_VOLTAGE: f64 = 5.0;
     const MAX_ADC_VALUE: f64 = 4_294_967_296.0;
-    const V_SCALE: f64 = REFERENCE_VOLTAGE / MAX_ADC_VALUE; 
+    // change 32 to be waht the gain is 
+    const V_SCALE: f64 = (REFERENCE_VOLTAGE / MAX_ADC_VALUE) / 32.0; 
 
     adc_reading as f64 * V_SCALE
 }
 
 /// Converts voltage to celsius for type K thermocouples.
-pub fn voltage_to_celsius(voltage: f64) -> f64 {
+pub fn voltage_to_celsius(mut voltage: f64) -> f64 {
+    voltage *= 1000.0;
     return match voltage {
         -5.891..=0.0 => calc_temp_exponential(voltage, &TYPE_K_COEF[0]),
         0.0..=20.644 => calc_temp_exponential(voltage, &TYPE_K_COEF[1]),

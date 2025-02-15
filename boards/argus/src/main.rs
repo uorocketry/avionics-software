@@ -278,7 +278,7 @@ mod app {
 
         let mut adc_manager = AdcManager::new(adc_spi, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
         adc_manager.init_adc1().unwrap();
-        adc_manager.init_adc2().ok();
+        adc_manager.init_adc2().unwrap();
 
 
         // leds
@@ -369,9 +369,21 @@ mod app {
                         let celsius = thermocouple_converter::adc_to_celsius(data.1);
                         info!("Celcius: {}", celsius);
                     }
+
+                    #[cfg(feature = "pressure")]
+                    {
+                        let pressure = (data.1 as f32 * 0.0001 * 6894.76) / 102400.0;
+                        info!("Pressure: {}", pressure);
+                    }
+
+                    #[cfg(feature = "strain")]
+                    {
+                        let strain = data.1 as f32 * 0.0001;
+                        info!("Strain: {}", strain);
+                    }
                     
                     // let temp_adc = adc_manager.read_adc1_temperature(); 
-                    // info!("Temp ADC: {:?}", temp_adc);
+                    // info!("Temp ADC: {:?}", temp_adc);102400
                 }
                 Err(_) => {
                     info!("Error reading data");

@@ -1,5 +1,5 @@
 use ads126x::{
-    register::{Mode2Register, NegativeInpMux, PositiveInpMux},
+    register::{Mode1Register, Mode2Register, NegativeInpMux, PositiveInpMux},
     ADCCommand, Ads126x,
 };
 
@@ -8,8 +8,7 @@ use embedded_hal::digital::v2::OutputPin;
 use heapless::Vec;
 use messages::sensor::AdcSensor;
 use stm32h7xx_hal::{
-    gpio::{Output, Pin, PushPull},
-    spi::Spi,
+    gpio::{Output, Pin, PushPull}, pac::sdmmc1::power, spi::Spi
 };
 
 // There is an option to use interrupts using the data ready pins, but for now we will poll.
@@ -126,15 +125,35 @@ where
         {
             // We need to enable vbias
             let mut power_cfg = ads126x::register::PowerRegister::default();
-            power_cfg.set_vbias(true);
+            power_cfg.set_vbias(false);
             self.adc1.set_power(&power_cfg, &mut self.spi).unwrap();
             // Set gain
             let mut mode2_cfg = Mode2Register::default();
-            mode2_cfg.set_gain(ads126x::register::PGAGain::VV32); // this needs to be 1 if wanting to read internal temp sensor. 
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV32); // this needs to be 1 if wanting to read internal temp sensor.             let mut mode1_cfg = Mode1Register::default();
+
             self.adc1.set_mode2(&mode2_cfg, &mut self.spi).unwrap();
-            let mode2_cfg_real: Mode2Register = self.adc1.get_mode2(&mut self.spi).unwrap();
-            assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
+
+            let mut mode1_cfg = Mode1Register::default();
+            mode1_cfg.set_sbmag(ads126x::register::SensorBiasMagnitude::R10MOhm);
+
+            self.adc1.set_mode1(&mode1_cfg, &mut self.spi).unwrap();
+
+            // let mut idac_cfg = ads126x::register::IdacMuxRegister::default();
+            // idac_cfg.set_mux1(ads126x::register::IdacOutMux::AIN7);
+            // idac_cfg.set_mux2(ads126x::register::IdacOutMux::AIN6);
+
+            // self.adc1.set_idacmux(&idac_cfg, &mut self.spi).unwrap();
+
+            // let mut idac_current_cfg = ads126x::register::IdacMagRegister::default();
+            // idac_current_cfg.set_mag1(ads126x::register::IdacCurMag::I250uA);
+            // idac_current_cfg.set_mag2(ads126x::register::IdacCurMag::I250uA);
+
+            // self.adc1.set_idacmag(&idac_current_cfg, &mut self.spi).unwrap();
         }
+
+
+        // no sensor (vbias) for strain gauage 
+
         // let mut mode0_cfg = ads126x::register::Mode0Register::default();
 
         // Verify none custom config works first
