@@ -41,6 +41,11 @@ name = "adc"
 harness = false
 path = "tests/adc.rs"
 
+[[test]]
+name = "simple"
+harness = false
+path = "tests/simple.rs"
+
 [[bin]]
 name = "argus"
 harness = false

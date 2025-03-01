@@ -372,24 +372,24 @@ mod app {
 
                     #[cfg(feature = "pressure")]
                     {
-                        let pressure = (data.1 as f32 * 0.0001 * 6894.76) / 102400.0;
-                        info!("Pressure: {}", pressure);
+                        let volts = thermocouple_converter::adc_to_voltage(data.1);
+                        info!("volatage: {}", volts);
+                        let pressure: f64 = ((10000.0/((60.0/100.0) * (2.5 / 3.0))) * volts) / 32.0;
+                        info!("Pressure (psi): {}", pressure);
                     }
 
                     #[cfg(feature = "strain")]
                     {
+                        let volts = thermocouple_converter::adc_to_voltage(data.1);
+                        info!("volatage: {}", volts);
                         let strain = data.1 as f32 * 0.0001;
                         info!("Strain: {}", strain);
                     }
-                    
-                    // let temp_adc = adc_manager.read_adc1_temperature(); 
-                    // info!("Temp ADC: {:?}", temp_adc);102400
                 }
                 Err(_) => {
                     info!("Error reading data");
                 }
             }
-
             adc_manager.select_next_adc1_sensor(); // round robin schedules the sensors to be read.
         });
         cx.local.adc1_int.clear_interrupt_pending_bit();
@@ -397,12 +397,11 @@ mod app {
 
     #[task(priority = 3, binds = EXTI3, shared = [adc_manager], local = [adc2_int])]
     fn adc2_data_ready(mut cx: adc2_data_ready::Context) {
-        info!("new data available come through");
         cx.shared.adc_manager.lock(|adc_manager| {
             let data = adc_manager.read_adc2_data();
             match data {
                 Ok(data) => {
-                    info!("data: {:?}", data.1);
+                    info!("Adc 2 reading data: {:?}", data.1);
                 }
                 Err(_) => {
                     info!("Error reading data");

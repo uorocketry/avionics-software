@@ -21,7 +21,7 @@ where
     pub adc2: Ads126x<GpioPin>,
     pub adc1_cs: Pin<'C', 10, Output<PushPull>>,
     pub adc2_cs: Pin<'D', 2, Output<PushPull>>,
-    pub adc1_sensors: (u8, Vec<AdcSensor, 1>), // (index, sensors)
+    pub adc1_sensors: (u8, Vec<AdcSensor, 4>), // (index, sensors)
     pub adc2_sensors: (u8, Vec<AdcSensor, 4>),
 }
 
@@ -91,11 +91,11 @@ where
         };
 
         // insert the sensors
-        // let adc1_sensors = Vec::from_slice(&[sensor1, sensor2, sensor3, sensor4])
-        //     .expect("Cannot create adc1_sensors vector.");
-        
-        let adc1_sensors = Vec::from_slice(&[sensor4])
+        let adc1_sensors = Vec::from_slice(&[sensor1, sensor2, sensor3, sensor4])
             .expect("Cannot create adc1_sensors vector.");
+        
+        // let adc1_sensors = Vec::from_slice(&[sensor4])
+            // .expect("Cannot create adc1_sensors vector.");
         
         let adc2_sensors = Vec::from_slice(&[sensor5, sensor6, sensor7, sensor8])
             .expect("Cannot create adc2_sensors vector.");
@@ -118,9 +118,6 @@ where
         // TODO: move these values to const, or pass in as a parameter (preferably pass as parameter)
         cortex_m::asm::delay(65536 * (96_000_000 / 6_000_000)); // delay 2^16 cycles of the ADC 
 
-        // self.adc1.send_command(ADCCommand::RESET, &mut self.spi)?;
-
-        // // setup the Power register
         #[cfg(any(feature = "temperature", feature = "pressure"))]
         {
             // We need to enable vbias
@@ -137,45 +134,7 @@ where
             mode1_cfg.set_sbmag(ads126x::register::SensorBiasMagnitude::R10MOhm);
 
             self.adc1.set_mode1(&mode1_cfg, &mut self.spi).unwrap();
-
-            // let mut idac_cfg = ads126x::register::IdacMuxRegister::default();
-            // idac_cfg.set_mux1(ads126x::register::IdacOutMux::AIN7);
-            // idac_cfg.set_mux2(ads126x::register::IdacOutMux::AIN6);
-
-            // self.adc1.set_idacmux(&idac_cfg, &mut self.spi).unwrap();
-
-            // let mut idac_current_cfg = ads126x::register::IdacMagRegister::default();
-            // idac_current_cfg.set_mag1(ads126x::register::IdacCurMag::I250uA);
-            // idac_current_cfg.set_mag2(ads126x::register::IdacCurMag::I250uA);
-
-            // self.adc1.set_idacmag(&idac_current_cfg, &mut self.spi).unwrap();
         }
-
-
-        // no sensor (vbias) for strain gauage 
-
-        // let mut mode0_cfg = ads126x::register::Mode0Register::default();
-
-        // Verify none custom config works first
-        // setup mode 1 and mode 2 registers
-        // let mut mode1_cfg = Mode1Register::default();
-        // mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
-        // self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
-
-        // let mut mode2_cfg = Mode2Register::default();
-        // mode2_cfg.set_dr(DataRate::SPS1200);
-        // self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
-
-        // read back the mode1 and mode2 registers to verify
-        // let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;
-
-        // let mode2_cfg_real = self.adc1.get_mode2(&mut self.spi)?;
-
-        // verify
-        // info!("Mode1: {:#010b}", mode1_cfg_real.bits());
-        // info!("Mode2: {:#010b}", mode2_cfg_real.bits());
-        // assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
-        // assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
 
         // start conversions
         self.set_adc1_inpmux(&mut self.adc1_sensors.1[0].clone())?;
@@ -190,63 +149,39 @@ where
     }
 
     pub fn init_adc2(&mut self) -> Result<(), ads126x::error::ADS126xError> {
-        self.select_adc1();
-        self.adc2.set_reset_high()?;
+        self.select_adc2();
+        self.adc2.set_reset_high().unwrap();
 
-        // 2^16 cycles of delay
-        cortex_m::asm::delay(65536 * (96_000_000 / 6_000_000));
-        
-        #[cfg(feature = "temperature")]
+        // TODO: move these values to const, or pass in as a parameter (preferably pass as parameter)
+        cortex_m::asm::delay(65536 * (96_000_000 / 6_000_000)); // delay 2^16 cycles of the ADC 
+
+        #[cfg(any(feature = "temperature", feature = "pressure"))]
         {
             // We need to enable vbias
-            // let mut power_cfg = ads126x::register::PowerRegister::default();
-            // power_cfg.set_vbias(true);
-            // self.adc2.set_power(&power_cfg, &mut self.spi).unwrap();
-            // // Set gain
-            // let mut mode2_cfg = Mode2Register::default();
-            // mode2_cfg.set_gain(ads126x::register::PGAGain::VV1);
-            // self.adc2.set_mode2(&mode2_cfg, &mut self.spi);
-            // let mode2_cfg_real: Mode2Register = self.adc2.get_mode2(&mut self.spi).unwrap();
-            // info!("Mode2: {:#010b}", mode2_cfg_real.bits());
-            // assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
+            let mut power_cfg = ads126x::register::PowerRegister::default();
+            power_cfg.set_vbias(false);
+            self.adc2.set_power(&power_cfg, &mut self.spi).unwrap();
+            // Set gain
+            let mut mode2_cfg = Mode2Register::default();
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV32); // this needs to be 1 if wanting to read internal temp sensor.             let mut mode1_cfg = Mode1Register::default();
+
+            self.adc2.set_mode2(&mode2_cfg, &mut self.spi).unwrap();
+
+            let mut mode1_cfg = Mode1Register::default();
+            mode1_cfg.set_sbmag(ads126x::register::SensorBiasMagnitude::R10MOhm);
+
+            self.adc2.set_mode1(&mode1_cfg, &mut self.spi).unwrap();
         }
-        // // stop conversions
-        // self.adc2.send_command(ADCCommand::STOP1, &mut self.spi)?;
-        // self.adc2.send_command(ADCCommand::STOP2, &mut self.spi)?;
 
-        // // setup the Power register
-        // let mut power_cfg = ads126x::register::PowerRegister::default();
-        // power_cfg.clear_reset();
-        // self.adc2.set_power(&power_cfg, &mut self.spi)?;
-
-        // // Verify none custom config works first
-        // // setup mode 1 and mode 2 registers
-        // let mut mode1_cfg = Mode1Register::default();
-        // mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
-        // self.adc2.set_mode1(&mode1_cfg, &mut self.spi)?;
-
-        // let mut mode2_cfg = Mode2Register::default();
-        // mode2_cfg.set_dr(DataRate::SPS1200);
-        // self.adc2.set_mode2(&mode2_cfg, &mut self.spi)?;
-
-        // // read back the mode1 and mode2 registers to verify
-        // let mode1_cfg_real = self.adc2.get_mode1(&mut self.spi)?;
-        // let mode2_cfg_real = self.adc2.get_mode2(&mut self.spi)?;
-
-        // // verify
-        // info!("Mode1: {:#010b}", mode1_cfg_real.bits());
-        // info!("Mode2: {:#010b}", mode2_cfg_real.bits());
-        // // assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
-        // // assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
-
-        // // start conversions    // abstract these functions
+        // start conversions
+        self.set_adc2_inpmux(&mut self.adc2_sensors.1[0].clone())?;
 
         self.adc2.send_command(ADCCommand::START1, &mut self.spi)?;
-        // self.adc2.send_command(ADCCommand::START2, &mut self.spi)?;
 
         self.adc2.send_command(ADCCommand::START2, &mut self.spi)?;
 
         self.adc2.send_command(ADCCommand::RDATA1, &mut self.spi)?;
+
         Ok(())
     }
 
