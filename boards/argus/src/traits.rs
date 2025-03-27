@@ -11,10 +11,8 @@ impl From<States> for DeviceState {
         match value {
             States::Idle => DeviceState::Idle,
             States::Calibration => DeviceState::Calibration,
-            States::Recovery => DeviceState::Recovery,
             States::Collection => DeviceState::Collection,
             States::Init => DeviceState::Init,
-            States::Processing => DeviceState::Processing,
             States::Fault => DeviceState::Fault,
         }
     }

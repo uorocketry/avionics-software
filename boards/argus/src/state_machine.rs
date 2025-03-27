@@ -3,9 +3,8 @@ use smlang::statemachine;
 statemachine! {
     transitions: {
         *Init + Start = Idle,
-        Idle | Recovery + WantsCollection = Collection,
+        Idle + WantsCollection = Collection,
         Idle + NoConfig = Calibration,
-        Collection + WantsProcessing = Processing,
         Calibration + Configured = Idle,
         Fault + FaultCleared = Idle,
         _ + FaultDetected = Fault,
@@ -39,10 +38,6 @@ pub mod tests {
         // Should transition to collection when asked
         _ = sm.process_event(Events::WantsCollection).unwrap();
         assert!(*sm.state() == States::Collection);
-    
-        // Should transition to processing when asked
-        _ = sm.process_event(Events::WantsProcessing).unwrap();
-        assert!(*sm.state() == States::Processing);
     }
 
     #[test]

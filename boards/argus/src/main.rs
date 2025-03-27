@@ -286,8 +286,6 @@ mod app {
                     sm::States::Fault => spawn!(sm_fault),
                     sm::States::Idle => spawn!(sm_idle),
                     sm::States::Init => spawn!(sm_init),
-                    sm::States::Processing => spawn!(sm_process),
-                    sm::States::Recovery => spawn!(sm_recover),
                 };
                 
                 last_state = state;
@@ -319,16 +317,6 @@ mod app {
 
     #[task(priority = 3)]
     async fn sm_init(cx: sm_init::Context) {
-        todo!()
-    }
-
-    #[task(priority = 3)]
-    async fn sm_process(cx: sm_process::Context) {
-        todo!()
-    }
-
-    #[task(priority = 3)]
-    async fn sm_recover(cx: sm_recover::Context) {
         todo!()
     }
 
