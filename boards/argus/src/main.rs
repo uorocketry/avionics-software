@@ -280,21 +280,56 @@ mod app {
         loop {
             let state = cx.shared.state_machine.state();
             if state != last_state {
-                match state {
-                    sm::States::Calibration => todo!(),
-                    sm::States::Collection => todo!(),
-                    sm::States::Fault => todo!(),
-                    sm::States::Idle => todo!(),
-                    sm::States::Init => todo!(),
-                    sm::States::Processing => todo!(),
-                    sm::States::Recovery => todo!(),
-                }
+                _ = match state {
+                    sm::States::Calibration => spawn!(sm_calibrate),
+                    sm::States::Collection => spawn!(sm_collect),
+                    sm::States::Fault => spawn!(sm_fault),
+                    sm::States::Idle => spawn!(sm_idle),
+                    sm::States::Init => spawn!(sm_init),
+                    sm::States::Processing => spawn!(sm_process),
+                    sm::States::Recovery => spawn!(sm_recover),
+                };
                 
                 last_state = state;
             }
 
             Mono::delay(100.millis()).await;
         }
+    }
+
+    #[task(priority = 3)]
+    async fn sm_calibrate(cx: sm_calibrate::Context) {
+        todo!()
+    }
+
+    #[task(priority = 3)]
+    async fn sm_collect(cx: sm_collect::Context) {
+        todo!()
+    }
+
+    #[task(priority = 3)]
+    async fn sm_fault(cx: sm_fault::Context) {
+        todo!()
+    }
+
+    #[task(priority = 3)]
+    async fn sm_idle(cx: sm_idle::Context) {
+        todo!()
+    }
+
+    #[task(priority = 3)]
+    async fn sm_init(cx: sm_init::Context) {
+        todo!()
+    }
+
+    #[task(priority = 3)]
+    async fn sm_process(cx: sm_process::Context) {
+        todo!()
+    }
+
+    #[task(priority = 3)]
+    async fn sm_recover(cx: sm_recover::Context) {
+        todo!()
     }
 
     #[task(priority = 3, binds = EXTI15_10, shared = [adc_manager], local = [adc1_int])]
