@@ -7,35 +7,25 @@
         {
             "type": "probe-rs-debug",
             "request": "launch",
-            "name": "Probe-rs Debug Strain",
+            "name": "Probe-rs Debug",
+            "preLaunchTask": "build-${input:task}",
+            "flashingConfig": {
+                "flashingEnabled": true
+            },
             "chip": "STM32H733VGTx",
             "coreConfigs": [
                 {
-                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/strain",
+                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/argus",
                 }
             ]
-        },
+        }
+    ],
+    "inputs": [
         {
-            "type": "probe-rs-debug",
-            "request": "attach",
-            "name": "Probe-rs Debug Temperature",
-            "chip": "STM32H733VGTx",
-            "coreConfigs": [
-                {
-                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/temperature",
-                }
-            ]
-        },
-        {
-            "type": "probe-rs-debug",
-            "request": "attach",
-            "name": "Probe-rs Debug Pressure",
-            "chip": "STM32H733VGTx",
-            "coreConfigs": [
-                {
-                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/pressure",
-                }
-            ]
-        },
+            "id": "task",
+            "type": "pickString",
+            "description": "Which task would you like to run?",
+            "options": ["strain", "temperature", "pressure"]
+        }
     ]
 }
