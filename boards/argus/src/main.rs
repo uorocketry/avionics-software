@@ -326,9 +326,23 @@ mod app {
         todo!()
     }
 
-    #[task(priority = 3)]
+   #[task(priority = 3)]
     async fn sm_init(cx: sm_init::Context) {
-        todo!()
+        let accel_init_data = cx.resources.imu.get_accel();
+        let gyro_init_data = cx.resources.imu.get_gyro();
+
+        match (accel_init_data, gyro_init_data) {
+            (Ok(accel), Ok(gyro)) => {
+                if (accel[2] - 9.8).abs() < 1.5 {
+                    cx.resources.state = State::Calibrate;
+                } else {
+                    cx.resources.state = State::Fault;
+                }
+            }
+            _ => {
+                cx.resources.state = State::Fault;
+            }
+        }
     }
 
     #[task(priority = 3, binds = EXTI15_10, shared = [adc_manager], local = [adc1_int])]
