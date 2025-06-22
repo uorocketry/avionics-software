@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 
-members = ["boards/*", "examples/*", "crates/*"]
+members = ["boards/*", "examples/*", "crates/*", "calibration_test", "calibrate_mock_test"]
 
 # Specify which members to build by default. Some libraries, such as messages, contain dev-dependencies that will give
 # compile errors if built directly.

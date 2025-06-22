@@ -297,7 +297,18 @@ mod app {
 
     #[task(priority = 3)]
     async fn sm_calibrate(cx: sm_calibrate::Context) {
-        todo!()
+        let accel_data = cx.resources.imu.get_accel().unwrap();
+        let gyro_data = cx.resources.imu.get_gyro().unwrap();
+        let imu_msg = ImuMsg::new(&accel, &gyro);
+
+        cx.resources.cal_proc.imu_callback(imu_msg)?;
+
+        if cx.resources.cal_proc.is_done(){
+
+            cx.resources.state = State::Idle;
+        }else{
+            cx.resources.state = State::Fault;
+        }
     }
 
     #[task(priority = 3)]
