@@ -35,6 +35,29 @@ const DATA_CHANNEL_CAPACITY: usize = 10;
 
 systick_monotonic!(Mono, 500);
 
+enum ImuWrapper{
+    Uninitialized(Imu<Uninitialized>),
+    Idling(Imu<Idle>),
+    Calibrating(Imu<Calibrating>),
+    Calibrated(Imu<Calibrated>),
+    Collecting(Imu<Collecting>),
+    Collected(Imu<Collected>),
+    Entered_Fault(Imu<Entering_Fault>),
+    Exiting_Fault(Imu<Exiting_Fault>)
+
+}
+
+impl ImuWrapper {
+    pub fn change<F>(&mut self, closure: F)
+    where
+        F: FnOnce(Self) -> Self,
+    {
+        unsafe {
+            replace_with::replace_with_or_abort_unchecked(self, closure);
+        }
+    }
+}
+
 #[inline(never)]
 #[defmt::panic_handler]
 fn panic() -> ! {
@@ -51,6 +74,7 @@ mod app {
 
     #[shared]
     struct SharedResources {
+        imu_wrapper: ImuWrapper,
         data_manager: DataManager,
         em: ErrorManager,
         sd_manager: SdManager<
