@@ -39,11 +39,8 @@ enum ImuWrapper{
     Uninitialized(Imu<Uninitialized>),
     Idling(Imu<Idle>),
     Calibrating(Imu<Calibrating>),
-    Calibrated(Imu<Calibrated>),
     Collecting(Imu<Collecting>),
-    Collected(Imu<Collected>),
-    Entered_Fault(Imu<Entering_Fault>),
-    Exiting_Fault(Imu<Exiting_Fault>)
+    Entered_Fault(Imu<Entering_Fault>)
 
 }
 
