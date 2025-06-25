@@ -47,6 +47,7 @@ enum ImuWrapper{
 
 }
 
+//defining state change
 impl ImuWrapper {
     pub fn change<F>(&mut self, closure: F)
     where
@@ -276,6 +277,7 @@ mod app {
 
         (
             SharedResources {
+                imu_wrapper,
                 data_manager,
                 em,
                 sd_manager,
@@ -316,6 +318,17 @@ mod app {
             }
 
             Mono::delay(100.millis()).await;
+        }
+    }
+
+    //defining the uninitialized state, 
+    impl Imu<Uninitialized>{
+        pub fn initial_state(self) -> Imu<idle>{
+            
+            Imu{
+                adc: self.adc,
+                _state: PhantomData,
+            }
         }
     }
 
