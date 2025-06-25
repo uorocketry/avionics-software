@@ -28,6 +28,7 @@ use stm32h7xx_hal::prelude::*;
 use stm32h7xx_hal::rtc;
 use stm32h7xx_hal::{rcc, rcc::rec};
 use types::COM_ID; // global logger
+use core::marker::PhantomData;
 
 use crate::types::{ADC2_RST_PIN_ID, ADC2_RST_PIN_PORT};
 
@@ -318,55 +319,73 @@ mod app {
         }
     }
 
-    //defining the uninitialized state, 
-    impl Imu<Uninitialized>{
-        pub fn initial_state(self) -> Imu<idle>{
-            
-            Imu{
-                adc: self.adc,
-                _state: PhantomData,
-            }
+    //generic imu state initialization
+    pub struct Imu<State> {
+        pub adc: AdcManager<Pin<'C', 11, Output<PushPull>>>,
+        _state: PhantomData<State>,
+    }
+
+    pub struct Uninitialized;
+    pub struct Idle;
+    pub struct Calibrating;
+    pub struct Collecting;
+    pub struct EnteringFault;
+
+    // Start from Uninitialized → Idle
+impl Imu<Uninitialized> {
+    pub fn initial_state(self) -> Imu<Idle> {
+        Imu {
+            adc: self.adc,
+            _state: PhantomData,
         }
     }
+}
 
-    //defining idle struct
-    pub struct Imu<Idle>{
-        adc: AdcManager<>,
-        _state: PhantomData<Idle>,
-    }
-
-
-    //idle will either move to calibration or fault, and either collecting or fault
-    impl Imu<Idle>{
-        pub fn to_calibration(self) -> Result<Imu<Calibrating>, Imu<Entering_Fault>>{
-            Ok(Imu{
-                adc:self.adc,
-                _state: PhantomData,
-            })
-        }
-
-        pub fn to_collection(self) -> Result<Imu<Collecting>, Imu<Entering_Fault>>{
-            Ok(Imu{
-                adc: self.adc,
-                _state: PhantomData,
-            })
-        }
-    }
-
-    //defining calibrating struct
-     pub struct Imu<Calibrating>{
-        adc: AdcManager<>,
-        _state: PhantomData<Calibrating>,
-    }
-
-    impl Imu<Calibrating> {
-    pub fn finish_calibration(self) -> Result<Imu<Collecting>, Imu<Entering_Fault>> {
-        
-
+// Idle → Calibrating or Collecting
+impl Imu<Idle> {
+    pub fn to_calibration(self) -> Result<Imu<Calibrating>, Imu<EnteringFault>> {
         Ok(Imu {
             adc: self.adc,
             _state: PhantomData,
         })
+    }
+
+    pub fn to_collection(self) -> Result<Imu<Collecting>, Imu<EnteringFault>> {
+        Ok(Imu {
+            adc: self.adc,
+            _state: PhantomData,
+        })
+    }
+}
+
+// Calibrating → Collecting
+impl Imu<Calibrating> {
+    pub fn finish_calibration(self) -> Result<Imu<Collecting>, Imu<EnteringFault>> {
+        Ok(Imu {
+            adc: self.adc,
+            _state: PhantomData,
+        })
+    }
+}
+
+// Collecting → Idle
+impl Imu<Collecting> {
+    pub fn done_collecting(self) -> Result<Imu<Idle>, Imu<EnteringFault>> {
+        Ok(Imu {
+            adc: self.adc,
+            _state: PhantomData,
+        })
+    }
+}
+
+
+// Fault → Idle
+impl Imu<EnteringFault> {
+    pub fn exit_fault(self) -> Imu<Idle> {
+        Imu {
+            adc: self.adc,
+            _state: PhantomData,
+        }
     }
 }
 
