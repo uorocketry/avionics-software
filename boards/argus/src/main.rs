@@ -337,7 +337,7 @@ mod app {
 
 
     //idle will either move to calibration or fault, and either collecting or fault
-    impl Imu<idle>{
+    impl Imu<Idle>{
         pub fn to_calibration(self) -> Result<Imu<Calibrating>, Imu<Entering_Fault>>{
             Ok(Imu{
                 adc:self.adc,
@@ -352,6 +352,25 @@ mod app {
             })
         }
     }
+
+    //defining calibrating struct
+     pub struct Imu<Calibrating>{
+        adc: AdcManager<>,
+        _state: PhantomData<Calibrating>,
+    }
+
+    impl Imu<Calibrating> {
+    pub fn finish_calibration(self) -> Result<Imu<Collecting>, Imu<Entering_Fault>> {
+        
+
+        Ok(Imu {
+            adc: self.adc,
+            _state: PhantomData,
+        })
+    }
+}
+
+
 
     #[task(priority = 3)]
     async fn sm_calibrate(cx: sm_calibrate::Context) {
