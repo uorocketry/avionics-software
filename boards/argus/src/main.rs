@@ -332,6 +332,30 @@ mod app {
         }
     }
 
+    //defining idle struct
+    pub struct Imu<Idle>{
+        adc: AdcManager<>,
+        _state: PhantomData<Idle>,
+    }
+
+
+    //idle will either move to calibration or fault, and either collecting or fault
+    impl Imu<idle>{
+        pub fn to_calibration(self) -> Result<Imu<Calibrating>, Imu<Entering_Fault>>{
+            Ok(Imu{
+                adc:self.adc,
+                _state: PhantomData,
+            })
+        }
+
+        pub fn to_collection(self) -> Result<Imu<Collecting>, Imu<Entering_Fault>>{
+            Ok(Imu{
+                adc: self.adc,
+                _state: PhantomData,
+            })
+        }
+    }
+
     #[task(priority = 3)]
     async fn sm_calibrate(cx: sm_calibrate::Context) {
         let accel_data = cx.resources.imu.get_accel().unwrap();
