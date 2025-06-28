@@ -361,9 +361,9 @@ impl Imu<Idle> {
     }
 }
 
-// Calibrating → Collecting
+// Calibrating → Idle
 impl Imu<Calibrating> {
-    pub fn finish_calibration(self) -> Result<Imu<Collecting>, Imu<EnteringFault>> {
+    pub fn finish_calibration(self) -> Result<Imu<Idle>, Imu<EnteringFault>> {
         Ok(Imu {
             adc: self.adc,
             _state: PhantomData,
@@ -409,7 +409,7 @@ impl Imu<EnteringFault> {
                                         
                                         info!("Calibrating with accel: {:?}, gyro: {:?}", accel_data, gyro_data);
                                         
-                                        // Store calibration data and update accumulators
+                                       
                                         data_manager.add_calibration_sample(accel_data, gyro_data);
                                         
                                         let sample_count = data_manager.get_calibration_sample_count();
@@ -418,7 +418,7 @@ impl Imu<EnteringFault> {
                                         }
                                         data_manager.update_calibration_accumulators(accel_data, gyro_data);
                                         
-                                        // Check if calibration is complete
+
                                         let calibration_complete = {
                                             const MIN_SAMPLES: usize = 100;
                                             const MAX_SAMPLES: usize = 500;
@@ -427,7 +427,7 @@ impl Imu<EnteringFault> {
                                             if sample_count < MIN_SAMPLES {
                                                 false
                                             } else if sample_count >= MAX_SAMPLES {
-                                                true // Force completion
+                                                true 
                                             } else if sample_count >= MIN_SAMPLES + STABILITY_WINDOW {
                                                 data_manager.is_calibration_stable(STABILITY_WINDOW)
                                             } else {
@@ -441,8 +441,8 @@ impl Imu<EnteringFault> {
                                         
                                             match imu.finish_calibration() {
                                                 Ok(collecting_imu) => {
-                                                    *imu_wrapper = ImuWrapper::Collecting(collecting_imu);
-                                                    state_machine.transition_to(sm::States::Collection);
+                                                    *imu_wrapper = ImuWrapper::Idling(collecting_imu);
+                                                    state_machine.transition_to(sm::States::Idle);
                                                 }
                                                 Err(fault_imu) => {
                                                     *imu_wrapper = ImuWrapper::Entered_Fault(fault_imu);
