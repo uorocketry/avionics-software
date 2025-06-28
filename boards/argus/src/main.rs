@@ -36,6 +36,9 @@ const DATA_CHANNEL_CAPACITY: usize = 10;
 
 systick_monotonic!(Mono, 500);
 
+const CALIBRATION_THRESHOLD: f32 = 0.1; //could change later
+const MOTION_THRESHOLD: f32 = 2.0;
+
 enum ImuWrapper{
     Uninitialized(Imu<Uninitialized>),
     Idling(Imu<Idle>),
@@ -391,54 +394,362 @@ impl Imu<EnteringFault> {
 
 
 
-    #[task(priority = 3)]
+    #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, data_manager, em])]
     async fn sm_calibrate(cx: sm_calibrate::Context) {
-        let accel_data = cx.resources.imu.get_accel().unwrap();
-        let gyro_data = cx.resources.imu.get_gyro().unwrap();
-        let imu_msg = ImuMsg::new(&accel, &gyro);
-
-        cx.resources.cal_proc.imu_callback(imu_msg)?;
-
-        if cx.resources.cal_proc.is_done(){
-
-            cx.resources.state = State::Idle;
-        }else{
-            cx.resources.state = State::Fault;
-        }
-    }
-
-    #[task(priority = 3)]
-    async fn sm_collect(cx: sm_collect::Context) {
-        todo!()
-    }
-
-    #[task(priority = 3)]
-    async fn sm_fault(cx: sm_fault::Context) {
-        todo!()
-    }
-
-    #[task(priority = 3)]
-    async fn sm_idle(cx: sm_idle::Context) {
-        todo!()
-    }
-
-   #[task(priority = 3)]
-    async fn sm_init(cx: sm_init::Context) {
-        let accel_init_data = cx.resources.imu.get_accel();
-        let gyro_init_data = cx.resources.imu.get_gyro();
-
-        match (accel_init_data, gyro_init_data) {
-            (Ok(accel), Ok(gyro)) => {
-                if (accel[2] - 9.8).abs() < 1.5 {
-                    cx.resources.state = State::Calibrate;
-                } else {
-                    cx.resources.state = State::Fault;
+        cx.shared.em.run(|| {
+        
+            (cx.shared.imu_wrapper, cx.shared.adc_manager, cx.shared.data_manager, cx.shared.state_machine).lock(|imu_wrapper, adc_manager, data_manager, state_machine| {
+                match imu_wrapper {
+                    ImuWrapper::Calibrating(imu) => {
+                    
+                        match adc_manager.read_adc1_data() {
+                            Ok(accel_data) => {
+                                match adc_manager.read_adc2_data() {
+                                    Ok(gyro_data) => {
+                                        
+                                        info!("Calibrating with accel: {:?}, gyro: {:?}", accel_data, gyro_data);
+                                        
+                                        // Store calibration data and update accumulators
+                                        data_manager.add_calibration_sample(accel_data, gyro_data);
+                                        
+                                        let sample_count = data_manager.get_calibration_sample_count();
+                                        if sample_count == 1 {
+                                            data_manager.init_calibration_accumulators();
+                                        }
+                                        data_manager.update_calibration_accumulators(accel_data, gyro_data);
+                                        
+                                        // Check if calibration is complete
+                                        let calibration_complete = {
+                                            const MIN_SAMPLES: usize = 100;
+                                            const MAX_SAMPLES: usize = 500;
+                                            const STABILITY_WINDOW: usize = 50;
+                                            
+                                            if sample_count < MIN_SAMPLES {
+                                                false
+                                            } else if sample_count >= MAX_SAMPLES {
+                                                true // Force completion
+                                            } else if sample_count >= MIN_SAMPLES + STABILITY_WINDOW {
+                                                data_manager.is_calibration_stable(STABILITY_WINDOW)
+                                            } else {
+                                                false
+                                            }
+                                        };
+                                        
+                                        if calibration_complete {
+                                            data_manager.finalize_calibration();
+                                            info!("Calibration complete with {} samples", sample_count);
+                                        
+                                            match imu.finish_calibration() {
+                                                Ok(collecting_imu) => {
+                                                    *imu_wrapper = ImuWrapper::Collecting(collecting_imu);
+                                                    state_machine.transition_to(sm::States::Collection);
+                                                }
+                                                Err(fault_imu) => {
+                                                    *imu_wrapper = ImuWrapper::Entered_Fault(fault_imu);
+                                                    state_machine.transition_to(sm::States::Fault);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(_) => {
+                                        info!("Failed to read gyro data during calibration");
+                                        state_machine.transition_to(sm::States::Fault);
+                                    }
+                                }
+                            }
+                            Err(_) => {
+                                info!("Failed to read accel data during calibration");
+                                state_machine.transition_to(sm::States::Fault);
+                            }
+                        }
+                    }
+                    _ => {
+                        info!("Invalid state for calibration");
+                        state_machine.transition_to(sm::States::Fault);
+                    }
                 }
-            }
-            _ => {
-                cx.resources.state = State::Fault;
-            }
-        }
+            });
+            Ok(())
+        });
+    }
+
+    #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, data_manager, em, rtc])]
+    async fn sm_collect(cx: sm_collect::Context) {
+        cx.shared.em.run(|| {
+            (cx.shared.imu_wrapper, cx.shared.adc_manager, cx.shared.data_manager, cx.shared.state_machine, cx.shared.rtc).lock(|imu_wrapper, adc_manager, data_manager, state_machine, rtc| {
+                match imu_wrapper {
+                    ImuWrapper::Collecting(imu) => {
+                        
+                        match (adc_manager.read_adc1_data(), adc_manager.read_adc2_data()) {
+                            (Ok(accel_data), Ok(gyro_data)) => {
+                                info!("Collecting data - accel: {:?}, gyro: {:?}", accel_data, gyro_data);
+                                
+                               
+                                
+                                
+                                
+                                let timestamp = messages::FormattedNaiveDateTime(rtc.date_time().unwrap());
+                                
+                                
+                               
+                                //let should_stop_collection, find out when to stop collection
+                                
+                                if should_stop_collection {
+                                    match imu.done_collecting() {
+                                        Ok(idle_imu) => {
+                                            *imu_wrapper = ImuWrapper::Idling(idle_imu);
+                                            state_machine.transition_to(sm::States::Idle);
+                                        }
+                                        Err(fault_imu) => {
+                                            *imu_wrapper = ImuWrapper::Entered_Fault(fault_imu);
+                                            state_machine.transition_to(sm::States::Fault);
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {
+                                info!("Failed to read sensor data during collection");
+                                state_machine.transition_to(sm::States::Fault);
+                            }
+                        }
+                    }
+                    _ => {
+                        info!("Invalid state for data collection");
+                        state_machine.transition_to(sm::States::Fault);
+                    }
+                }
+            });
+            Ok(())
+        });
+        
+        
+        Mono::delay(100.millis()).await;
+    }
+
+    #[task(priority = 3, shared = [imu_wrapper, state_machine, em, data_manager])]
+    async fn sm_fault(cx: sm_fault::Context) {
+        info!("System in fault state - attempting recovery");
+        
+        cx.shared.em.run(|| {
+            (cx.shared.imu_wrapper, cx.shared.state_machine, cx.shared.data_manager).lock(|imu_wrapper, state_machine, data_manager| {
+                
+                info!("Fault state entered, logging error condition");
+                
+                match imu_wrapper {
+                    ImuWrapper::Entered_Fault(imu) => {
+                       
+                        info!("Attempting fault recovery");
+                        
+                        
+                        let recovery_successful = {
+                            let mut recovery_steps = Vec::new();
+                            
+                            
+                            let reset_ok = match imu.reset() {
+                                Ok(_) => {
+                                    info!("IMU reset successful");
+                                    true
+                                },
+                                Err(e) => {
+                                    error!("IMU reset failed: {:?}", e);
+                                    false
+                                }
+                            };
+                            recovery_steps.push(("Reset", reset_ok));
+                            
+                            
+                            let init_ok = if reset_ok {
+                                match imu.initialize() {
+                                    Ok(_) => {
+                                        info!("IMU re-initialization successful");
+                                        true
+                                    },
+                                    Err(e) => {
+                                        error!("IMU initialization failed: {:?}", e);
+                                        false
+                                    }
+                                }
+                            } else { false };
+                            recovery_steps.push(("Initialize", init_ok));
+                            
+                            
+                            let comm_ok = if init_ok {
+                                match imu.read_device_id() {
+                                    Ok(id) if id == EXPECTED_DEVICE_ID => {
+                                        info!("IMU communication verified");
+                                        true
+                                    },
+                                    Ok(wrong_id) => {
+                                        error!("Wrong device ID: expected {}, got {}", EXPECTED_DEVICE_ID, wrong_id);
+                                        false
+                                    },
+                                    Err(e) => {
+                                        error!("Communication test failed: {:?}", e);
+                                        false
+                                    }
+                                }
+                            } else { false };
+                            recovery_steps.push(("Communication", comm_ok));
+                            
+                            
+                            let sensor_ok = if comm_ok {
+                                match imu.read_acceleration() {
+                                    Ok(accel) => {
+                                        
+                                        let magnitude = accel.magnitude();
+                                        let readings_valid = magnitude > 0.1 && magnitude < 50.0; // Adjust thresholds
+                                        if readings_valid {
+                                            info!("Sensor readings validated");
+                                        } else {
+                                            warn!("Sensor readings out of expected range: {}", magnitude);
+                                        }
+                                        readings_valid
+                                    },
+                                    Err(e) => {
+                                        error!("Sensor reading test failed: {:?}", e);
+                                        false
+                                    }
+                                }
+                            } else { false };
+                            recovery_steps.push(("Sensor Test", sensor_ok));
+                            
+                           
+                            for (step, success) in recovery_steps.iter() {
+                                info!("Recovery step '{}': {}", step, if *success { "PASS" } else { "FAIL" });
+                            }
+                            
+                            
+                            reset_ok && init_ok && comm_ok && sensor_ok
+                        };
+                    
+                        
+                        if recovery_successful {
+                            info!("Fault recovery successful");
+                            let recovered_imu = imu.exit_fault();
+                            *imu_wrapper = ImuWrapper::Idling(recovered_imu);
+                            state_machine.transition_to(sm::States::Idle);
+                        } else {
+                            info!("Fault recovery failed, remaining in fault state");
+                            
+                        }
+                    }
+                    _ => {
+                        info!("Unexpected state in fault handler");
+                    }
+                }
+            });
+            Ok(())
+        });
+        
+        Mono::delay(5.secs()).await;
+    }
+
+    #[task(priority = 3, shared = [imu_wrapper, state_machine, em])]
+    async fn sm_idle(cx: sm_idle::Context) {
+        cx.shared.em.run(|| {
+            (cx.shared.imu_wrapper, cx.shared.state_machine).lock(|imu_wrapper, state_machine| {
+                match imu_wrapper {
+                    ImuWrapper::Idling(imu) => {
+                        info!("System in idle state");
+                        
+                        
+                        
+                        let needs_calibration = {
+                            
+                            let current_bias = imu.get_bias_estimate();
+                            current_bias.magnitude() > CALIBRATION_THRESHOLD
+                        };
+                        
+                        
+                        let start_collection = {
+                            let accel_data = imu.read_acceleration();
+                            accel_data.magnitude() > MOTION_THRESHOLD
+                        };
+                        
+                        if needs_calibration {
+                            match imu.to_calibration() {
+                                Ok(calibrating_imu) => {
+                                    *imu_wrapper = ImuWrapper::Calibrating(calibrating_imu);
+                                    state_machine.transition_to(sm::States::Calibration);
+                                    info!("Transitioning to calibration state");
+                                }
+                                Err(fault_imu) => {
+                                    *imu_wrapper = ImuWrapper::Entered_Fault(fault_imu);
+                                    state_machine.transition_to(sm::States::Fault);
+                                }
+                            }
+                        } else if start_collection {
+                            match imu.to_collection() {
+                                Ok(collecting_imu) => {
+                                    *imu_wrapper = ImuWrapper::Collecting(collecting_imu);
+                                    state_machine.transition_to(sm::States::Collection);
+                                    info!("Transitioning to collection state");
+                                }
+                                Err(fault_imu) => {
+                                    *imu_wrapper = ImuWrapper::Entered_Fault(fault_imu);
+                                    state_machine.transition_to(sm::States::Fault);
+                                }
+                            }
+                        }
+                        
+                    
+                    }
+                    _ => {
+                        info!("Invalid state for idle handler");
+                        state_machine.transition_to(sm::States::Fault);
+                    }
+                }
+            });
+            Ok(())
+        });
+        
+        
+        Mono::delay(1.secs()).await;
+    }
+
+    #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, em])]
+    async fn sm_init(cx: sm_init::Context) {
+        info!("Initializing system");
+        
+        cx.shared.em.run(|| {
+            (cx.shared.adc_manager, cx.shared.imu_wrapper, cx.shared.state_machine).lock(|adc_manager, imu_wrapper, state_machine| {
+                
+                match adc_manager.init_adc1() { // Initialize ADC manager and perform initial sensor checks
+                    Ok(_) => info!("ADC1 initialized successfully"),
+                    Err(_) => {
+                        info!("Failed to initialize ADC1");
+                        state_machine.transition_to(sm::States::Fault);
+                        return Ok(());
+                    }
+                }
+                
+                
+                match (adc_manager.read_adc1_data(), adc_manager.read_adc2_data()) { // Perform initial sensor readings to verify functionality
+                    (Ok(accel_data), Ok(gyro_data)) => {
+                        info!("Initial sensor readings successful - accel: {:?}, gyro: {:?}", accel_data, gyro_data);
+                        
+                        
+                        match imu_wrapper { // Initialize the IMU wrapper to idle state
+                            ImuWrapper::Uninitialized(uninitialized_imu) => {
+                                let idle_imu = uninitialized_imu.initial_state();
+                                *imu_wrapper = ImuWrapper::Idling(idle_imu);
+                                state_machine.transition_to(sm::States::Idle);
+                                info!("System initialization complete, transitioning to idle");
+                            }
+                            _ => {
+                                info!("IMU wrapper in unexpected state during init");
+                                state_machine.transition_to(sm::States::Fault);
+                            }
+                        }
+                    }
+                    _ => {
+                        info!("Failed initial sensor readings");
+                        state_machine.transition_to(sm::States::Fault);
+                    }
+                }
+                Ok(())
+            })
+        });
     }
 
     #[task(priority = 3, binds = EXTI15_10, shared = [adc_manager], local = [adc1_int])]
