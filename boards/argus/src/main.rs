@@ -396,6 +396,22 @@ impl Imu<EnteringFault> {
 
     #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, data_manager, em])]
     async fn sm_calibrate(cx: sm_calibrate::Context) {
+        #[cfg(feature = "temperature")]
+        {
+
+        }
+
+        #[cfg(feature = "pressure")]
+         {
+
+         }
+
+        #[cfg(feature = "strain")]
+         {
+
+         }
+
+
         cx.shared.em.run(|| {
         
             (cx.shared.imu_wrapper, cx.shared.adc_manager, cx.shared.data_manager, cx.shared.state_machine).lock(|imu_wrapper, adc_manager, data_manager, state_machine| {
@@ -475,6 +491,22 @@ impl Imu<EnteringFault> {
 
     #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, data_manager, em, rtc])]
     async fn sm_collect(cx: sm_collect::Context) {
+
+         #[cfg(feature = "temperature")]
+        {
+
+        }
+
+        #[cfg(feature = "pressure")]
+         {
+
+         }
+
+        #[cfg(feature = "strain")]
+         {
+
+         }
+
         cx.shared.em.run(|| {
             (cx.shared.imu_wrapper, cx.shared.adc_manager, cx.shared.data_manager, cx.shared.state_machine, cx.shared.rtc).lock(|imu_wrapper, adc_manager, data_manager, state_machine, rtc| {
                 match imu_wrapper {
@@ -492,7 +524,7 @@ impl Imu<EnteringFault> {
                                 
                                 
                                
-                                //let should_stop_collection, find out when to stop collection
+                               
                                 
                                 if should_stop_collection {
                                     match imu.done_collecting() {
@@ -528,7 +560,23 @@ impl Imu<EnteringFault> {
 
     #[task(priority = 3, shared = [imu_wrapper, state_machine, em, data_manager])]
     async fn sm_fault(cx: sm_fault::Context) {
+
         info!("System in fault state - attempting recovery");
+
+        #[cfg(feature = "temperature")]
+        {
+
+        }
+
+        #[cfg(feature = "pressure")]
+         {
+
+         }
+
+        #[cfg(feature = "strain")]
+         {
+
+         }
         
         cx.shared.em.run(|| {
             (cx.shared.imu_wrapper, cx.shared.state_machine, cx.shared.data_manager).lock(|imu_wrapper, state_machine, data_manager| {
@@ -597,7 +645,7 @@ impl Imu<EnteringFault> {
                                     Ok(accel) => {
                                         
                                         let magnitude = accel.magnitude();
-                                        let readings_valid = magnitude > 0.1 && magnitude < 50.0; // Adjust thresholds
+                                        let readings_valid = magnitude > 0.1 && magnitude < 50.0; // Adjust threshold *****
                                         if readings_valid {
                                             info!("Sensor readings validated");
                                         } else {
@@ -646,6 +694,22 @@ impl Imu<EnteringFault> {
 
     #[task(priority = 3, shared = [imu_wrapper, state_machine, em])]
     async fn sm_idle(cx: sm_idle::Context) {
+
+        #[cfg(feature = "temperature")]
+        {
+
+        }
+
+        #[cfg(feature = "pressure")]
+         {
+
+         }
+
+        #[cfg(feature = "strain")]
+         {
+
+         }
+
         cx.shared.em.run(|| {
             (cx.shared.imu_wrapper, cx.shared.state_machine).lock(|imu_wrapper, state_machine| {
                 match imu_wrapper {
@@ -710,11 +774,26 @@ impl Imu<EnteringFault> {
     #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, em])]
     async fn sm_init(cx: sm_init::Context) {
         info!("Initializing system");
+
+        #[cfg(feature = "temperature")]
+        {
+
+        }
+
+        #[cfg(feature = "pressure")]
+         {
+
+         }
+
+        #[cfg(feature = "strain")]
+         {
+
+         }
         
         cx.shared.em.run(|| {
             (cx.shared.adc_manager, cx.shared.imu_wrapper, cx.shared.state_machine).lock(|adc_manager, imu_wrapper, state_machine| {
                 
-                match adc_manager.init_adc1() { // Initialize ADC manager and perform initial sensor checks
+                match adc_manager.init_adc1() { 
                     Ok(_) => info!("ADC1 initialized successfully"),
                     Err(_) => {
                         info!("Failed to initialize ADC1");
@@ -724,12 +803,11 @@ impl Imu<EnteringFault> {
                 }
                 
                 
-                match (adc_manager.read_adc1_data(), adc_manager.read_adc2_data()) { // Perform initial sensor readings to verify functionality
-                    (Ok(accel_data), Ok(gyro_data)) => {
+                match (adc_manager.read_adc1_data(), adc_manager.read_adc2_data()) { 
                         info!("Initial sensor readings successful - accel: {:?}, gyro: {:?}", accel_data, gyro_data);
                         
                         
-                        match imu_wrapper { // Initialize the IMU wrapper to idle state
+                        match imu_wrapper { 
                             ImuWrapper::Uninitialized(uninitialized_imu) => {
                                 let idle_imu = uninitialized_imu.initial_state();
                                 *imu_wrapper = ImuWrapper::Idling(idle_imu);
