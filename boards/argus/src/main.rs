@@ -1,3 +1,4 @@
+#![feature(impl_trait_in_assoc_type)]
 #![no_std]
 #![no_main]
 
@@ -6,575 +7,372 @@ compile_error!(
     "You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'."
 );
 
-use argus::*;
+mod traits;
 
-use adc_manager::AdcManager;
-use chrono::NaiveDate;
-use common_arm::*;
-use data_manager::DataManager;
-use defmt::info;
-use messages::CanData;
-use messages::CanMessage;
-use panic_probe as _;
-use rtic_monotonics::systick::prelude::*;
-use rtic_sync::{channel::*, make_channel};
-use state_machine as sm;
-use stm32h7xx_hal::gpio::gpioa::{PA2, PA3};
-use stm32h7xx_hal::gpio::PA4;
-use stm32h7xx_hal::gpio::{Edge, ExtiPin, Pin};
-use stm32h7xx_hal::gpio::{Output, PushPull};
-use stm32h7xx_hal::hal::spi;
-use stm32h7xx_hal::prelude::*;
-use stm32h7xx_hal::rtc;
-use stm32h7xx_hal::{rcc, rcc::rec};
-use types::COM_ID; // global logger
+use libm::{logf, powf};
+use core::cell::RefCell;
+use core::marker::PhantomData;
+use defmt::*;
+use embassy_executor::Spawner;
+use embassy_stm32::adc::{Adc, SampleTime};
+use embassy_stm32::gpio::{Input, Level, Output, OutputType, Pull, Speed};
+use embassy_stm32::mode::Blocking;
+use embassy_stm32::rtc::Rtc;
+use embassy_stm32::spi::{BitOrder, Config as SpiConfig, Spi};
+use embassy_stm32::time::{hz, khz, mhz};
+use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
+use embassy_stm32::usart::{Config as UartConfig, RingBufferedUartRx, Uart, UartTx};
+use embassy_stm32::{bind_interrupts, mode, peripherals, usart};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::blocking_mutex::Mutex;
+use embassy_sync::channel::Channel;
+use embassy_time::{Delay, Duration, Instant, Ticker, Timer};
+use embedded_alloc::Heap;
+use heapless::HistoryBuffer;
+use messages_prost::sensor::sbg::SbgData;
+use static_cell::StaticCell;
+use crate::traits::Context;
+use {defmt_rtt as _};
+use {panic_probe as _};
+use embedded_sdmmc::{Mode, SdCard, VolumeIdx, VolumeManager};
+use embedded_hal_bus::spi::RefCellDevice;
+use pid::Pid;
 
-use crate::types::{ADC2_RST_PIN_ID, ADC2_RST_PIN_PORT};
+// Use the asynchronous SpiDevice from embassy-embedded-hal
 
-const DATA_CHANNEL_CAPACITY: usize = 10;
+use smlang::statemachine;
 
-systick_monotonic!(Mono, 500);
+// --- System Configuration ---
 
-#[inline(never)]
-#[defmt::panic_handler]
-fn panic() -> ! {
-    cortex_m::asm::udf()
+/// The target temperature we want to maintain.
+const SETPOINT_TEMP_C: f32 = 25.0;
+
+/// How often the PID control loop runs.
+const CONTROL_LOOP_INTERVAL_MS: u64 = 1000;
+
+// The maximum raw value for the ADC (2^12 - 1 for a 12-bit ADC).
+const ADC_MAX_VALUE: f32 = 4095.0;
+
+// The value of the fixed resistor in your voltage divider circuit (in Ohms).
+// This is taken from the schematic (R5 = 1.6kΩ).
+const DIVIDER_RESISTANCE: f32 = 1600.0;
+
+
+// --- NTC Thermistor Datasheet Parameters ---
+// IMPORTANT: You MUST get these values from the datasheet for YOUR specific thermistor.
+// These are common values for a standard 10k NTC thermistor.
+
+/// Nominal resistance at the nominal temperature (e.g., 10kΩ at 25°C).
+const THERMISTOR_NOMINAL_RESISTANCE: f32 = 10000.0;
+
+/// The Beta coefficient of the thermistor (often in the range 3000-4500).
+const THERMISTOR_BETA: f32 = 3950.0;
+
+/// Nominal temperature in Kelvin (25°C).
+const TEMPERATURE_NOMINAL_KELVIN: f32 = 298.15; // 25.0 + 273.15
+
+
+// --- PID Tuning Constants ---
+// You MUST tune these for your specific hardware setup.
+const KP: f32 = 2.5;
+const KI: f32 = 0.1;
+const KD: f32 = 0.5;
+
+// =================================================================================
+// Shared Resources & Types
+// =================================================================================
+
+#[global_allocator]
+static HEAP: Heap = Heap::empty();
+
+// static FAULT_CHANNEL: Channel<CriticalSectionRawMutex, , 2> = Channel::new();
+
+// The SPI bus is protected by a Mutex, so the RefCell is not needed.
+static SPI_BUS: StaticCell<embassy_sync::mutex::Mutex<CriticalSectionRawMutex, Spi<mode::Async>>> = StaticCell::new();
+
+// Static variable for the RTC
+pub static RTC: Mutex<CriticalSectionRawMutex, RefCell<Option<Rtc>>> =
+    Mutex::new(RefCell::new(None));
+
+bind_interrupts!(struct Irqs {
+    UART7 => usart::InterruptHandler<peripherals::UART7>;
+    UART8 => usart::InterruptHandler<peripherals::UART8>;
+});
+
+statemachine! {
+    transitions: {
+        *Init + Start = WaitForLaunch,
+        WaitForLaunch + Launch = Ascent,
+        Ascent + Apogee = Descent,
+        Descent + MainDeployment = Fuck, 
+        Descent + DrogueDeployment = DrogueDescent, 
+        DrogueDescent + MainDeployment =  MainDescent,
+        MainDescent + NoMovement = Landed,
+        Fault + FaultCleared = _,
+        _ + FaultDetected = Fault,
+    }
 }
 
-#[rtic::app(device = stm32h7xx_hal::stm32, peripherals = true, dispatchers = [EXTI0, EXTI2, SPI3, SPI2])]
-mod app {
-    use messages::FormattedNaiveDateTime;
+pub struct TimeSink {
+    _marker: PhantomData<*const ()>,
+}
 
-    use crate::time_manager::TimeManager;
-
-    use super::*;
-
-    #[shared]
-    struct SharedResources {
-        data_manager: DataManager,
-        em: ErrorManager,
-        sd_manager: SdManager<
-            stm32h7xx_hal::spi::Spi<stm32h7xx_hal::pac::SPI1, stm32h7xx_hal::spi::Enabled>,
-            PA4<Output<PushPull>>,
-        >,
-        // can_command_manager: CanManager<stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN1>>,
-        // can_data_manager: CanManager<stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN2>>,
-        rtc: rtc::Rtc,
-        adc_manager: AdcManager<Pin<ADC2_RST_PIN_PORT, ADC2_RST_PIN_ID, Output<PushPull>>>,
-        time_manager: TimeManager,
-        state_machine: sm::StateMachine<traits::Context>,
+impl TimeSink {
+    fn new() -> Self {
+        TimeSink {
+            _marker: PhantomData,
+        }
     }
+}
 
-    #[local]
-    struct LocalResources {
-        can_sender: Sender<'static, CanMessage, DATA_CHANNEL_CAPACITY>,
-        led_red: PA2<Output<PushPull>>,
-        led_green: PA3<Output<PushPull>>,
-        adc1_int: Pin<'A', 15, stm32h7xx_hal::gpio::Input>,
-        adc2_int: Pin<'D', 3, stm32h7xx_hal::gpio::Input>,
+impl embedded_sdmmc::TimeSource for TimeSink {
+    fn get_timestamp(&self) -> embedded_sdmmc::Timestamp {
+        embedded_sdmmc::Timestamp {
+            year_since_1970: 0,
+            zero_indexed_month: 0,
+            zero_indexed_day: 0,
+            hours: 0,
+            minutes: 0,
+            seconds: 0,
+        }
     }
+}
 
-    #[init]
-    fn init(ctx: init::Context) -> (SharedResources, LocalResources) {
-        // channel setup
-        let (can_sender, can_receiver) = make_channel!(CanMessage, DATA_CHANNEL_CAPACITY);
+// =================================================================================
+// Application Tasks
+// =================================================================================
 
-        let core = ctx.core;
+#[embassy_executor::task]
+async fn led_blinker_task(pin: peripherals::PA3) {
+    let mut led = Output::new(pin, Level::High, Speed::Low);
+    info!("LED blinker task started.");
+    loop {
+        led.set_high();
+        Timer::after_millis(500).await;
+        led.set_low();
+        Timer::after_millis(500).await;
+    }
+}
 
-        /* Logging Setup */
-        // turn off logging for the moment
-        // HydraLogging::set_ground_station_callback(queue_log_message);
 
-        let pwr = ctx.device.PWR.constrain();
-        // We could use smps, but the board is not designed for it
-        // let pwrcfg = example_power!(pwr).freeze();
-        let mut pwrcfg = pwr.freeze();
+/// Converts a raw ADC reading from the thermistor's voltage divider
+/// into a temperature in Celsius.
+fn adc_to_celsius(adc_value: u16) -> f32 {
+    // 1. Calculate the resistance of the thermistor using the voltage divider formula.
+    // This formula works regardless of the input voltage (3.3V or 5V) as it's ratiometric.
+    // R_thermistor = R_fixed / ((ADC_MAX / ADC_reading) - 1)
+    let resistance = DIVIDER_RESISTANCE / ((ADC_MAX_VALUE / adc_value as f32) - 1.0);
 
-        info!("Power enabled");
-        let backup = pwrcfg.backup().unwrap();
-        info!("Backup domain enabled");
-        // RCC
-        let mut rcc = ctx.device.RCC.constrain();
-        let reset = rcc.get_reset_reason();
-        let fdcan_prec_unsafe = unsafe { rcc.steal_peripheral_rec() }
-            .FDCAN
-            .kernel_clk_mux(rec::FdcanClkSel::Pll1Q);
+    // 2. Calculate temperature using the Beta-parameter equation.
+    // 1/T = 1/T0 + (1/B) * ln(R/R0)
+    let steinhart = logf(resistance / THERMISTOR_NOMINAL_RESISTANCE) / THERMISTOR_BETA
+        + (1.0 / TEMPERATURE_NOMINAL_KELVIN);
+    
+    let temp_kelvin = 1.0 / steinhart;
 
-        let ccdr = rcc
-            // .use_hse(48.MHz()) // check the clock hardware
-            .sys_ck(96.MHz())
-            .pll1_strategy(rcc::PllConfigStrategy::Iterative)
-            .pll1_q_ck(48.MHz())
-            .pclk1(48.MHz())
-            .pclk2(48.MHz())
-            .pclk3(48.MHz())
-            .pclk4(48.MHz())
-            .freeze(pwrcfg, &ctx.device.SYSCFG);
-        info!("RCC configured");
-        let fdcan_prec = ccdr
-            .peripheral
-            .FDCAN
-            .kernel_clk_mux(rec::FdcanClkSel::Pll1Q);
+    // 3. Convert from Kelvin to Celsius.
+    let temp_celsius = temp_kelvin - 273.15;
 
-        // GPIO
-        let gpioa = ctx.device.GPIOA.split(ccdr.peripheral.GPIOA);
-        let gpiod = ctx.device.GPIOD.split(ccdr.peripheral.GPIOD);
-        let gpioc = ctx.device.GPIOC.split(ccdr.peripheral.GPIOC);
-        let gpiob = ctx.device.GPIOB.split(ccdr.peripheral.GPIOB);
-        let gpioe = ctx.device.GPIOE.split(ccdr.peripheral.GPIOE);
+    temp_celsius
+}
 
-        // assert_eq!(ccdr.clocks.pll1_q_ck().unwrap().raw(), 32_000_000);
-        info!("PLL1Q:");
-        // https://github.com/stm32-rs/stm32h7xx-hal/issues/369 This needs to be stolen. Grrr I hate the imaturity of the stm32-hal
-        // let can2: fdcan::FdCan<
-        //     stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN2>,
-        //     fdcan::ConfigMode,
-        // > = {
-        //     let rx = gpiob.pb12.into_alternate().speed(Speed::VeryHigh);
-        //     let tx = gpiob.pb13.into_alternate().speed(Speed::VeryHigh);
-        //     ctx.device.FDCAN2.fdcan(tx, rx, fdcan_prec)
-        // };
+/// Sets the heater state based on the PID controller's output.
+/// The PID output is treated as a percentage. If it's over a threshold,
+/// the heater turns on, otherwise it turns off. This is a simple
+/// way to use a PID controller for on/off (bang-bang) control.
+fn set_heater_state(
+    heater_pin: &mut Output,
+    pid_output: f32,
+) {
+    // We can use a simple threshold. If the PID controller requests more than
+    // 50% power, we turn the heater on. Otherwise, we turn it off.
+    // This threshold can be adjusted. A lower threshold will make the
+    // heater turn on more readily.
+    if pid_output > 50.0 {
+        heater_pin.set_high();
+    } else {
+        heater_pin.set_low();
+    }
+}
 
-        // let can_data_manager = CanManager::new(can2);
+#[embassy_executor::task]
+async fn temperature_regulator(
+    mut adc: Adc<'static, embassy_stm32::peripherals::ADC1>,
+    mut temp_pin: embassy_stm32::peripherals::PB1,
+    mut heater_pin: Output<'static>,
+) {
+    defmt::info!("Temperature regulator task started.");
+    
+    // Configure the PID controller.
+    let mut pid = Pid::new(SETPOINT_TEMP_C, 100.0);
+    pid.p(KP, 100.0)
+       .i(KI, 100.0) // Limit integral contribution to prevent wind-up
+       .d(KD, 100.0);
 
-        // let can1: fdcan::FdCan<
-        //     stm32h7xx_hal::can::Can<stm32h7xx_hal::pac::FDCAN1>,
-        //     fdcan::ConfigMode,
-        // > = {
-        //     let rx = gpioa.pa11.into_alternate().speed(Speed::VeryHigh);
-        //     let tx = gpioa.pa12.into_alternate().speed(Speed::VeryHigh);
-        //     ctx.device.FDCAN1.fdcan(tx, rx, fdcan_prec_unsafe)
-        // };
+    let mut ticker = Ticker::every(Duration::from_millis(CONTROL_LOOP_INTERVAL_MS));
 
-        // let can_command_manager = CanManager::new(can1);
+    loop {
+        // Read the raw ADC value from the thermistor pin.
+        let adc_raw = adc.blocking_read(&mut temp_pin);
+        
+        // Convert the raw value to a temperature in Celsius.
+        let measurement = adc_to_celsius(adc_raw);
 
-        let spi_sd: stm32h7xx_hal::spi::Spi<
-            stm32h7xx_hal::stm32::SPI1,
-            stm32h7xx_hal::spi::Enabled,
-            u8,
-        > = ctx.device.SPI1.spi(
-            (
-                gpioa.pa5.into_alternate::<5>(), // sck
-                gpioa.pa6.into_alternate(),      // miso
-                gpioa.pa7.into_alternate(),      // mosi
-            ),
-            stm32h7xx_hal::spi::Config::new(spi::MODE_0),
-            16.MHz(),
-            ccdr.peripheral.SPI1,
-            &ccdr.clocks,
+        // Calculate the new control output.
+        let control_output = pid.next_control_output(measurement);
+        
+        // Apply the new output to the heater pin (on/off).
+        set_heater_state(&mut heater_pin, control_output.output);
+
+        defmt::info!(
+            "Setpoint: {}°C, Measured: {}°C -> PID Output: {} (P: {}, I: {}, D: {}) -> Heater: {}",
+            SETPOINT_TEMP_C,
+            measurement,
+            control_output.output,
+            control_output.p,
+            control_output.i,
+            control_output.d,
+            if heater_pin.is_set_high() { "ON" } else { "OFF" }
         );
 
-        let cs_sd = gpioa.pa4.into_push_pull_output();
+        // Wait for the next tick.
+        ticker.next().await;
+    }
+}
 
-        let sd_manager = SdManager::new(spi_sd, cs_sd);
+#[embassy_executor::task] 
+async fn sm_task(spawner: Spawner, state_machine: StateMachine<Context>) {
+    info!("State Machine task started.");
 
-        // ADC setup
-        let adc_spi: stm32h7xx_hal::spi::Spi<
-            stm32h7xx_hal::stm32::SPI4,
-            stm32h7xx_hal::spi::Enabled,
-            u8,
-        > = ctx.device.SPI4.spi(
-            (
-                gpioe.pe2.into_alternate(),
-                gpioe.pe5.into_alternate(),
-                gpioe.pe6.into_alternate(),
-            ),
-            stm32h7xx_hal::spi::Config::new(spi::MODE_1), // datasheet mentioned a mode 1 per datasheet
-            8.MHz(),                                      // 125 ns
-            ccdr.peripheral.SPI4,
-            &ccdr.clocks,
-        );
+    loop {
+        match state_machine.state {
+            States::Ascent => {
 
-        let adc1_cs = gpioc.pc10.into_push_pull_output();
-        let adc2_cs = gpiod.pd2.into_push_pull_output();
-
-        let adc1_rst = gpioc.pc11.into_push_pull_output();
-
-        #[cfg(feature = "temperature")]
-        let adc2_rst = gpioe.pe0.into_push_pull_output();
-
-        #[cfg(feature = "pressure")]
-        let adc2_rst = gpiod.pd1.into_push_pull_output();
-
-        #[cfg(feature = "strain")]
-        let adc2_rst = gpiob.pb9.into_push_pull_output();
-
-        let mut adc_manager = AdcManager::new(adc_spi, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
-        adc_manager.init_adc1().ok();
-
-        // leds
-        let led_red = gpioa.pa2.into_push_pull_output();
-        let led_green = gpioa.pa3.into_push_pull_output();
-
-        let mut rtc = stm32h7xx_hal::rtc::Rtc::open_or_init(
-            ctx.device.RTC,
-            backup.RTC,
-            stm32h7xx_hal::rtc::RtcClock::Lsi,
-            &ccdr.clocks,
-        );
-
-        // TODO: Get current time from some source, this should be the responsibility of pheonix to sync the boards with GPS time.
-        let now = NaiveDate::from_ymd_opt(2001, 1, 1)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap();
-        rtc.set_date_time(now.clone());
-
-        let time_manager = TimeManager::new(Some(FormattedNaiveDateTime(now)));
-
-        let mut syscfg = ctx.device.SYSCFG;
-        let mut exti = ctx.device.EXTI;
-        // setup interupt drdy pins
-        let mut adc1_int = gpioa.pa15.into_pull_down_input();
-        adc1_int.make_interrupt_source(&mut syscfg);
-        adc1_int.trigger_on_edge(&mut exti, Edge::Rising);
-        adc1_int.enable_interrupt(&mut exti);
-
-        let mut adc2_int = gpiod.pd3.into_pull_down_input();
-        adc2_int.make_interrupt_source(&mut syscfg);
-        adc2_int.trigger_on_edge(&mut exti, Edge::Rising);
-        adc2_int.enable_interrupt(&mut exti);
-
-        /* Monotonic clock */
-        Mono::start(core.SYST, 200_000_000);
-
-        let mut data_manager = DataManager::new();
-        data_manager.set_reset_reason(reset);
-        let em = ErrorManager::new();
-        let state_machine = sm::StateMachine::new(traits::Context {});
-
-        blink::spawn().ok();
-        // send_data_internal::spawn(can_receiver).ok();
-        reset_reason_send::spawn().ok();
-        state_send::spawn().ok();
-        sm_orchestrate::spawn().ok();
-        info!("Online");
-
-        (
-            SharedResources {
-                data_manager,
-                em,
-                sd_manager,
-                // can_command_manager,
-                // can_data_manager,
-                rtc,
-                adc_manager,
-                time_manager,
-                state_machine,
             },
-            LocalResources {
-                adc1_int,
-                adc2_int,
-                can_sender,
-                led_red,
-                led_green,
-            },
-        )
-    }
+            States::Fault => {
 
-    /// The state machine orchestrator.
-    /// Handles the current state of the ARGUS system.
-    #[task(priority = 2, shared = [&state_machine])]
-    async fn sm_orchestrate(cx: sm_orchestrate::Context) {
-        let mut last_state = cx.shared.state_machine.state();
-        loop {
-            let state = cx.shared.state_machine.state();
-            if state != last_state {
-                _ = match state {
-                    sm::States::Calibration => spawn!(sm_calibrate),
-                    sm::States::Collection => spawn!(sm_collect),
-                    sm::States::Fault => spawn!(sm_fault),
-                    sm::States::Idle => spawn!(sm_idle),
-                    sm::States::Init => spawn!(sm_init),
-                };
+            },
+            States::Init => {
                 
-                last_state = state;
+            },
+            States::WaitForLaunch => {
+                
+            },
+            States::Descent => {
+
+            },
+            States::DrogueDescent => {
+
+            },
+            States::Fuck => {
+
+            },
+            States::Landed => {
+
+            },
+            States::MainDescent => {
+
             }
+        } 
+        Timer::after(Duration::from_millis(1000)).await;
+    }
+}
 
-            Mono::delay(100.millis()).await;
-        }
+// =================================================================================
+// Main Entry Point
+// =================================================================================
+
+#[embassy_executor::main]
+async fn main(spawner: Spawner) {
+    info!("System starting...");
+    {
+        use core::mem::MaybeUninit;
+        const HEAP_SIZE: usize = 40000;
+        static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
+        unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
 
-    #[task(priority = 3)]
-    async fn sm_calibrate(cx: sm_calibrate::Context) {
-        let accel_data = cx.resources.imu.get_accel().unwrap();
-        let gyro_data = cx.resources.imu.get_gyro().unwrap();
-        let imu_msg = ImuMsg::new(&accel, &gyro);
+    let mut config = embassy_stm32::Config::default();
 
-        cx.resources.cal_proc.imu_callback(imu_msg)?;
-
-        if cx.resources.cal_proc.is_done(){
-
-            cx.resources.state = State::Idle;
-        }else{
-            cx.resources.state = State::Fault;
-        }
-    }
-
-    #[task(priority = 3)]
-    async fn sm_collect(cx: sm_collect::Context) {
-        todo!()
-    }
-
-    #[task(priority = 3)]
-    async fn sm_fault(cx: sm_fault::Context) {
-        todo!()
-    }
-
-    #[task(priority = 3)]
-    async fn sm_idle(cx: sm_idle::Context) {
-        todo!()
-    }
-
-   #[task(priority = 3)]
-    async fn sm_init(cx: sm_init::Context) {
-        let accel_init_data = cx.resources.imu.get_accel();
-        let gyro_init_data = cx.resources.imu.get_gyro();
-
-        match (accel_init_data, gyro_init_data) {
-            (Ok(accel), Ok(gyro)) => {
-                if (accel[2] - 9.8).abs() < 1.5 {
-                    cx.resources.state = State::Calibrate;
-                } else {
-                    cx.resources.state = State::Fault;
-                }
-            }
-            _ => {
-                cx.resources.state = State::Fault;
-            }
-        }
-    }
-
-    #[task(priority = 3, binds = EXTI15_10, shared = [adc_manager], local = [adc1_int])]
-    fn adc1_data_ready(mut cx: adc1_data_ready::Context) {
-        info!("new data available come through");
-        cx.shared.adc_manager.lock(|adc_manager| {
-            let data = adc_manager.read_adc1_data();
-            match data {
-                Ok(data) => {
-                    info!("data: {:?}", data);
-                }
-                Err(_) => {
-                    info!("Error reading data");
-                }
-            }
-            // change the inpmux
-            adc_manager.set_adc1_inpmux(
-                ads126x::register::NegativeInpMux::AIN1,
-                ads126x::register::PositiveInpMux::AIN0,
-            );
+    {
+        use embassy_stm32::rcc::*;
+        config.rcc.hsi = Some(HSIPrescaler::DIV1);
+        config.rcc.csi = true;
+        config.rcc.pll1 = Some(Pll {
+            source: PllSource::HSI,
+            prediv: PllPreDiv::DIV4,
+            mul: PllMul::MUL50,
+            divp: Some(PllDiv::DIV2),
+            divq: Some(PllDiv::DIV8), // used by SPI3. 100Mhz.
+            divr: None,
         });
-        cx.local.adc1_int.clear_interrupt_pending_bit();
+        config.rcc.sys = Sysclk::PLL1_P; // 400 Mhz
+        config.rcc.ahb_pre = AHBPrescaler::DIV2; // 200 Mhz
+        config.rcc.apb1_pre = APBPrescaler::DIV2; // 100 Mhz
+        config.rcc.apb2_pre = APBPrescaler::DIV2; // 100 Mhz
+        config.rcc.apb3_pre = APBPrescaler::DIV2; // 100 Mhz
+        config.rcc.apb4_pre = APBPrescaler::DIV2; // 100 Mhz
+        config.rcc.voltage_scale = VoltageScale::Scale1;
     }
+    // config.rcc.ls = rcc::LsConfig::default_lse();
+    let p = embassy_stm32::init(config);
 
-    #[task(priority = 3, binds = EXTI3, shared = [adc_manager], local = [adc2_int])]
-    fn adc2_data_ready(mut cx: adc2_data_ready::Context) {
-        info!("new data available come through");
-        cx.shared.adc_manager.lock(|adc_manager| {
-            let data = adc_manager.read_adc2_data();
-            match data {
-                Ok(data) => {
-                    info!("data: {:?}", data);
-                }
-                Err(_) => {
-                    info!("Error reading data");
-                }
-            }
-            adc_manager.set_adc2_inpmux(
-                ads126x::register::NegativeInpMux::AIN1,
-                ads126x::register::PositiveInpMux::AIN0,
-            );
-        });
-        cx.local.adc2_int.clear_interrupt_pending_bit();
-    }
+    // --- SD Card ---
+    let mut sd_spi_config = SpiConfig::default();
 
-    #[task(priority = 3, shared = [data_manager, &em, rtc])]
-    async fn reset_reason_send(mut cx: reset_reason_send::Context) {
-        let reason = cx
-            .shared
-            .data_manager
-            .lock(|data_manager| data_manager.reset_reason.take());
-        match reason {
-            Some(reason) => {
-                let message = messages::CanMessage::new(
-                    cx.shared
-                        .rtc
-                        .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
-                    COM_ID,
-                    CanData::Common(reason.into()),
-                );
+    sd_spi_config.frequency = mhz(16);
+    
+    sd_spi_config.mode = embassy_stm32::spi::Mode {
+        polarity: embassy_stm32::spi::Polarity::IdleLow,
+        phase: embassy_stm32::spi::Phase::CaptureOnFirstTransition,
+    };
 
-                cx.shared.em.run(|| {
-                    spawn!(queue_data_internal, message)?;
-                    Ok(())
-                });
-            }
-            None => return,
+    sd_spi_config.bit_order = BitOrder::MsbFirst;
+
+    let sd_spi_bus = Spi::new(
+        p.SPI1, p.PA5, p.PA7, p.PA6, p.DMA1_CH4, p.DMA1_CH5, sd_spi_config,
+    );
+
+    let sd_cs = Output::new(p.PB9, Level::High, Speed::VeryHigh);
+
+    let sd_spi_bus_ref_cell = RefCell::new(sd_spi_bus);
+    let sd_spi_device = RefCellDevice::new(&sd_spi_bus_ref_cell, sd_cs, Delay);
+
+    let sdcard = SdCard::new(sd_spi_device.unwrap(), Delay);
+    println!("Card size is {} bytes", sdcard.num_bytes().unwrap());
+    let volume_mgr = VolumeManager::new(sdcard, TimeSink::new());
+    let volume0 = volume_mgr.open_volume(VolumeIdx(0)).unwrap();
+    let root_dir = volume0.open_root_dir().unwrap();
+    let my_file = root_dir.open_file_in_dir("MY_FILE.TXT", Mode::ReadOnly).unwrap();
+    while !my_file.is_eof() {
+        let mut buffer = [0u8; 32];
+        let num_read = my_file.read(&mut buffer).unwrap();
+        for b in &buffer[0..num_read] {
+            info!("{}", *b as char);
         }
     }
+    info!("Sd write and setup complete");
 
-    #[task(priority = 3)]
-    async fn delay(_cx: delay::Context, delay: u32) {
-        Mono::delay(delay.millis()).await;
-    }
+    // --- State Machine ---
+    let state_machine = StateMachine::new(traits::Context {});
 
-    #[task(shared = [data_manager, &em, rtc])]
-    async fn state_send(mut cx: state_send::Context) {
-        let state_data = cx
-            .shared
-            .data_manager
-            .lock(|data_manager| data_manager.state.clone());
-        cx.shared.em.run(|| {
-            if let Some(x) = state_data {
-                let can_data: CanData = CanData::Common(x.into());
-                let message = CanMessage::new(
-                    cx.shared
-                        .rtc
-                        .lock(|rtc| messages::FormattedNaiveDateTime(rtc.date_time().unwrap())),
-                    COM_ID,
-                    can_data,
-                );
-                cx.shared.em.run(|| {
-                    spawn!(queue_data_internal, message)?;
-                    Ok(())
-                });
-            } // if there is none we still return since we simply don't have data yet.
-            Ok(())
-        });
-        Mono::delay(5.secs()).await;
-        // spawn_after!(state_send, ExtU64::secs(5)).ok();
-    }
+    let mut adc = Adc::new(p.ADC1);
+    adc.set_sample_time(SampleTime::CYCLES32_5);
+    let temp_pin = p.PB1; // Your thermistor pin
+    
+    // --- Heater Pin Setup ---
+    // This is the single pin that controls the heater.
+    let heater_pin = Output::new(p.PE11, Level::Low, Speed::Low);
 
-    /**
-     * Sends information about the sensors.
-     */
-    #[task(priority = 3, shared = [data_manager, rtc, &em])]
-    async fn sensor_send(mut cx: sensor_send::Context) {
-        let sensors = cx
-            .shared
-            .data_manager
-            .lock(|data_manager| data_manager.temperature.take());
 
-        cx.shared.em.run(|| {
-            match sensors {
-                Some(x) => {
-                    for sensor in x.iter() {
-                        let message = CanMessage::new(
-                            messages::FormattedNaiveDateTime(
-                                cx.shared.rtc.lock(|rtc| rtc.date_time().unwrap()),
-                            ),
-                            COM_ID,
-                            CanData::Temperature(*sensor),
-                        );
-                        spawn!(queue_data_internal, message)?;
-                    }
-                }
-                None => {
-                    info!("No sensor data to send");
-                }
-            }
-            Ok(())
-        });
-    }
+    // NOTE 
+    // Creating multiple executor instances is supported, to run tasks with multiple priority levels. This allows higher-priority tasks to preempt lower-priority tasks.
 
-    /// Callback for our logging library to access the needed resources.
-    pub fn queue_log_message(d: impl Into<CanData>) {
-        send_log_intermediate::spawn(d.into()).ok();
-    }
+    // --- Spawning Tasks ---
+    spawner.must_spawn(led_blinker_task(p.PA3));
 
-    #[task(priority = 3, local = [can_sender], shared = [&em])]
-    async fn queue_data_internal(cx: queue_data_internal::Context, m: CanMessage) {
-        match cx.local.can_sender.send(m).await {
-            // Preferably clean this up to be handled by the error manager.
-            Ok(_) => {}
-            Err(_) => {
-                info!("Failed to send data");
-            }
-        }
-    }
-
-    #[task(priority = 3, shared = [rtc, &em])]
-    async fn send_log_intermediate(mut cx: send_log_intermediate::Context, m: CanData) {
-        cx.shared.em.run(|| {
-            cx.shared.rtc.lock(|rtc| {
-                let message = messages::CanMessage::new(
-                    messages::FormattedNaiveDateTime(rtc.date_time().unwrap()),
-                    COM_ID,
-                    m,
-                );
-
-                spawn!(queue_data_internal, message)?;
-                Ok(())
-            })
-        });
-    }
-
-    // #[task(priority = 2, binds = FDCAN1_IT0, shared = [can_command_manager, data_manager, &em])]
-    // fn can_command(mut cx: can_command::Context) {
-    //     // info!("CAN Command");
-    //     cx.shared.can_command_manager.lock(|can| {
-    //         cx.shared
-    //             .data_manager
-    //             .lock(|data_manager| cx.shared.em.run(|| can.process_data(data_manager)));
-    //     })
-    // }
-
-    // #[task( priority = 3, binds = FDCAN2_IT0, shared = [&em, can_data_manager, data_manager])]
-    // fn can_data(mut cx: can_data::Context) {
-    //     cx.shared.can_data_manager.lock(|can| {
-    //         {
-    //             cx.shared.data_manager.lock(|data_manager| {
-    //                 cx.shared.em.run(|| {
-    //                     can.process_data(data_manager)?;
-    //                     Ok(())
-    //                 })
-    //             })
-    //         }
-    //     });
-    // }
-
-    // #[task(priority = 2, shared = [&em, can_data_manager, data_manager])]
-    // async fn send_data_internal(
-    //     mut cx: send_data_internal::Context,
-    //     mut receiver: Receiver<'static, CanMessage, DATA_CHANNEL_CAPACITY>,
-    // ) {
-    //     loop {
-    //         if let Ok(m) = receiver.recv().await {
-    //             cx.shared.can_data_manager.lock(|can| {
-    //                 cx.shared.em.run(|| {
-    //                     can.send_message(m)?;
-    //                     Ok(())
-    //                 })
-    //             });
-    //         }
-    //     }
-    // }
-
-    // #[task(priority = 2, shared = [&em, can_command_manager, data_manager])]
-    // async fn send_command_internal(mut cx: send_command_internal::Context, m: CanMessage) {
-    //     cx.shared.can_command_manager.lock(|can| {
-    //         cx.shared.em.run(|| {
-    //             can.send_message(m)?;
-    //             Ok(())
-    //         })
-    //     });
-    // }
-
-    #[task(priority = 1, local = [led_red, led_green], shared = [&em])]
-    async fn blink(cx: blink::Context) {
-        loop {
-            if cx.shared.em.has_error() {
-                cx.local.led_red.toggle();
-                Mono::delay(500.millis()).await;
-            } else {
-                cx.local.led_green.toggle();
-                Mono::delay(2000.millis()).await;
-            }
-        }
-    }
-
-    #[task(priority = 3, shared = [&em])]
-    async fn sleep_system(_cx: sleep_system::Context) {
-        // in here we can stop the ADCs.
-    }
+    // Spawn the regulator task, passing it the hardware peripherals.
+    spawner.spawn(temperature_regulator(adc, temp_pin, heater_pin)).unwrap();
+    // pass control of the spawner to the state machine
+    spawner.must_spawn(sm_task(spawner, state_machine));
 }

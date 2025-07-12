@@ -1,19 +1,22 @@
-//! This module should be refactored out.
-use crate::state_machine::{StateMachineContext, States};
-use messages::state::DeviceState;
+use crate::{StateMachineContext, States};
+use messages_prost::state::State;
 
 pub struct Context {}
 
 impl StateMachineContext for Context {}
 
-impl From<States> for DeviceState {
+impl From<States> for State {
     fn from(value: States) -> Self {
         match value {
-            States::Idle => DeviceState::Idle,
-            States::Calibration => DeviceState::Calibration,
-            States::Collection => DeviceState::Collection,
-            States::Init => DeviceState::Init,
-            States::Fault => DeviceState::Fault,
+            States::Fuck => State::Abort,
+            States::Init => State::Initializing,
+            States::Fault => State::Abort, 
+            States::WaitForLaunch => State::WaitForTakeoff,
+            States::Ascent => State::Ascent,
+            States::Descent => State::Descent, 
+            States::DrogueDescent => State::Descent,
+            States::MainDescent => State::TerminalDescent,
+            States::Landed => State::WaitForRecovery 
         }
     }
 }

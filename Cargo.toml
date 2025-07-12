@@ -1,16 +1,11 @@
 [workspace]
 resolver = "2"
 
-members = ["boards/*", "examples/*", "crates/*"]
+members = ["boards/*", "crates/*"]
 
 # Specify which members to build by default. Some libraries, such as messages, contain dev-dependencies that will give
 # compile errors if built directly.
-default-members = ["boards/*", "examples/*"]
-
-[workspace.dependencies.stm32h7xx-hal]
-git = "https://github.com/uorocketry/stm32h7xx-hal"
-# We use 35 even though we have the 33. 
-features = ["defmt", "rt", "stm32h735", "can", "rtc"]
+default-members = ["boards/*"]
 
 [workspace.dependencies.serde]
 version = "1.0.150"
@@ -29,6 +24,10 @@ version = "0.2.7"
 
 [workspace.dependencies.nb]
 version = "1.1.0"
+
+[workspace.dependencies.messages-prost]
+git = "https://github.com/uorocketry/messages-prost"
+branch = "add-messages"
 
 [workspace.dependencies.rtic]
 version = "2.0.0"
@@ -51,9 +50,6 @@ features = ["print-defmt"]
 [workspace.dependencies.defmt] 
 version = "0.3.2"
 
-[workspace.dependencies.fdcan]
-version = "0.2"
-
 [workspace.dependencies.defmt-rtt]
 version = "0.4"
 
@@ -66,10 +62,6 @@ version = "0.7.16"
 
 [workspace.dependencies.embedded-alloc]
 version = "0.5.0"
-
-[workspace.dependencies.messages]
-git = "https://github.com/uorocketry/messages"
-branch = "state-refactor"
 
 [workspace.dependencies.defmt-test]
 version = "0.3.2"
