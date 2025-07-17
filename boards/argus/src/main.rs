@@ -775,20 +775,41 @@ impl Imu<EnteringFault> {
     async fn sm_init(cx: sm_init::Context) {
         info!("Initializing system");
 
-        #[cfg(feature = "temperature")]
-        {
+       match FEATURE{
+        Feature::Temperature => {
+            info!("Initializing Temperature board")
 
+            let temp_sensor_pin = gpioa.pa1.into_analog(); //find actual pin
+            //get data from adc for temperature
+            let data = self.adc.read_adc1_data(NegativeInpMux::AIN1, PositiveInpMux::AIN0);
+            
+            if let Ok(bytes) = data {
+                //convert data to signed i32
+                let raw = i32::from_be_bytes(bytes);
+
+                let adc_max = (1<<23) as f32;
+                let v_ref = 3.3; //need to find actual adc voltage reference from MCU
+                let voltage = (raw as f32 / adc_max) * v_ref;
+
+                let temperature_celsius = (voltage - 0.5) * 100.0;
+
+                info!("temperature reading around: {} °C", temperature_celsius);
+
+
+            }
+
+
+
+           
+            //*****ask about where to store temperature data**************
+
+            
         }
-
-        #[cfg(feature = "pressure")]
-         {
-
-         }
-
-        #[cfg(feature = "strain")]
-         {
-
-         }
+        Feature::Pressure  => {
+            info!("Initializing Pressure Board");
+        }
+        Feature::Strain => {}
+       }
         
         cx.shared.em.run(|| {
             (cx.shared.adc_manager, cx.shared.imu_wrapper, cx.shared.state_machine).lock(|adc_manager, imu_wrapper, state_machine| {
