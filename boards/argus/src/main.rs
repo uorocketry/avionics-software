@@ -781,17 +781,17 @@ impl Imu<EnteringFault> {
 
             let temp_sensor_pin = gpioa.pa1.into_analog(); //find actual pin
             //get data from adc for temperature
-            let data = self.adc.read_adc1_data(NegativeInpMux::AIN1, PositiveInpMux::AIN0);
+            let data_t = self.adc.read_adc1_data(NegativeInpMux::AIN1, PositiveInpMux::AIN0);
             
-            if let Ok(bytes) = data {
+            if let Ok(bytes) = data_t {
                 //convert data to signed i32
-                let raw = i32::from_be_bytes(bytes);
+                let raw_t = i32::from_be_bytes(bytes);
 
-                let adc_max = (1<<23) as f32;
-                let v_ref = 3.3; //need to find actual adc voltage reference from MCU
-                let voltage = (raw as f32 / adc_max) * v_ref;
+                let adc_max_t = (1<<23) as f32;
+                let v_ref_t = 3.3; //need to find actual adc voltage reference from MCU
+                let voltage_t = (raw_t as f32 / adc_max_t) * v_ref_t;
 
-                let temperature_celsius = (voltage - 0.5) * 100.0;
+                let temperature_celsius = (voltage_t - 0.5) * 100.0;
 
                 info!("temperature reading around: {} °C", temperature_celsius);
 
@@ -807,6 +807,33 @@ impl Imu<EnteringFault> {
         }
         Feature::Pressure  => {
             info!("Initializing Pressure Board");
+
+            let pressure_pin = gpioa.pa2.into_analog(); //find actual pin
+
+            let data_p = self.adc.read_adc2_data(NegativeInpMux::AIN1, PositiveInpMux::AIN0);
+
+            if let Ok(bytes) = data_p {
+
+                let adc_max_p = (1<<23) as f32;
+                let raw_p = i32::from_be_bytes(bytes);
+                let voltage_p = (raw_p as f32 / adc_max_p) * v_ref_p;
+
+                let max_pressure = 101.3;
+
+
+                let v_min = 0;  //find actual values
+                let v_max = 4.5;
+                let p_min = 26.5;
+                let p_max = max_pressure;
+
+                let slope = (p_max - p_min) / (v_max - v_min);
+                let offset = p_min - slope * v_min;
+
+
+                let pressure_kpa = 
+
+                 info!("pressure reading around: {} kpa", pressure_kpa);
+            }
         }
         Feature::Strain => {}
        }
