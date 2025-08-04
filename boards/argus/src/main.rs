@@ -29,6 +29,7 @@ use stm32h7xx_hal::rtc;
 use stm32h7xx_hal::{rcc, rcc::rec};
 use types::COM_ID; // global logger
 use core::marker::PhantomData;
+use tokio::time::{interval, Duration}; // for time delays
 
 use crate::types::{ADC2_RST_PIN_ID, ADC2_RST_PIN_PORT};
 
@@ -492,20 +493,16 @@ impl Imu<EnteringFault> {
     #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, data_manager, em, rtc])]
     async fn sm_collect(cx: sm_collect::Context) {
 
-         #[cfg(feature = "temperature")]
-        {
-
-        }
-
-        #[cfg(feature = "pressure")]
-         {
-
-         }
-
-        #[cfg(feature = "strain")]
-         {
-
-         }
+         match FEATURE{
+            Feature::Temperature => {
+                info!("Collecting data - Temperature board ready");
+            }
+            Feature::Pressure => {
+                info!("Collecting data - Pressure board ready");
+            }
+            Feature::Strain => {
+                info!("Collecting data - Strain board ready");
+            }
 
         cx.shared.em.run(|| {
             (cx.shared.imu_wrapper, cx.shared.adc_manager, cx.shared.data_manager, cx.shared.state_machine, cx.shared.rtc).lock(|imu_wrapper, adc_manager, data_manager, state_machine, rtc| {
@@ -557,26 +554,24 @@ impl Imu<EnteringFault> {
         
         Mono::delay(100.millis()).await;
     }
+}
 
     #[task(priority = 3, shared = [imu_wrapper, state_machine, em, data_manager])]
     async fn sm_fault(cx: sm_fault::Context) {
 
-        info!("System in fault state - attempting recovery");
+      info!("System in fault state - attempting recovery");
 
-        #[cfg(feature = "temperature")]
-        {
-
+      match FEATURE{
+            Feature::Temperature => {
+                info!("Fault state - Temperature board ready");
+            }
+            Feature::Pressure => {
+                info!("Fault state - Pressure board ready");
+            }
+            Feature::Strain => {
+                info!("Fault state - Strain board ready");
+            }
         }
-
-        #[cfg(feature = "pressure")]
-         {
-
-         }
-
-        #[cfg(feature = "strain")]
-         {
-
-         }
         
         cx.shared.em.run(|| {
             (cx.shared.imu_wrapper, cx.shared.state_machine, cx.shared.data_manager).lock(|imu_wrapper, state_machine, data_manager| {
@@ -694,21 +689,119 @@ impl Imu<EnteringFault> {
 
     #[task(priority = 3, shared = [imu_wrapper, state_machine, em])]
     async fn sm_idle(cx: sm_idle::Context) {
+        match FEATURE{
+            Feature::Temperature => {
+                info!("System in idle state - Temperature board ready");
 
-        #[cfg(feature = "temperature")]
-        {
+                let temp_sensor_pin = gpioa.pa1.into_analog(); //find actual pin
+                let mut interval = interval(Duration::from_secs(100)); //adjust appropiately millisecond delay
+                loop{
+                    interval.tick().await;
+                    let data_t = self.adc.read_adc1_data(NegativeInpMux::AIN1, PositiveInpMux::AIN0);
+            
+                    if let Ok(bytes) = data_t {
+                        //convert data to signed i32
+                        let raw_t = i32::from_be_bytes(bytes);
 
+                        let adc_max_t = (1<<23) as f32;
+                        let v_ref_t = 3.3; //need to find actual adc voltage reference from MCU
+                        let voltage_t = (raw_t as f32 / adc_max_t) * v_ref_t;
+
+                        let temperature_celsius = (voltage_t - 0.5) * 100.0;
+
+                        }
+
+                        
+                        if temperature_celsius > 50.0 {
+                            info!("Temperature reading too high: {} °C", temperature_celsius);
+                            state_machine.transition_to(sm::States::Fault);
+                        } else if temperature_celsius < 10.0{ 
+                            info!("Temperature reading too low: {} °C", temperature_celsius);
+                            state_machine.transition_to(sm::States::Fault);
+                        }    else {
+                            info!("Temperature reading: {} °C", temperature_celsius);
+                        }
+
+
+            }
         }
+            Feature::Pressure => {
+                info!("System in idle state - Pressure board ready");
 
-        #[cfg(feature = "pressure")]
-         {
+                let pressure_pin = gpioa.pa2.into_analog(); //find actual pin
+                let mut interval = interval(Duration::from_secs(100)); //adjust appropiately millisecond delay
+                loop{
+                    interval.tick().await;
+                    let data_p = self.adc.read_adc1_data(NegativeInpMux::AIN1, PositiveInpMux::AIN0);
+            
+                    if let Ok(bytes) = data_p {
 
-         }
+                        let adc_max_p = (1<<23) as f32;
+                        let v_ref_p = 3.3; //need to find actual adc voltage reference from MCU
+                        let raw_p = i32::from_be_bytes(bytes);
+                        let voltage_p = (raw_p as f32 / adc_max_p) * v_ref_p;
 
-        #[cfg(feature = "strain")]
-         {
+                        let max_pressure = 101.3;
 
-         }
+
+                        let v_min = 0;  //find actual values
+                        let v_max = 4.5;
+                        let p_min = 26.5;
+                        let p_max = max_pressure;
+
+                        let slope = (p_max - p_min) / (v_max - v_min);
+                        let offset = p_min - slope * v_min;
+
+
+                        let pressure_kpa = slope * voltage_p + offset;
+
+                       
+                    }
+
+                        
+                        if pressure_kpa > 150.0 { //verify this threshold
+                            info!("Pressure reading too high: {} kPa", pressure_kpa);
+                            state_machine.transition_to(sm::States::Fault);
+                        } else if pressure_kpa < 20.0 {
+                            info!("Pressure reading too low: {} kPa", pressure_kpa);
+                            state_machine.transition_to(sm::States::Fault);
+                        } else {
+                            info!("Pressure reading: {} kPa", pressure_kpa);
+                        }
+            }
+            Feature::Strain => {
+                info!("System in idle state - Strain board ready");
+                let strain_pin = gpioa.pa3.into_analog(); //find actual pin
+                let mut interval = interval(Duration::from_secs(100)); //adjust appropiately millisecond delay
+                loop{
+                    interval.tick().await;
+                    let data_s = self.adc.read_adc1_data(NegativeInpMux::AIN1, PositiveInpMux::AIN0);
+            
+                    if let Ok(bytes) = data_s {
+
+                        let adc_max_s = (1<<23) as f32;
+                        let v_ref_s = 3.3; //need to find actual adc voltage reference from MCU
+                        let raw_s = i32::from_be_bytes(bytes);
+                        let voltage_s = (raw_s as f32 / adc_max_s) * v_ref_s;
+                        let gauge_factor = 2.0; //example value, find actual gauge factor
+                        let e_voltage = 1.0; //example value, find actual excitation voltage
+                        let strain_value = (voltage_s / (gauge_factor * e_voltage));
+
+                        
+                    }
+
+                        
+                        if strain_value > 2000.0 { //verify this threshold
+                            info!("Strain reading too high: {} microstrain", strain_value);
+                            state_machine.transition_to(sm::States::Fault);
+                        } else if strain_value < -2000.0 {
+                            info!("Strain reading too low: {} microstrain", strain_value);
+                            state_machine.transition_to(sm::States::Fault);
+                        } else {
+                            info!("Strain reading: {} microstrain", strain_value);
+                        }
+            }
+        }
 
         cx.shared.em.run(|| {
             (cx.shared.imu_wrapper, cx.shared.state_machine).lock(|imu_wrapper, state_machine| {
@@ -815,6 +908,7 @@ impl Imu<EnteringFault> {
             if let Ok(bytes) = data_p {
 
                 let adc_max_p = (1<<23) as f32;
+                let v_ref_p = 3.3; //need to find actual adc voltage reference from MCU
                 let raw_p = i32::from_be_bytes(bytes);
                 let voltage_p = (raw_p as f32 / adc_max_p) * v_ref_p;
 
@@ -830,12 +924,30 @@ impl Imu<EnteringFault> {
                 let offset = p_min - slope * v_min;
 
 
-                let pressure_kpa = 
+                let pressure_kpa = slope * voltage_p + offset;  //verify formula
 
-                 info!("pressure reading around: {} kpa", pressure_kpa);
+                info!("pressure reading around: {} kpa", pressure_kpa);
             }
         }
-        Feature::Strain => {}
+        Feature::Strain => {
+            let strain_pin = gpioa.pa3.into_analog(); //find actual pin
+
+            let data_s = self.adc.read_adc3_data(NegativeInpMux::AIN1, PositiveInpMux::AIN0);
+
+            if let Ok(bytes) = data_p {
+
+                let adc_max_s = (1<<23) as f32;
+                let v_ref_s = 3.3; //need to find actual adc voltage reference from MCU
+                let raw_s = i32::from_be_bytes(bytes);
+                let voltage_s = (raw_s as f32 / adc_max_s) * v_ref_s;
+                let gauge_factor = 2.0; //example value, find actual gauge factor
+                let e_voltage = 1.0; //example value, find actual excitation voltage
+                let strain_value = (voltage_s / (gauge_factor * e_voltage));
+
+                info!("strain reading around: {} microstrain", strain_value);
+            }
+
+        }
        }
         
         cx.shared.em.run(|| {
