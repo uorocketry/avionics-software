@@ -5,7 +5,6 @@
 
 /// Coefficients for strain gauge conversion
 const GAUGE_FACTOR: f64 = 2.0; // Gauge factor for the strain gauge
-const RESISTANCE: f64 = 120.0; // Resistance of the strain gauge in ohms
 const V_REF: f64 = 5.0; // Output voltage reference
 
 /*
@@ -19,6 +18,8 @@ pub fn voltage_to_strain(voltage: f64, gauge_factor: f64) -> f64 {
     // Convert voltage to strain using the gauge factor and resistance
     let mut strain = (voltage) / ((0.25) * GAUGE_FACTOR * V_REF);
     // Apply correction factor
-    strain = strain * (GAUGE_FACTOR / gauge_factor);
+    if gauge_factor != 0.0 || !gauge_factor.is_nan() {
+        strain = strain * (GAUGE_FACTOR / gauge_factor);
+    }
     return strain;
 }
