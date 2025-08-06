@@ -40,7 +40,7 @@ pub fn voltage_to_strain_half(voltage: f64, gauge_factor: f64) -> f64 {
 }
 
 /*
-* Function to convert voltage to strain in full bridge configuration
+* Function to convert voltage to strain in full bridge configuration.
 *
 * @param voltage: f64 - The voltage output from the strain gauge
 * @param gauge_factor: f64 - The gauge factor of the strain gauge
