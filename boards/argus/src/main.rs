@@ -90,6 +90,9 @@ mod app {
         adc_manager: AdcManager<Pin<ADC2_RST_PIN_PORT, ADC2_RST_PIN_ID, Output<PushPull>>>,
         time_manager: TimeManager,
         state_machine: sm::StateMachine<traits::Context>,
+        temperature_celsius: f32,
+        pressure_kpa: f32,
+        strain_value: f32,  
     }
 
     #[local]
@@ -397,20 +400,17 @@ impl Imu<EnteringFault> {
 
     #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, data_manager, em])]
     async fn sm_calibrate(cx: sm_calibrate::Context) {
-        #[cfg(feature = "temperature")]
-        {
-
+       match FEATURE {
+            Feature::Temperature => {
+                info!("Calibrating - Temperature board ready"); //clarify goal of this method
+            }
+            Feature::Pressure => {
+                info!("Calibrating - Pressure board ready");
+            }
+            Feature::Strain => {
+                info!("Calibrating - Strain board ready");
+            }
         }
-
-        #[cfg(feature = "pressure")]
-         {
-
-         }
-
-        #[cfg(feature = "strain")]
-         {
-
-         }
 
 
         cx.shared.em.run(|| {
@@ -490,18 +490,27 @@ impl Imu<EnteringFault> {
         });
     }
 
-    #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, data_manager, em, rtc])]
+    #[task(priority = 3, shared = [imu_wrapper, state_machine, adc_manager, data_manager, em, rtc, temperature_celsius, pressure_kpa, strain_value])]
     async fn sm_collect(cx: sm_collect::Context) {
 
          match FEATURE{
             Feature::Temperature => {
                 info!("Collecting data - Temperature board ready");
+                cx.shared.temperature_celsius.lock(|temp|{
+                    info!("Collecting data - Temperature: {} °C", *temp); //need to decide what kind of file to save to
+                })
             }
             Feature::Pressure => {
                 info!("Collecting data - Pressure board ready");
+                cx.shared.pressure_kpa.lock(|pressure|{
+                    info!("Collecting data - Pressure: {} kPa", *pressure); //need to decide what kind of file to save to
+                })
             }
             Feature::Strain => {
                 info!("Collecting data - Strain board ready");
+                cx.shared.strain_value.lock(|strain|{
+                    info!("Collecting data - Strain: {} microstrain", *strain); //need to decide what kind of file to save to
+                })
             }
 
         cx.shared.em.run(|| {
@@ -563,7 +572,7 @@ impl Imu<EnteringFault> {
 
       match FEATURE{
             Feature::Temperature => {
-                info!("Fault state - Temperature board ready");
+                info!("Fault state - Temperature board ready"); // clarify goal of this method
             }
             Feature::Pressure => {
                 info!("Fault state - Pressure board ready");
@@ -687,7 +696,7 @@ impl Imu<EnteringFault> {
         Mono::delay(5.secs()).await;
     }
 
-    #[task(priority = 3, shared = [imu_wrapper, state_machine, em])]
+    #[task(priority = 3, shared = [imu_wrapper, state_machine, em, adc_manager, temperature_celsius, pressure_kpa, strain_value])]
     async fn sm_idle(cx: sm_idle::Context) {
         match FEATURE{
             Feature::Temperature => {
@@ -714,12 +723,21 @@ impl Imu<EnteringFault> {
                         
                         if temperature_celsius > 50.0 {
                             info!("Temperature reading too high: {} °C", temperature_celsius);
+                            cx.shared.temperature_celsius
+                                .lock(|temp| *temp = temperature_celsius);
                             state_machine.transition_to(sm::States::Fault);
+        
                         } else if temperature_celsius < 10.0{ 
                             info!("Temperature reading too low: {} °C", temperature_celsius);
+                            cx.shared.temperature_celsius
+                                .lock(|temp| *temp = temperature_celsius);
                             state_machine.transition_to(sm::States::Fault);
+                           
                         }    else {
+                            cx.shared.temperature_celsius
+                                .lock(|temp| *temp = temperature_celsius);
                             info!("Temperature reading: {} °C", temperature_celsius);
+                            
                         }
 
 
@@ -761,12 +779,18 @@ impl Imu<EnteringFault> {
                         
                         if pressure_kpa > 150.0 { //verify this threshold
                             info!("Pressure reading too high: {} kPa", pressure_kpa);
+                            cx.shared.pressure_kpa
+                                .lock(|pressure| *pressure = pressure_kpa);
                             state_machine.transition_to(sm::States::Fault);
                         } else if pressure_kpa < 20.0 {
                             info!("Pressure reading too low: {} kPa", pressure_kpa);
+                            cx.shared.pressure_kpa
+                                .lock(|pressure| *pressure = pressure_kpa);
                             state_machine.transition_to(sm::States::Fault);
                         } else {
                             info!("Pressure reading: {} kPa", pressure_kpa);
+                            cx.shared.pressure_kpa
+                                .lock(|pressure| *pressure = pressure_kpa);
                         }
             }
             Feature::Strain => {
@@ -793,12 +817,18 @@ impl Imu<EnteringFault> {
                         
                         if strain_value > 2000.0 { //verify this threshold
                             info!("Strain reading too high: {} microstrain", strain_value);
+                            cx.shared.strain_value
+                                .lock(|strain| *strain = strain_value);
                             state_machine.transition_to(sm::States::Fault);
                         } else if strain_value < -2000.0 {
                             info!("Strain reading too low: {} microstrain", strain_value);
+                            cx.shared.strain_value
+                                .lock(|strain| *strain = strain_value);
                             state_machine.transition_to(sm::States::Fault);
                         } else {
                             info!("Strain reading: {} microstrain", strain_value);
+                            cx.shared.strain_value
+                                .lock(|strain| *strain = strain_value);
                         }
             }
         }
