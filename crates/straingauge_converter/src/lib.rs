@@ -1,11 +1,11 @@
 #![no_std]
 //!
-//! This crate contains code to convert strain gauge voltages to temperatures.
+//! This crate contains code to convert strain gauge voltages to actual strain values.
 //!
 
 /// Coefficients for strain gauge conversion
 const GAUGE_FACTOR: f64 = 2.0; 
-const V_REF: f64 = 5.0; // Output voltage reference
+const V_REF: f64 = 5.0;
 
 /*
 * Function to convert voltage to strain in quarter bridge configuration
@@ -17,7 +17,7 @@ const V_REF: f64 = 5.0; // Output voltage reference
 pub fn voltage_to_strain_quart(voltage: f64, gauge_factor: f64) -> f64 {
     let mut strain = (voltage) / ((0.25) * GAUGE_FACTOR * V_REF);
     // Apply correction factor
-    if gauge_factor != 0.0 || !gauge_factor.is_nan() {
+    if gauge_factor != 0.0 && !gauge_factor.is_nan() {
         strain = strain * (GAUGE_FACTOR / gauge_factor);
     }
     return strain;
@@ -33,7 +33,7 @@ pub fn voltage_to_strain_quart(voltage: f64, gauge_factor: f64) -> f64 {
 pub fn voltage_to_strain_half(voltage: f64, gauge_factor: f64) -> f64 {
     let mut strain = (voltage) / ((0.5) * GAUGE_FACTOR * V_REF);
     // Apply correction factor
-    if gauge_factor != 0.0 || !gauge_factor.is_nan() {
+    if gauge_factor != 0.0 && !gauge_factor.is_nan() {
         strain = strain * (GAUGE_FACTOR / gauge_factor);
     }
     return strain;
@@ -49,7 +49,7 @@ pub fn voltage_to_strain_half(voltage: f64, gauge_factor: f64) -> f64 {
 pub fn voltage_to_strain_full(voltage: f64, gauge_factor: f64) -> f64 {
     let mut strain = (voltage) / (GAUGE_FACTOR * V_REF);
     // Apply correction factor
-    if gauge_factor != 0.0 || !gauge_factor.is_nan() {
+    if gauge_factor != 0.0 && !gauge_factor.is_nan() {
         strain = strain * (GAUGE_FACTOR / gauge_factor);
     }
     return strain;
