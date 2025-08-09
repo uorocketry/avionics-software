@@ -347,7 +347,17 @@ async fn main(spawner: Spawner) {
     adc_manager.init_adc1().unwrap();
     adc_manager.init_adc2().unwrap();
 
-
+    #[cfg(feature = "strain")]
+    {
+        adc_manager.set_adc1_inpmux(
+            ads126x::register::NegativeInpMux::AIN0,
+            ads126x::register::PositiveInpMux::AIN1,
+        ); 
+        adc_manager.set_adc2_inpmux(
+            ads126x::register::NegativeInpMux::AIN0,
+            ads126x::register::PositiveInpMux::AIN1,
+        ); 
+    }
 
     #[cfg(feature = "pressure")]
     {
@@ -420,7 +430,7 @@ async fn main(spawner: Spawner) {
             {
                 let volts = thermocouple_converter::adc_to_voltage(data);
                 info!("volatage: {}", volts);
-                let strain = data as f32 * 0.0001;
+                let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
                 info!("Strain: {}", strain);
             }
         } else {

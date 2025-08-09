@@ -43,6 +43,7 @@ static_cell = "2"
 grounded = "0.2.0"
 pid = "4.0.0"
 thermocouple-converter = { path = "../../crates/thermocouple-converter" }
+straingauge-converter = { path = "../../crates/straingauge-converter" }
 
 [dev-dependencies]
 defmt-test = { workspace = true }

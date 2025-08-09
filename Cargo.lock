@@ -96,6 +96,7 @@ dependencies = [
  "smlang",
  "static_cell",
  "stm32-fmc",
+ "straingauge-converter",
  "thermocouple-converter",
 ]
 
@@ -1595,6 +1596,10 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
 ]
+
+[[package]]
+name = "straingauge-converter"
+version = "0.1.1"
 
 [[package]]
 name = "string_morph"
