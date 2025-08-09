@@ -4,22 +4,21 @@ use ads126x::{
 };
 
 use defmt::info;
-use embedded_hal::digital::v2::OutputPin;
-use stm32h7xx_hal::{
-    gpio::{Output, Pin, PushPull},
-    spi::Spi,
-};
+use embedded_hal_1::digital::OutputPin;
+
+use embassy_stm32::gpio::{Output}; 
+use embassy_stm32::spi::Spi; 
 
 // There is an option to use interrupts using the data ready pins, but for now we will poll.
 pub struct AdcManager<GpioPin>
 where
     GpioPin: OutputPin,
 {
-    pub spi: Spi<stm32h7xx_hal::pac::SPI4, stm32h7xx_hal::spi::Enabled, u8>,
-    pub adc1: Ads126x<Pin<'C', 11, Output<PushPull>>>,
+    pub spi: Spi<'static, embassy_stm32::mode::Blocking>,
+    pub adc1: Ads126x<GpioPin>,
     pub adc2: Ads126x<GpioPin>,
-    pub adc1_cs: Pin<'C', 10, Output<PushPull>>,
-    pub adc2_cs: Pin<'D', 2, Output<PushPull>>,
+    pub adc1_cs: GpioPin,
+    pub adc2_cs: GpioPin,
 }
 
 impl<GpioPin> AdcManager<GpioPin>
@@ -27,11 +26,11 @@ where
     GpioPin: OutputPin,
 {
     pub fn new(
-        spi: Spi<stm32h7xx_hal::pac::SPI4, stm32h7xx_hal::spi::Enabled, u8>,
-        adc1_rst: Pin<'C', 11, Output<PushPull>>,
+        spi: Spi<'static, embassy_stm32::mode::Blocking>,
+        adc1_rst: GpioPin,
         adc2_rst: GpioPin,
-        adc1_cs: Pin<'C', 10, Output<PushPull>>,
-        adc2_cs: Pin<'D', 2, Output<PushPull>>,
+        adc1_cs: GpioPin,
+        adc2_cs: GpioPin,
     ) -> Self {
         Self {
             spi,
@@ -53,30 +52,66 @@ where
         self.adc1.send_command(ADCCommand::STOP1, &mut self.spi)?;
         self.adc1.send_command(ADCCommand::STOP2, &mut self.spi)?;
 
+        #[cfg(any(feature = "temperature", feature = "pressure"))]
+        {
+            // We need to enable vbias
+            let mut power_cfg = ads126x::register::PowerRegister::default();
+            power_cfg.set_vbias(false);
+            self.adc1.set_power(&power_cfg, &mut self.spi).unwrap();
+            // Set gain
+            let mut mode2_cfg = Mode2Register::default();
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV32); 
+
+            self.adc1.set_mode2(&mode2_cfg, &mut self.spi).unwrap();
+
+            let mut mode1_cfg = Mode1Register::default();
+            mode1_cfg.set_sbmag(ads126x::register::SensorBiasMagnitude::R10MOhm);
+
+            self.adc1.set_mode1(&mode1_cfg, &mut self.spi).unwrap();
+
+            let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;
+            let mode2_cfg_real = self.adc1.get_mode2(&mut self.spi)?;
+
+            // verify
+            info!("Mode1: {:#010b}", mode1_cfg.bits());
+            info!("Mode2: {:#010b}", mode2_cfg.bits());
+            info!("Mode1: {:#010b}", mode1_cfg_real.bits());
+            info!("Mode2: {:#010b}", mode2_cfg_real.bits());
+            assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
+            assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
+        }
+
+
+        #[cfg(feature = "strain")]
+        {
         // setup the Power register
-        let mut power_cfg = ads126x::register::PowerRegister::default();
-        power_cfg.clear_reset();
-        self.adc1.set_power(&power_cfg, &mut self.spi)?;
+            let mut power_cfg = ads126x::register::PowerRegister::default();
+            power_cfg.clear_reset();
+            self.adc1.set_power(&power_cfg, &mut self.spi)?;
 
-        // Verify none custom config works first
-        // setup mode 1 and mode 2 registers
-        let mut mode1_cfg = Mode1Register::default();
-        mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
-        self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
+            // Verify none custom config works first
+            // setup mode 1 and mode 2 registers
+            let mut mode1_cfg = Mode1Register::default();
+            mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
+            self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
 
-        let mut mode2_cfg = Mode2Register::default();
-        mode2_cfg.set_dr(DataRate::SPS1200);
-        self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
+            let mut mode2_cfg = Mode2Register::default();
+            mode2_cfg.set_dr(DataRate::SPS1200);
+            self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
 
-        // read back the mode1 and mode2 registers to verify
-        let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;
-        let mode2_cfg_real = self.adc1.get_mode2(&mut self.spi)?;
+            // read back the mode1 and mode2 registers to verify
+            let mode1_cfg_real = self.adc1.get_mode1(&mut self.spi)?;
+            let mode2_cfg_real = self.adc1.get_mode2(&mut self.spi)?;
 
-        // verify
-        info!("Mode1: {:#010b}", mode1_cfg_real.bits());
-        info!("Mode2: {:#010b}", mode2_cfg_real.bits());
-        assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
-        assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
+            // verify
+            info!("Mode1: {:#010b}", mode1_cfg.bits());
+            info!("Mode2: {:#010b}", mode2_cfg.bits());
+            info!("Mode1: {:#010b}", mode1_cfg_real.bits());
+            info!("Mode2: {:#010b}", mode2_cfg_real.bits());
+            assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
+            assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
+        }
+    
 
         // start conversions
         self.adc1.send_command(ADCCommand::START1, &mut self.spi)?;
@@ -96,31 +131,64 @@ where
         self.adc2.send_command(ADCCommand::STOP1, &mut self.spi)?;
         self.adc2.send_command(ADCCommand::STOP2, &mut self.spi)?;
 
+        #[cfg(any(feature = "temperature", feature = "pressure"))]
+        {
+            // We need to enable vbias
+            let mut power_cfg = ads126x::register::PowerRegister::default();
+            power_cfg.set_vbias(false);
+            self.adc2.set_power(&power_cfg, &mut self.spi).unwrap();
+            // Set gain
+            let mut mode2_cfg = Mode2Register::default();
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV32); 
+
+            self.adc2.set_mode2(&mode2_cfg, &mut self.spi).unwrap();
+
+            let mut mode1_cfg = Mode1Register::default();
+            mode1_cfg.set_sbmag(ads126x::register::SensorBiasMagnitude::R10MOhm);
+
+            self.adc2.set_mode1(&mode1_cfg, &mut self.spi).unwrap();
+
+            let mode1_cfg_real = self.adc2.get_mode1(&mut self.spi)?;
+            let mode2_cfg_real = self.adc2.get_mode2(&mut self.spi)?;
+
+            // verify
+            info!("Mode1: {:#010b}", mode1_cfg.bits());
+            info!("Mode2: {:#010b}", mode2_cfg.bits());
+            info!("Mode1: {:#010b}", mode1_cfg_real.bits());
+            info!("Mode2: {:#010b}", mode2_cfg_real.bits());
+            assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
+            assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
+        }
+        #[cfg(feature = "strain")]
+        {
         // setup the Power register
-        let mut power_cfg = ads126x::register::PowerRegister::default();
-        power_cfg.clear_reset();
-        self.adc2.set_power(&power_cfg, &mut self.spi)?;
+            let mut power_cfg = ads126x::register::PowerRegister::default();
+            power_cfg.clear_reset();
+            self.adc2.set_power(&power_cfg, &mut self.spi)?;
 
-        // Verify none custom config works first
-        // setup mode 1 and mode 2 registers
-        let mut mode1_cfg = Mode1Register::default();
-        mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
-        self.adc2.set_mode1(&mode1_cfg, &mut self.spi)?;
+            // Verify none custom config works first
+            // setup mode 1 and mode 2 registers
+            let mut mode1_cfg = Mode1Register::default();
+            mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
+            self.adc2.set_mode1(&mode1_cfg, &mut self.spi)?;
 
-        let mut mode2_cfg = Mode2Register::default();
-        mode2_cfg.set_dr(DataRate::SPS1200);
-        self.adc2.set_mode2(&mode2_cfg, &mut self.spi)?;
+            let mut mode2_cfg = Mode2Register::default();
+            mode2_cfg.set_dr(DataRate::SPS1200);
+            self.adc2.set_mode2(&mode2_cfg, &mut self.spi)?;
 
-        // read back the mode1 and mode2 registers to verify
-        let mode1_cfg_real = self.adc2.get_mode1(&mut self.spi)?;
-        let mode2_cfg_real = self.adc2.get_mode2(&mut self.spi)?;
+            // read back the mode1 and mode2 registers to verify
+            let mode1_cfg_real = self.adc2.get_mode1(&mut self.spi)?;
+            let mode2_cfg_real = self.adc2.get_mode2(&mut self.spi)?;
 
-        // verify
-        info!("Mode1: {:#010b}", mode1_cfg_real.bits());
-        info!("Mode2: {:#010b}", mode2_cfg_real.bits());
-        assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
-        assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
-
+            // verify
+            info!("Mode1: {:#010b}", mode1_cfg.bits());
+            info!("Mode2: {:#010b}", mode2_cfg.bits());
+            info!("Mode1: {:#010b}", mode1_cfg_real.bits());
+            info!("Mode2: {:#010b}", mode2_cfg_real.bits());
+            assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
+            assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
+        }
+    
         // start conversions
         self.adc2.send_command(ADCCommand::START1, &mut self.spi)?;
         self.adc2.send_command(ADCCommand::START2, &mut self.spi)?;

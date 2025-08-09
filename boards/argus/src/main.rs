@@ -8,7 +8,9 @@ compile_error!(
 );
 
 mod traits;
+mod adc_manager;
 
+use embassy_stm32::exti::ExtiInput;
 use libm::{logf, powf};
 use core::cell::RefCell;
 use core::marker::PhantomData;
@@ -317,6 +319,119 @@ async fn main(spawner: Spawner) {
     // config.rcc.ls = rcc::LsConfig::default_lse();
     let p = embassy_stm32::init(config);
 
+    // --- ADS 126 Setup --- 
+    let mut adc_spi_config = SpiConfig::default(); 
+    adc_spi_config.frequency = mhz(8); 
+    adc_spi_config.mode = embassy_stm32::spi::MODE_1; 
+
+    let adc_spi_bus = Spi::new_blocking(p.SPI4, p.PE2, p.PE6, p.PE5, adc_spi_config);
+
+    let mut adc1_cs = Output::new(p.PE1, Level::High, Speed::Low);
+
+    let mut adc2_cs = Output::new(p.PB8, Level::High, Speed::Low);
+
+    let mut adc1_rst = Output::new(p.PE0, Level::High, Speed::Low);
+    let mut adc2_rst = Output::new(p.PB7, Level::High, Speed::Low);
+
+    let mut adc1_drdy = ExtiInput::new(p.PB9, p.EXTI9, Pull::Down);
+    let mut adc2_drdy = ExtiInput::new(p.PB6, p.EXTI6, Pull::Down);
+
+    let mut adc_manager = adc_manager::AdcManager::new(
+        adc_spi_bus, 
+        adc1_rst,
+        adc2_rst,
+        adc1_cs,
+        adc2_cs,
+    );
+
+    adc_manager.init_adc1().unwrap();
+    adc_manager.init_adc2().unwrap();
+
+
+
+    #[cfg(feature = "pressure")]
+    {
+        adc_manager.set_adc2_inpmux(
+            ads126x::register::NegativeInpMux::AIN6,
+            ads126x::register::PositiveInpMux::AIN7,
+        );
+    }
+    #[cfg(feature = "temperature")]
+    {
+        adc_manager.set_adc1_inpmux(
+            ads126x::register::NegativeInpMux::AIN1,
+            ads126x::register::PositiveInpMux::AIN0,
+        );
+        adc_manager.set_adc2_inpmux(
+            ads126x::register::NegativeInpMux::AIN0,
+            ads126x::register::PositiveInpMux::AIN1,
+        );
+    }
+    loop {
+        if let Ok(data) = adc_manager.read_adc1_data() {
+            info!("ADC1 Data: {:?}", data);
+            #[cfg(feature = "temperature")]
+            {
+                let volts = thermocouple_converter::adc_to_voltage(data);
+                info!("volatage: {}", volts);
+
+                let celsius = thermocouple_converter::adc_to_celsius(data);
+                info!("Celcius: {}", celsius);
+            }
+
+            #[cfg(feature = "pressure")]
+            {
+                let volts = thermocouple_converter::adc_to_voltage(data);
+                info!("volatage: {}", volts);
+                let pressure: f64 = ((10000.0/((60.0/100.0) * (2.5 / 3.0))) * volts) / 32.0;
+                info!("Pressure (psi): {}", pressure);
+            }
+
+            #[cfg(feature = "strain")]
+            {
+                let volts = thermocouple_converter::adc_to_voltage(data);
+                info!("volatage: {}", volts);
+                let strain = data as f32 * 0.0001;
+                info!("Strain: {}", strain);
+            }
+        } else {
+            info!("Failed to read ADC1 data.");
+        }
+        if let Ok(data) = adc_manager.read_adc2_data() {
+            info!("ADC2 Data: {:?}", data);
+            #[cfg(feature = "temperature")]
+            {
+                let volts = thermocouple_converter::adc_to_voltage(data);
+                info!("volatage: {}", volts);
+
+                let celsius = thermocouple_converter::adc_to_celsius(data);
+                info!("Celcius: {}", celsius);
+            }
+
+            #[cfg(feature = "pressure")]
+            {
+                let volts = thermocouple_converter::adc_to_voltage(data);
+                info!("volatage: {}", volts);
+                let pressure: f64 = ((10000.0/((60.0/100.0) * (2.5 / 3.0))) * volts) / 32.0;
+                info!("Pressure (psi): {}", pressure);
+            }
+
+            #[cfg(feature = "strain")]
+            {
+                let volts = thermocouple_converter::adc_to_voltage(data);
+                info!("volatage: {}", volts);
+                let strain = data as f32 * 0.0001;
+                info!("Strain: {}", strain);
+            }
+        } else {
+            info!("Failed to read ADC1 data.");
+        }
+
+
+
+        Timer::after(Duration::from_millis(1000)).await;
+    }
+
     // --- SD Card ---
     let mut sd_spi_config = SpiConfig::default();
 
@@ -333,7 +448,7 @@ async fn main(spawner: Spawner) {
         p.SPI1, p.PA5, p.PA7, p.PA6, p.DMA1_CH4, p.DMA1_CH5, sd_spi_config,
     );
 
-    let sd_cs = Output::new(p.PB9, Level::High, Speed::VeryHigh);
+    let sd_cs = Output::new(p.PC4, Level::High, Speed::Low);
 
     let sd_spi_bus_ref_cell = RefCell::new(sd_spi_bus);
     let sd_spi_device = RefCellDevice::new(&sd_spi_bus_ref_cell, sd_cs, Delay);
@@ -343,27 +458,29 @@ async fn main(spawner: Spawner) {
     let volume_mgr = VolumeManager::new(sdcard, TimeSink::new());
     let volume0 = volume_mgr.open_volume(VolumeIdx(0)).unwrap();
     let root_dir = volume0.open_root_dir().unwrap();
-    let my_file = root_dir.open_file_in_dir("MY_FILE.TXT", Mode::ReadOnly).unwrap();
-    while !my_file.is_eof() {
-        let mut buffer = [0u8; 32];
-        let num_read = my_file.read(&mut buffer).unwrap();
-        for b in &buffer[0..num_read] {
-            info!("{}", *b as char);
-        }
-    }
-    info!("Sd write and setup complete");
+    // let my_file = root_dir.open_file_in_dir("MY_FILE.TXT", Mode::ReadOnly).unwrap();
+    // while !my_file.is_eof() {
+    //     let mut buffer = [0u8; 32];
+    //     let num_read = my_file.read(&mut buffer).unwrap();
+    //     for b in &buffer[0..num_read] {
+    //         info!("{}", *b as char);
+    //     }
+    // }
+    // info!("Sd write and setup complete");
 
     // --- State Machine ---
     let state_machine = StateMachine::new(traits::Context {});
 
-    let mut adc = Adc::new(p.ADC1);
-    adc.set_sample_time(SampleTime::CYCLES32_5);
-    let temp_pin = p.PB1; // Your thermistor pin
-    
-    // --- Heater Pin Setup ---
-    // This is the single pin that controls the heater.
-    let heater_pin = Output::new(p.PE11, Level::Low, Speed::Low);
-
+    #[cfg(feature = "pressure")]
+    {
+        // --- Heater Pin Setup ---
+        // This is the single pin that controls the heater.
+        let heater_pin = Output::new(p.PE11, Level::Low, Speed::Low);
+        let mut adc = Adc::new(p.ADC1);
+        adc.set_sample_time(SampleTime::CYCLES32_5);
+        let temp_pin = p.PB1; // Your thermistor pin
+        spawner.spawn(temperature_regulator(adc, temp_pin, heater_pin)).unwrap();
+    }    
 
     // NOTE 
     // Creating multiple executor instances is supported, to run tasks with multiple priority levels. This allows higher-priority tasks to preempt lower-priority tasks.
@@ -372,7 +489,6 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(led_blinker_task(p.PA3));
 
     // Spawn the regulator task, passing it the hardware peripherals.
-    spawner.spawn(temperature_regulator(adc, temp_pin, heater_pin)).unwrap();
     // pass control of the spawner to the state machine
     spawner.must_spawn(sm_task(spawner, state_machine));
 }
