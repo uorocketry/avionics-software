@@ -7,7 +7,14 @@ use defmt::info;
 use embedded_hal_1::digital::OutputPin;
 
 use embassy_stm32::gpio::{Output}; 
-use embassy_stm32::spi::Spi; 
+use embassy_stm32::spi::Spi;
+use heapless::Vec; 
+
+#[derive(Clone, Copy)]
+struct AdcSensor {
+    negative: ads126x::register::NegativeInpMux,
+    positive: ads126x::register::PositiveInpMux,
+}
 
 // There is an option to use interrupts using the data ready pins, but for now we will poll.
 pub struct AdcManager<GpioPin>
@@ -19,6 +26,14 @@ where
     pub adc2: Ads126x<GpioPin>,
     pub adc1_cs: GpioPin,
     pub adc2_cs: GpioPin,
+    #[cfg(any(feature = "strain", feature = "pressure"))]
+    pub adc1_sensors: (u8, Vec<AdcSensor, 1>),
+    #[cfg(feature = "temperature")]
+    pub adc1_sensors: (u8, Vec<AdcSensor, 1>),
+    #[cfg(any(feature = "strain", feature = "pressure"))]
+    pub adc2_sensors: (u8, Vec<AdcSensor, 5>),
+    #[cfg(feature = "temperature")]
+    pub adc2_sensors: (u8, Vec<AdcSensor, 4>),
 }
 
 impl<GpioPin> AdcManager<GpioPin>
@@ -38,6 +53,130 @@ where
             adc2: Ads126x::new(adc2_rst),
             adc1_cs,
             adc2_cs,
+            #[cfg(feature = "strain")]
+            adc1_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN1,
+                    positive: ads126x::register::PositiveInpMux::AIN0,
+                }, 
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN2,
+                //     positive: ads126x::register::PositiveInpMux::AIN3,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN4,
+                //     positive: ads126x::register::PositiveInpMux::AIN5,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN6,
+                //     positive: ads126x::register::PositiveInpMux::AIN7,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN8,
+                //     positive: ads126x::register::PositiveInpMux::AIN9,
+                // }
+            ]).unwrap()),
+            #[cfg(feature = "pressure")]
+            adc1_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN2,
+                //     positive: ads126x::register::PositiveInpMux::AIN3,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN4,
+                //     positive: ads126x::register::PositiveInpMux::AIN5,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN6,
+                //     positive: ads126x::register::PositiveInpMux::AIN7,
+                // }
+            ]).unwrap()),
+            #[cfg(feature = "temperature")]
+            adc1_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN2,
+                //     positive: ads126x::register::PositiveInpMux::AIN3,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN4,
+                //     positive: ads126x::register::PositiveInpMux::AIN5,
+                // },
+                // AdcSensor {
+                //     negative: ads126x::register::NegativeInpMux::AIN6,
+                //     positive: ads126x::register::PositiveInpMux::AIN7,
+                // },
+         
+            ]).unwrap()),
+
+            #[cfg(feature = "strain")]
+            adc2_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                }, 
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN2,
+                    positive: ads126x::register::PositiveInpMux::AIN3,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN4,
+                    positive: ads126x::register::PositiveInpMux::AIN5,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN6,
+                    positive: ads126x::register::PositiveInpMux::AIN7,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN8,
+                    positive: ads126x::register::PositiveInpMux::AIN9,
+                }
+            ]).unwrap()),
+            #[cfg(feature = "pressure")]
+            adc2_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN2,
+                    positive: ads126x::register::PositiveInpMux::AIN3,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN4,
+                    positive: ads126x::register::PositiveInpMux::AIN5,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN6,
+                    positive: ads126x::register::PositiveInpMux::AIN7,
+                }
+            ]).unwrap()),
+            #[cfg(feature = "temperature")]
+            adc2_sensors: (0, Vec::from_slice(&[
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN0,
+                    positive: ads126x::register::PositiveInpMux::AIN1,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN2,
+                    positive: ads126x::register::PositiveInpMux::AIN3,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN4,
+                    positive: ads126x::register::PositiveInpMux::AIN5,
+                },
+                AdcSensor {
+                    negative: ads126x::register::NegativeInpMux::AIN6,
+                    positive: ads126x::register::PositiveInpMux::AIN7,
+                },
+            ]).unwrap()),
         }
     }
 
@@ -60,7 +199,7 @@ where
             self.adc1.set_power(&power_cfg, &mut self.spi).unwrap();
             // Set gain
             let mut mode2_cfg = Mode2Register::default();
-            mode2_cfg.set_gain(ads126x::register::PGAGain::VV32); 
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV1); 
 
             self.adc1.set_mode2(&mode2_cfg, &mut self.spi).unwrap();
 
@@ -96,7 +235,9 @@ where
             self.adc1.set_mode1(&mode1_cfg, &mut self.spi)?;
 
             let mut mode2_cfg = Mode2Register::default();
-            mode2_cfg.set_dr(DataRate::SPS1200);
+            mode2_cfg.set_dr(DataRate::SPS10);
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV32); 
+
             self.adc1.set_mode2(&mode2_cfg, &mut self.spi)?;
 
             // read back the mode1 and mode2 registers to verify
@@ -121,7 +262,7 @@ where
     }
 
     pub fn init_adc2(&mut self) -> Result<(), ads126x::error::ADS126xError> {
-        self.select_adc1();
+        self.select_adc2();
         self.adc2.set_reset_high()?;
 
         // 2^16 cycles of delay
@@ -135,7 +276,7 @@ where
         {
             // We need to enable vbias
             let mut power_cfg = ads126x::register::PowerRegister::default();
-            power_cfg.set_vbias(false);
+            power_cfg.set_vbias(true);
             self.adc2.set_power(&power_cfg, &mut self.spi).unwrap();
             // Set gain
             let mut mode2_cfg = Mode2Register::default();
@@ -169,11 +310,13 @@ where
             // Verify none custom config works first
             // setup mode 1 and mode 2 registers
             let mut mode1_cfg = Mode1Register::default();
-            mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc1);
+            mode1_cfg.set_filter(ads126x::register::DigitalFilter::Sinc4);
             self.adc2.set_mode1(&mode1_cfg, &mut self.spi)?;
 
             let mut mode2_cfg = Mode2Register::default();
-            mode2_cfg.set_dr(DataRate::SPS1200);
+            mode2_cfg.set_dr(DataRate::SPS20);
+            mode2_cfg.set_gain(ads126x::register::PGAGain::VV32); 
+
             self.adc2.set_mode2(&mode2_cfg, &mut self.spi)?;
 
             // read back the mode1 and mode2 registers to verify
@@ -208,25 +351,23 @@ where
 
     pub fn set_adc1_inpmux(
         &mut self,
-        negative: ads126x::register::NegativeInpMux,
-        positive: ads126x::register::PositiveInpMux,
+        sensor: &mut AdcSensor,
     ) -> Result<(), ads126x::error::ADS126xError> {
         self.select_adc1();
         let mut reg = ads126x::register::InpMuxRegister::default();
-        reg.set_muxn(negative);
-        reg.set_muxp(positive);
+        reg.set_muxn(sensor.negative);
+        reg.set_muxp(sensor.positive);
         self.adc1.set_inpmux(&reg, &mut self.spi)
     }
 
     pub fn set_adc2_inpmux(
         &mut self,
-        negative: ads126x::register::NegativeInpMux,
-        positive: ads126x::register::PositiveInpMux,
+        sensor: &mut AdcSensor,
     ) -> Result<(), ads126x::error::ADS126xError> {
         self.select_adc2();
         let mut reg = ads126x::register::InpMuxRegister::default();
-        reg.set_muxn(negative);
-        reg.set_muxp(positive);
+        reg.set_muxn(sensor.negative);
+        reg.set_muxp(sensor.positive);
         self.adc2.set_inpmux(&reg, &mut self.spi)
     }
 
@@ -239,23 +380,45 @@ where
 
      */
 
-    pub fn read_adc1_data(&mut self) -> Result<i32, ads126x::error::ADS126xError> {
+    pub fn read_adc1_data(&mut self) -> Result<(u8, i32), ads126x::error::ADS126xError> {
         self.select_adc1();
         // ask for data
         /*
         If no command is intended, keep the DIN pin low during readback. If an input command is
         sent during readback, the ADC executes the command, and data interruption may result.
          */
-        self.adc1.read_data1(&mut self.spi)
+        let data = self.adc1.read_data1(&mut self.spi)?;
+        // select the next sensor based on round robin
+        let current_index = (self.adc1_sensors.0 as usize + 1) % self.adc1_sensors.1.len();
+
+        // // set the inputmux
+        // let mut sensor = &mut self.adc1_sensors.1[current_index].clone();
+        // self.set_adc1_inpmux(&mut sensor).unwrap();
+
+        // // update the index
+        // self.adc1_sensors.0 = current_index as u8;
+
+        Ok((current_index as u8, data))
     }
 
-    pub fn read_adc2_data(&mut self) -> Result<i32, ads126x::error::ADS126xError> {
+    pub fn read_adc2_data(&mut self) -> Result<(u8, i32), ads126x::error::ADS126xError> {
         self.select_adc2();
         // ask for data
         /*
         If no command is intended, keep the DIN pin low during readback. If an input command is
         sent during readback, the ADC executes the command, and data interruption may result.
          */
-        self.adc2.read_data1(&mut self.spi)
+        let data = self.adc2.read_data1(&mut self.spi)?;
+        // select the next sensor based on round robin
+        let current_index = (self.adc2_sensors.0 as usize + 1) % self.adc2_sensors.1.len();
+
+        // set the inputmux
+        let mut sensor = &mut self.adc2_sensors.1[current_index].clone();
+        self.set_adc2_inpmux(&mut sensor).unwrap();
+
+        // update the index
+        self.adc2_sensors.0 = current_index as u8;
+
+        Ok((current_index as u8, data))
     }
 }

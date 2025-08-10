@@ -30,7 +30,7 @@ use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{Delay, Duration, Instant, Ticker, Timer};
 use embedded_alloc::Heap;
-use heapless::HistoryBuffer;
+use heapless::{HistoryBuffer, Vec};
 use messages_prost::sensor::sbg::SbgData;
 use static_cell::StaticCell;
 use crate::traits::Context;
@@ -347,51 +347,21 @@ async fn main(spawner: Spawner) {
     adc_manager.init_adc1().unwrap();
     adc_manager.init_adc2().unwrap();
 
-    #[cfg(feature = "strain")]
-    {
-        adc_manager.set_adc1_inpmux(
-            ads126x::register::NegativeInpMux::AIN0,
-            ads126x::register::PositiveInpMux::AIN1,
-        ); 
-        adc_manager.set_adc2_inpmux(
-            ads126x::register::NegativeInpMux::AIN0,
-            ads126x::register::PositiveInpMux::AIN1,
-        ); 
-    }
-
-    #[cfg(feature = "pressure")]
-    {
-        adc_manager.set_adc2_inpmux(
-            ads126x::register::NegativeInpMux::AIN6,
-            ads126x::register::PositiveInpMux::AIN7,
-        );
-    }
-    #[cfg(feature = "temperature")]
-    {
-        adc_manager.set_adc1_inpmux(
-            ads126x::register::NegativeInpMux::AIN1,
-            ads126x::register::PositiveInpMux::AIN0,
-        );
-        adc_manager.set_adc2_inpmux(
-            ads126x::register::NegativeInpMux::AIN0,
-            ads126x::register::PositiveInpMux::AIN1,
-        );
-    }
     loop {
         if let Ok(data) = adc_manager.read_adc1_data() {
             info!("ADC1 Data: {:?}", data);
             #[cfg(feature = "temperature")]
             {
-                let volts = thermocouple_converter::adc_to_voltage(data);
+                let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);
 
-                let celsius = thermocouple_converter::adc_to_celsius(data);
+                let celsius = thermocouple_converter::voltage_to_celsius(volts);
                 info!("Celcius: {}", celsius);
             }
 
             #[cfg(feature = "pressure")]
             {
-                let volts = thermocouple_converter::adc_to_voltage(data);
+                let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);
                 let pressure: f64 = ((10000.0/((60.0/100.0) * (2.5 / 3.0))) * volts) / 32.0;
                 info!("Pressure (psi): {}", pressure);
@@ -399,9 +369,10 @@ async fn main(spawner: Spawner) {
 
             #[cfg(feature = "strain")]
             {
-                let volts = thermocouple_converter::adc_to_voltage(data);
+                info!("{}", (data.1 as f64 / 2147483647.0) * (2.5 / 32.0));
+                let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);
-                let strain = data as f32 * 0.0001;
+                let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
                 info!("Strain: {}", strain);
             }
         } else {
@@ -411,16 +382,16 @@ async fn main(spawner: Spawner) {
             info!("ADC2 Data: {:?}", data);
             #[cfg(feature = "temperature")]
             {
-                let volts = thermocouple_converter::adc_to_voltage(data);
+                let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);
 
-                let celsius = thermocouple_converter::adc_to_celsius(data);
+                let celsius = thermocouple_converter::voltage_to_celsius(volts);
                 info!("Celcius: {}", celsius);
             }
 
             #[cfg(feature = "pressure")]
             {
-                let volts = thermocouple_converter::adc_to_voltage(data);
+                let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);
                 let pressure: f64 = ((10000.0/((60.0/100.0) * (2.5 / 3.0))) * volts) / 32.0;
                 info!("Pressure (psi): {}", pressure);
@@ -428,7 +399,7 @@ async fn main(spawner: Spawner) {
 
             #[cfg(feature = "strain")]
             {
-                let volts = thermocouple_converter::adc_to_voltage(data);
+                let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);
                 let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
                 info!("Strain: {}", strain);
