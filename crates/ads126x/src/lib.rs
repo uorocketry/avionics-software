@@ -97,7 +97,8 @@ where
             },
         ];
 
-        spi.transfer(&mut [0x00, 0x00], &mut opcodes).map_err(|_| ADS126xError::IO)?; // this ?)?; is weird, why can't I just ? on the block result.
+        spi.transfer(&mut [0x00, 0x00], &mut opcodes)
+            .map_err(|_| ADS126xError::IO)?; // this ?)?; is weird, why can't I just ? on the block result.
         Ok(())
     }
 
@@ -107,7 +108,8 @@ where
     {
         // 0x00 gets interpretted as NOP command
         let mut buffer: [u8; 7] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-        spi.transfer(&mut buffer, &mut [0x12]).map_err(|_| ADS126xError::IO)?;
+        spi.transfer(&mut buffer, &mut [0x12])
+            .map_err(|_| ADS126xError::IO)?;
         info!("Read buffer: {:#010b}", buffer);
         let data_buffer: [u8; 4] = [buffer[3], buffer[4], buffer[5], buffer[6]];
         let data: i32 = i32::from_be_bytes(data_buffer);
@@ -132,34 +134,12 @@ where
         }
         // self.send_command(ADCCommand::RREG(reg, num - 1), spi)?;
         let mut buffer: [u8; 25] = [
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ];
 
-        spi.transfer(&mut buffer, &mut [num, 0x20 | reg as u8]).map_err(|_| ADS126xError::IO)?;
+        spi.transfer(&mut buffer, &mut [num, 0x20 | reg as u8])
+            .map_err(|_| ADS126xError::IO)?;
 
         // let mut buffer: Vec<u8, 27> = Vec::new();
         // for _ in 0..num {
@@ -179,8 +159,9 @@ where
         // self.send_command(ADCCommand::RREG(reg, 0), spi)?;
         // let data = spi.read().map_err(|_| ADS126xError::IO)?;
         let mut buffer = [reg as u8 | 0x20];
-        let mut read_buffer = [0x00; 3]; 
-        spi.transfer( &mut read_buffer, &mut buffer).map_err(|_| ADS126xError::IO)?;
+        let mut read_buffer = [0x00; 3];
+        spi.transfer(&mut read_buffer, &mut buffer)
+            .map_err(|_| ADS126xError::IO)?;
         info!("Read buffer: {:#010b}", read_buffer.clone());
         Ok(read_buffer[2])
     }

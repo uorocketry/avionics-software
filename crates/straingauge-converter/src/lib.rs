@@ -4,7 +4,7 @@
 //!
 
 /// Coefficients for strain gauge conversion
-const GAUGE_FACTOR_DEFAULT: f64 = 2.0; 
+const GAUGE_FACTOR_DEFAULT: f64 = 2.0;
 const V_REF: f64 = 5.0; // Output voltage reference
 
 /*

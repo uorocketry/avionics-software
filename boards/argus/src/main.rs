@@ -7,16 +7,17 @@ compile_error!(
     "You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'."
 );
 
-mod traits;
 mod adc_manager;
+mod traits;
 
-use embassy_stm32::exti::ExtiInput;
-use libm::{logf, powf};
+use crate::traits::Context;
 use core::cell::RefCell;
 use core::marker::PhantomData;
 use defmt::*;
+use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::adc::{Adc, SampleTime};
+use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{Input, Level, Output, OutputType, Pull, Speed};
 use embassy_stm32::mode::Blocking;
 use embassy_stm32::rtc::Rtc;
@@ -30,15 +31,14 @@ use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{Delay, Duration, Instant, Ticker, Timer};
 use embedded_alloc::Heap;
-use heapless::{HistoryBuffer, Vec};
-use messages_prost::sensor::sbg::SbgData;
-use static_cell::StaticCell;
-use crate::traits::Context;
-use {defmt_rtt as _};
-use {panic_probe as _};
-use embedded_sdmmc::{Mode, SdCard, VolumeIdx, VolumeManager};
 use embedded_hal_bus::spi::RefCellDevice;
+use embedded_sdmmc::{Mode, SdCard, VolumeIdx, VolumeManager};
+use heapless::{HistoryBuffer, Vec};
+use libm::{logf, powf};
+use messages_prost::sensor::sbg::SbgData;
+use panic_probe as _;
 use pid::Pid;
+use static_cell::StaticCell;
 
 // Use the asynchronous SpiDevice from embassy-embedded-hal
 
@@ -59,7 +59,6 @@ const ADC_MAX_VALUE: f32 = 4095.0;
 // This is taken from the schematic (R5 = 1.6kΩ).
 const DIVIDER_RESISTANCE: f32 = 1600.0;
 
-
 // --- NTC Thermistor Datasheet Parameters ---
 // IMPORTANT: You MUST get these values from the datasheet for YOUR specific thermistor.
 // These are common values for a standard 10k NTC thermistor.
@@ -72,7 +71,6 @@ const THERMISTOR_BETA: f32 = 3950.0;
 
 /// Nominal temperature in Kelvin (25°C).
 const TEMPERATURE_NOMINAL_KELVIN: f32 = 298.15; // 25.0 + 273.15
-
 
 // --- PID Tuning Constants ---
 // You MUST tune these for your specific hardware setup.
@@ -90,7 +88,8 @@ static HEAP: Heap = Heap::empty();
 // static FAULT_CHANNEL: Channel<CriticalSectionRawMutex, , 2> = Channel::new();
 
 // The SPI bus is protected by a Mutex, so the RefCell is not needed.
-static SPI_BUS: StaticCell<embassy_sync::mutex::Mutex<CriticalSectionRawMutex, Spi<mode::Async>>> = StaticCell::new();
+static SPI_BUS: StaticCell<embassy_sync::mutex::Mutex<CriticalSectionRawMutex, Spi<mode::Async>>> =
+    StaticCell::new();
 
 // Static variable for the RTC
 pub static RTC: Mutex<CriticalSectionRawMutex, RefCell<Option<Rtc>>> =
@@ -106,8 +105,8 @@ statemachine! {
         *Init + Start = WaitForLaunch,
         WaitForLaunch + Launch = Ascent,
         Ascent + Apogee = Descent,
-        Descent + MainDeployment = Fuck, 
-        Descent + DrogueDeployment = DrogueDescent, 
+        Descent + MainDeployment = Fuck,
+        Descent + DrogueDeployment = DrogueDescent,
         DrogueDescent + MainDeployment =  MainDescent,
         MainDescent + NoMovement = Landed,
         Fault + FaultCleared = _,
@@ -156,7 +155,6 @@ async fn led_blinker_task(pin: peripherals::PA3) {
     }
 }
 
-
 /// Converts a raw ADC reading from the thermistor's voltage divider
 /// into a temperature in Celsius.
 fn adc_to_celsius(adc_value: u16) -> f32 {
@@ -169,7 +167,7 @@ fn adc_to_celsius(adc_value: u16) -> f32 {
     // 1/T = 1/T0 + (1/B) * ln(R/R0)
     let steinhart = logf(resistance / THERMISTOR_NOMINAL_RESISTANCE) / THERMISTOR_BETA
         + (1.0 / TEMPERATURE_NOMINAL_KELVIN);
-    
+
     let temp_kelvin = 1.0 / steinhart;
 
     // 3. Convert from Kelvin to Celsius.
@@ -182,10 +180,7 @@ fn adc_to_celsius(adc_value: u16) -> f32 {
 /// The PID output is treated as a percentage. If it's over a threshold,
 /// the heater turns on, otherwise it turns off. This is a simple
 /// way to use a PID controller for on/off (bang-bang) control.
-fn set_heater_state(
-    heater_pin: &mut Output,
-    pid_output: f32,
-) {
+fn set_heater_state(heater_pin: &mut Output, pid_output: f32) {
     // We can use a simple threshold. If the PID controller requests more than
     // 50% power, we turn the heater on. Otherwise, we turn it off.
     // This threshold can be adjusted. A lower threshold will make the
@@ -204,25 +199,25 @@ async fn temperature_regulator(
     mut heater_pin: Output<'static>,
 ) {
     defmt::info!("Temperature regulator task started.");
-    
+
     // Configure the PID controller.
     let mut pid = Pid::new(SETPOINT_TEMP_C, 100.0);
     pid.p(KP, 100.0)
-       .i(KI, 100.0) // Limit integral contribution to prevent wind-up
-       .d(KD, 100.0);
+        .i(KI, 100.0) // Limit integral contribution to prevent wind-up
+        .d(KD, 100.0);
 
     let mut ticker = Ticker::every(Duration::from_millis(CONTROL_LOOP_INTERVAL_MS));
 
     loop {
         // Read the raw ADC value from the thermistor pin.
         let adc_raw = adc.blocking_read(&mut temp_pin);
-        
+
         // Convert the raw value to a temperature in Celsius.
         let measurement = adc_to_celsius(adc_raw);
 
         // Calculate the new control output.
         let control_output = pid.next_control_output(measurement);
-        
+
         // Apply the new output to the heater pin (on/off).
         set_heater_state(&mut heater_pin, control_output.output);
 
@@ -234,7 +229,11 @@ async fn temperature_regulator(
             control_output.p,
             control_output.i,
             control_output.d,
-            if heater_pin.is_set_high() { "ON" } else { "OFF" }
+            if heater_pin.is_set_high() {
+                "ON"
+            } else {
+                "OFF"
+            }
         );
 
         // Wait for the next tick.
@@ -242,40 +241,22 @@ async fn temperature_regulator(
     }
 }
 
-#[embassy_executor::task] 
+#[embassy_executor::task]
 async fn sm_task(spawner: Spawner, state_machine: StateMachine<Context>) {
     info!("State Machine task started.");
 
     loop {
         match state_machine.state {
-            States::Ascent => {
-
-            },
-            States::Fault => {
-
-            },
-            States::Init => {
-                
-            },
-            States::WaitForLaunch => {
-                
-            },
-            States::Descent => {
-
-            },
-            States::DrogueDescent => {
-
-            },
-            States::Fuck => {
-
-            },
-            States::Landed => {
-
-            },
-            States::MainDescent => {
-
-            }
-        } 
+            States::Ascent => {}
+            States::Fault => {}
+            States::Init => {}
+            States::WaitForLaunch => {}
+            States::Descent => {}
+            States::DrogueDescent => {}
+            States::Fuck => {}
+            States::Landed => {}
+            States::MainDescent => {}
+        }
         Timer::after(Duration::from_millis(1000)).await;
     }
 }
@@ -319,10 +300,10 @@ async fn main(spawner: Spawner) {
     // config.rcc.ls = rcc::LsConfig::default_lse();
     let p = embassy_stm32::init(config);
 
-    // --- ADS 126 Setup --- 
-    let mut adc_spi_config = SpiConfig::default(); 
-    adc_spi_config.frequency = mhz(8); 
-    adc_spi_config.mode = embassy_stm32::spi::MODE_1; 
+    // --- ADS 126 Setup ---
+    let mut adc_spi_config = SpiConfig::default();
+    adc_spi_config.frequency = mhz(8);
+    adc_spi_config.mode = embassy_stm32::spi::MODE_1;
 
     let adc_spi_bus = Spi::new_blocking(p.SPI4, p.PE2, p.PE6, p.PE5, adc_spi_config);
 
@@ -336,15 +317,10 @@ async fn main(spawner: Spawner) {
     let mut adc1_drdy = ExtiInput::new(p.PB9, p.EXTI9, Pull::Down);
     let mut adc2_drdy = ExtiInput::new(p.PB6, p.EXTI6, Pull::Down);
 
-    let mut adc_manager = adc_manager::AdcManager::new(
-        adc_spi_bus, 
-        adc1_rst,
-        adc2_rst,
-        adc1_cs,
-        adc2_cs,
-    );
+    let mut adc_manager =
+        adc_manager::AdcManager::new(adc_spi_bus, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
 
-    adc_manager.init_adc1().unwrap();
+    adc_manager.init_adc1(false, Delay).unwrap();
     adc_manager.init_adc2(false, Delay).unwrap();
 
     loop {
@@ -363,7 +339,7 @@ async fn main(spawner: Spawner) {
             {
                 let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);
-                let pressure: f64 = ((10000.0/((60.0/100.0) * (2.5 / 3.0))) * volts) / 32.0;
+                let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (2.5 / 3.0))) * volts) / 32.0;
                 info!("Pressure (psi): {}", pressure);
             }
 
@@ -381,8 +357,6 @@ async fn main(spawner: Spawner) {
         if let Ok(data) = adc_manager.read_adc2_data() {
             info!("ADC2 Data: {:?}", data);
             #[cfg(feature = "temperature")]
-            
-
             {
                 let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);
@@ -395,7 +369,7 @@ async fn main(spawner: Spawner) {
             {
                 let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);
-                let pressure: f64 = ((10000.0/((60.0/100.0) * (2.5 / 3.0))) * volts) / 32.0;
+                let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (2.5 / 3.0))) * volts) / 32.0;
                 info!("Pressure (psi): {}", pressure);
             }
 
@@ -410,8 +384,6 @@ async fn main(spawner: Spawner) {
             info!("Failed to read ADC1 data.");
         }
 
-
-
         Timer::after(Duration::from_millis(1000)).await;
     }
 
@@ -419,7 +391,7 @@ async fn main(spawner: Spawner) {
     let mut sd_spi_config = SpiConfig::default();
 
     sd_spi_config.frequency = mhz(16);
-    
+
     sd_spi_config.mode = embassy_stm32::spi::Mode {
         polarity: embassy_stm32::spi::Polarity::IdleLow,
         phase: embassy_stm32::spi::Phase::CaptureOnFirstTransition,
@@ -428,7 +400,13 @@ async fn main(spawner: Spawner) {
     sd_spi_config.bit_order = BitOrder::MsbFirst;
 
     let sd_spi_bus = Spi::new(
-        p.SPI1, p.PA5, p.PA7, p.PA6, p.DMA1_CH4, p.DMA1_CH5, sd_spi_config,
+        p.SPI1,
+        p.PA5,
+        p.PA7,
+        p.PA6,
+        p.DMA1_CH4,
+        p.DMA1_CH5,
+        sd_spi_config,
     );
 
     let sd_cs = Output::new(p.PC4, Level::High, Speed::Low);
@@ -462,10 +440,12 @@ async fn main(spawner: Spawner) {
         let mut adc = Adc::new(p.ADC1);
         adc.set_sample_time(SampleTime::CYCLES32_5);
         let temp_pin = p.PB1; // Your thermistor pin
-        spawner.spawn(temperature_regulator(adc, temp_pin, heater_pin)).unwrap();
-    }    
+        spawner
+            .spawn(temperature_regulator(adc, temp_pin, heater_pin))
+            .unwrap();
+    }
 
-    // NOTE 
+    // NOTE
     // Creating multiple executor instances is supported, to run tasks with multiple priority levels. This allows higher-priority tasks to preempt lower-priority tasks.
 
     // --- Spawning Tasks ---

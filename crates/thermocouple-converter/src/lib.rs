@@ -7,38 +7,41 @@
 /// Type K thermocouple coefficients for polynomial voltage to temperature conversion.
 /// See https://www.eevblog.com/forum/metrology/a-dive-into-k-type-thermocouple-maths/
 pub const TYPE_K_COEF: [[f64; 10]; 3] = [
-    [                   // Coefficients for -5.891 <= voltage <= 0.0
+    [
+        // Coefficients for -5.891 <= voltage <= 0.0
         0.0000000E+00,
         2.5173462E+01,
-       -1.1662878E+00,
-       -1.0833638E+00,
-       -8.9773540E-01,
-       -3.7342377E-01,
-       -8.6632643E-02,
-       -1.0450598E-02,
-       -5.1920577E-04,
+        -1.1662878E+00,
+        -1.0833638E+00,
+        -8.9773540E-01,
+        -3.7342377E-01,
+        -8.6632643E-02,
+        -1.0450598E-02,
+        -5.1920577E-04,
         0.0000000E+00,
     ],
-    [                   // Coefficients for 0.0 <= voltage <= 20.644
+    [
+        // Coefficients for 0.0 <= voltage <= 20.644
         0.000000E+00,
         2.508355E+01,
         7.860106E-02,
-       -2.503131E-01,
+        -2.503131E-01,
         8.315270E-02,
-       -1.228034E-02,
+        -1.228034E-02,
         9.804036E-04,
-       -4.413030E-05,
+        -4.413030E-05,
         1.057734E-06,
-       -1.052755E-08,
+        -1.052755E-08,
     ],
-    [                   // Coefficients for 20.644 <= voltage <= 54.886
-       -1.318058E+02,
+    [
+        // Coefficients for 20.644 <= voltage <= 54.886
+        -1.318058E+02,
         4.830222E+01,
-       -1.646031E+00,
+        -1.646031E+00,
         5.464731E-02,
-       -9.650715E-04,
+        -9.650715E-04,
         8.802193E-06,
-       -3.110810E-08,
+        -3.110810E-08,
         0.000000E+00,
         0.000000E+00,
         0.000000E+00,
@@ -54,8 +57,8 @@ pub fn adc_to_celsius(adc_reading: i32) -> f64 {
 pub fn adc_to_voltage(adc_reading: i32) -> f64 {
     const REFERENCE_VOLTAGE: f64 = 5.0;
     const MAX_ADC_VALUE: f64 = 4_294_967_296.0;
-    // change 32 to be waht the gain is 
-    const V_SCALE: f64 = (REFERENCE_VOLTAGE / MAX_ADC_VALUE) / 32.0; 
+    // change 32 to be waht the gain is
+    const V_SCALE: f64 = (REFERENCE_VOLTAGE / MAX_ADC_VALUE) / 32.0;
 
     adc_reading as f64 * V_SCALE
 }
@@ -70,8 +73,8 @@ pub fn voltage_to_celsius(mut voltage: f64) -> f64 {
 
         // Insane temperature ranges that should never be reached.
         // Hitting this is a strong indicator of a bug in the Argus system.
-        _ => panic!("T < -270 or T > 1372 celcius")
-    }
+        _ => panic!("T < -270 or T > 1372 celcius"),
+    };
 }
 
 /// Calculates temperature using the NIST's exponential polynomial.

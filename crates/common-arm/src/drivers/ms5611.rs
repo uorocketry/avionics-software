@@ -1,11 +1,5 @@
 //! Driver for the MS5611 Barometric Pressure Sensor
-use embedded_hal::{
-    spi::{
-        SpiBus,
-    },
-    digital::OutputPin,
-    delay::DelayNs
-};
+use embedded_hal::{delay::DelayNs, digital::OutputPin, spi::SpiBus};
 
 // According to datasheet section 4.1
 mod command {
@@ -185,7 +179,6 @@ where
         })
     }
 
-
     /// Reads a 16-bit word from the specified PROM address.
     ///
     /// This function is corrected to use the `embedded-hal` v1.0.0 `SpiBus::transfer` API properly.
@@ -207,7 +200,9 @@ where
             let mut read_buffer = [0u8; 3];
 
             // Perform the simultaneous write and read operation.
-            self.spi.transfer(&mut read_buffer, &write_buffer).map_err(Error::Spi)?;
+            self.spi
+                .transfer(&mut read_buffer, &write_buffer)
+                .map_err(Error::Spi)?;
 
             // The 16-bit result is in the second and third bytes of the read buffer.
             // We construct the u16 value from these bytes in big-endian order.
@@ -264,11 +259,18 @@ where
             let mut read_buffer = [0u8; 4];
 
             // Perform the simultaneous write and read operation.
-            self.spi.transfer(&mut read_buffer, &write_buffer).map_err(Error::Spi)?;
+            self.spi
+                .transfer(&mut read_buffer, &write_buffer)
+                .map_err(Error::Spi)?;
 
             // The 24-bit result is in the last three bytes of the read buffer.
             // We construct a u32 value from these bytes, padding the most significant byte with 0.
-            Ok(u32::from_be_bytes([0, read_buffer[1], read_buffer[2], read_buffer[3]]))
+            Ok(u32::from_be_bytes([
+                0,
+                read_buffer[1],
+                read_buffer[2],
+                read_buffer[3],
+            ]))
         })
     }
 
