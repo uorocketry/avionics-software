@@ -345,7 +345,7 @@ async fn main(spawner: Spawner) {
     );
 
     adc_manager.init_adc1().unwrap();
-    adc_manager.init_adc2().unwrap();
+    adc_manager.init_adc2(false, Delay).unwrap();
 
     loop {
         if let Ok(data) = adc_manager.read_adc1_data() {
@@ -381,6 +381,8 @@ async fn main(spawner: Spawner) {
         if let Ok(data) = adc_manager.read_adc2_data() {
             info!("ADC2 Data: {:?}", data);
             #[cfg(feature = "temperature")]
+            
+
             {
                 let volts = thermocouple_converter::adc_to_voltage(data.1);
                 info!("volatage: {}", volts);

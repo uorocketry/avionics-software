@@ -254,14 +254,27 @@ where
         }
     
 
+
+        self.set_adc1_inpmux(&mut AdcSensor {
+            negative: ads126x::register::NegativeInpMux::Float,
+            positive: ads126x::register::PositiveInpMux::Float,
+        });
+
+        if !is_calibrated {
+            self.adc1.send_command(ADCCommand::SFOCAL1, &mut self.spi)?;
+        }
+
+        Delay.delay_ms(1000); 
         // start conversions
         self.adc1.send_command(ADCCommand::START1, &mut self.spi)?;
         self.adc1.send_command(ADCCommand::START2, &mut self.spi)?;
 
+        self.raad_adc1_data(); 
+
         Ok(())
     }
 
-    pub fn init_adc2(&mut self) -> Result<(), ads126x::error::ADS126xError> {
+    pub fn init_adc2(&mut self, is_calibrated: bool, delay: embassy_time::Delay) -> Result<(), ads126x::error::ADS126xError> {
         self.select_adc2();
         self.adc2.set_reset_high()?;
 
@@ -331,10 +344,23 @@ where
             assert!(mode1_cfg.difference(mode1_cfg_real).is_empty());
             assert!(mode2_cfg.difference(mode2_cfg_real).is_empty());
         }
-    
+
+        self.set_adc2_inpmux(&mut AdcSensor {
+            negative: ads126x::register::NegativeInpMux::Float,
+            positive: ads126x::register::PositiveInpMux::Float,
+        });
+
+        if !is_calibrated {
+            self.adc2.send_command(ADCCommand::SFOCAL1, &mut self.spi)?;
+        }
+
+        Delay.delay_ms(1000); 
+
         // start conversions
         self.adc2.send_command(ADCCommand::START1, &mut self.spi)?;
         self.adc2.send_command(ADCCommand::START2, &mut self.spi)?;
+
+        self.read_adc2_data();
 
         Ok(())
     }
