@@ -7,14 +7,16 @@ compile_error!(
     "You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'."
 );
 
-mod adc_manager;
+// mod adc_manager;
 mod traits;
+mod ads;
 
 use crate::traits::Context;
 use core::cell::RefCell;
 use core::marker::PhantomData;
 use defmt::*;
 use defmt_rtt as _;
+use embassy_embedded_hal::shared_bus::blocking::spi::SpiDevice;
 use embassy_executor::Spawner;
 use embassy_stm32::adc::{Adc, SampleTime};
 use embassy_stm32::exti::ExtiInput;
@@ -27,7 +29,7 @@ use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
 use embassy_stm32::usart::{Config as UartConfig, RingBufferedUartRx, Uart, UartTx};
 use embassy_stm32::{bind_interrupts, mode, peripherals, usart};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::blocking_mutex::Mutex;
+use embassy_sync::blocking_mutex::{Mutex, NoopMutex};
 use embassy_sync::channel::Channel;
 use embassy_time::{Delay, Duration, Instant, Ticker, Timer};
 use embedded_alloc::Heap;
@@ -43,7 +45,7 @@ use static_cell::StaticCell;
 // Use the asynchronous SpiDevice from embassy-embedded-hal
 
 use smlang::statemachine;
-
+use crate::ads::Ads1262;
 // --- System Configuration ---
 
 /// The target temperature we want to maintain.
@@ -317,75 +319,92 @@ async fn main(spawner: Spawner) {
     let mut adc1_drdy = ExtiInput::new(p.PB9, p.EXTI9, Pull::Down);
     let mut adc2_drdy = ExtiInput::new(p.PB6, p.EXTI6, Pull::Down);
 
-    let mut adc_manager =
-        adc_manager::AdcManager::new(adc_spi_bus, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
+    let spi_bus_mutex = NoopMutex::new(RefCell::new(adc_spi_bus));
 
-    adc_manager.init_adc1(false, Delay).unwrap();
-    adc_manager.init_adc2(false, Delay).unwrap();
+    let adc1_spi_device = SpiDevice::new(&spi_bus_mutex, adc1_cs);
+
+    let mut adc1 = Ads1262::new(adc1_spi_device, adc1_rst, adc1_drdy);
+
+    let adc2_spi_device = SpiDevice::new(&spi_bus_mutex, adc2_cs);
+
+    let mut adc2 = Ads1262::new(adc2_spi_device, adc2_rst, adc2_drdy);
 
     loop {
-        if let Ok(data) = adc_manager.read_adc1_data() {
-            info!("ADC1 Data: {:?}", data);
-            #[cfg(feature = "temperature")]
-            {
-                let volts = thermocouple_converter::adc_to_voltage(data.1);
-                info!("volatage: {}", volts);
-
-                let celsius = thermocouple_converter::voltage_to_celsius(volts);
-                info!("Celcius: {}", celsius);
-            }
-
-            #[cfg(feature = "pressure")]
-            {
-                let volts = thermocouple_converter::adc_to_voltage(data.1);
-                info!("volatage: {}", volts);
-                let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (2.5 / 3.0))) * volts) / 32.0;
-                info!("Pressure (psi): {}", pressure);
-            }
-
-            #[cfg(feature = "strain")]
-            {
-                info!("{}", (data.1 as f64 / 2147483647.0) * (2.5 / 32.0));
-                let volts = thermocouple_converter::adc_to_voltage(data.1);
-                info!("volatage: {}", volts);
-                let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
-                info!("Strain: {}", strain);
-            }
-        } else {
-            info!("Failed to read ADC1 data.");
-        }
-        if let Ok(data) = adc_manager.read_adc2_data() {
-            info!("ADC2 Data: {:?}", data);
-            #[cfg(feature = "temperature")]
-            {
-                let volts = thermocouple_converter::adc_to_voltage(data.1);
-                info!("volatage: {}", volts);
-
-                let celsius = thermocouple_converter::voltage_to_celsius(volts);
-                info!("Celcius: {}", celsius);
-            }
-
-            #[cfg(feature = "pressure")]
-            {
-                let volts = thermocouple_converter::adc_to_voltage(data.1);
-                info!("volatage: {}", volts);
-                let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (2.5 / 3.0))) * volts) / 32.0;
-                info!("Pressure (psi): {}", pressure);
-            }
-
-            #[cfg(feature = "strain")]
-            {
-                let volts = thermocouple_converter::adc_to_voltage(data.1);
-                info!("volatage: {}", volts);
-                let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
-                info!("Strain: {}", strain);
-            }
-        } else {
-            info!("Failed to read ADC1 data.");
-        }
-
-        Timer::after(Duration::from_millis(1000)).await;
+        
     }
+
+
+    // let mut adc_manager =
+    //     adc_manager::AdcManager::new(adc_spi_bus, adc1_rst, adc2_rst, adc1_cs, adc2_cs);
+
+
+    //
+    // adc_manager.init_adc1(false, Delay).unwrap();
+    // adc_manager.init_adc2(false, Delay).unwrap();
+    //
+    // loop {
+    //     if let Ok(data) = adc_manager.read_adc1_data() {
+    //         info!("ADC1 Data: {:?}", data);
+    //         #[cfg(feature = "temperature")]
+    //         {
+    //             let volts = thermocouple_converter::adc_to_voltage(data.1);
+    //             info!("volatage: {}", volts);
+    //
+    //             let celsius = thermocouple_converter::voltage_to_celsius(volts);
+    //             info!("Celcius: {}", celsius);
+    //         }
+    //
+    //         #[cfg(feature = "pressure")]
+    //         {
+    //             let volts = thermocouple_converter::adc_to_voltage(data.1);
+    //             info!("volatage: {}", volts);
+    //             let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (2.5 / 3.0))) * volts) / 32.0;
+    //             info!("Pressure (psi): {}", pressure);
+    //         }
+    //
+    //         #[cfg(feature = "strain")]
+    //         {
+    //             info!("{}", (data.1 as f64 / 2147483647.0) * (2.5 / 32.0));
+    //             let volts = thermocouple_converter::adc_to_voltage(data.1);
+    //             info!("volatage: {}", volts);
+    //             let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
+    //             info!("Strain: {}", strain);
+    //         }
+    //     } else {
+    //         info!("Failed to read ADC1 data.");
+    //     }
+    //     if let Ok(data) = adc_manager.read_adc2_data() {
+    //         info!("ADC2 Data: {:?}", data);
+    //         #[cfg(feature = "temperature")]
+    //         {
+    //             let volts = thermocouple_converter::adc_to_voltage(data.1);
+    //             info!("volatage: {}", volts);
+    //
+    //             let celsius = thermocouple_converter::voltage_to_celsius(volts);
+    //             info!("Celcius: {}", celsius);
+    //         }
+    //
+    //         #[cfg(feature = "pressure")]
+    //         {
+    //             let volts = thermocouple_converter::adc_to_voltage(data.1);
+    //             info!("volatage: {}", volts);
+    //             let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (2.5 / 3.0))) * volts) / 32.0;
+    //             info!("Pressure (psi): {}", pressure);
+    //         }
+    //
+    //         #[cfg(feature = "strain")]
+    //         {
+    //             let volts = thermocouple_converter::adc_to_voltage(data.1);
+    //             info!("volatage: {}", volts);
+    //             let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
+    //             info!("Strain: {}", strain);
+    //         }
+    //     } else {
+    //         info!("Failed to read ADC1 data.");
+    //     }
+    //
+    //     Timer::after(Duration::from_millis(1000)).await;
+    // }
 
     // --- SD Card ---
     let mut sd_spi_config = SpiConfig::default();
