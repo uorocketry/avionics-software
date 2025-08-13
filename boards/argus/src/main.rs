@@ -33,6 +33,7 @@ use embassy_sync::blocking_mutex::{Mutex, NoopMutex};
 use embassy_sync::channel::Channel;
 use embassy_time::{Delay, Duration, Instant, Ticker, Timer};
 use embedded_alloc::Heap;
+use embedded_hal_1::delay::DelayNs;
 use embedded_hal_bus::spi::RefCellDevice;
 use embedded_sdmmc::{Mode, SdCard, VolumeIdx, VolumeManager};
 use heapless::{HistoryBuffer, Vec};
@@ -328,9 +329,27 @@ async fn main(spawner: Spawner) {
     let adc2_spi_device = SpiDevice::new(&spi_bus_mutex, adc2_cs);
 
     let mut adc2 = Ads1262::new(adc2_spi_device, adc2_rst, adc2_drdy);
+    info!("ADC1 and ADC2 initialized.");
 
+    adc1.write_register(ads::Register::INTERFACE, ads::register_data::INTERFACE_CRC_NONE).unwrap();
+    adc1.write_register(ads::Register::POWER, ads::register_data::POWER_INTREF).unwrap();
+    adc1.write_register(ads::Register::MODE2, ads::register_data::MODE2_SPS_20).unwrap();
+    adc1.write_register(ads::Register::MODE2, ads::register_data::MODE2_GAIN_32).unwrap();
+    adc1.send_command(ads::Command::START1).unwrap();
+    info!("ADC1 configured and started.");
+
+    // --- ADC2 Configuration (DEBUGGING) ---
+    adc2.write_register(ads::Register::INTERFACE, ads::register_data::INTERFACE_CRC_NONE).unwrap();
+    adc2.write_register(ads::Register::POWER, ads::register_data::POWER_INTREF).unwrap();
+    adc2.write_register(ads::Register::MODE2, ads::register_data::MODE2_SPS_20).unwrap();
+    adc2.write_register(ads::Register::MODE2, ads::register_data::MODE2_GAIN_32).unwrap();
+    adc2.send_command(ads::Command::START1).unwrap();
     loop {
-        
+        let data = adc1.read_data();
+        if let Ok(data) = data {
+            info!("ADC1 Data: {:?}", data);
+        }
+        Delay.delay_ms(1000);
     }
 
 
