@@ -566,10 +566,13 @@ compile_error!(
 );
 
 // mod adc_manager;
-mod traits;
+mod sd; 
+mod resources;
 mod ads;
+mod state_machine;
 
-use crate::traits::Context;
+use crate::resources::HEAP;
+use crate::state_machine::{sm_task, StateMachine, States};
 use core::cell::RefCell;
 use core::marker::PhantomData;
 use defmt::*;
@@ -590,7 +593,6 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::blocking_mutex::{Mutex, NoopMutex};
 use embassy_sync::channel::Channel;
 use embassy_time::{Delay, Duration, Instant, Ticker, Timer};
-use embedded_alloc::Heap;
 use embedded_hal_1::delay::DelayNs;
 use embedded_hal_1::digital::{OutputPin, InputPin};
 use embedded_hal_1::spi::{Error as SpiError, SpiDevice };
@@ -645,9 +647,6 @@ const KD: f32 = 0.5;
 // Shared Resources & Types
 // =================================================================================
 
-#[global_allocator]
-static HEAP: Heap = Heap::empty();
-
 // static FAULT_CHANNEL: Channel<CriticalSectionRawMutex, , 2> = Channel::new();
 
 // The SPI bus is protected by a Mutex, so the RefCell is not needed.
@@ -657,25 +656,6 @@ static SPI_BUS: StaticCell<embassy_sync::mutex::Mutex<CriticalSectionRawMutex, S
 // Static variable for the RTC
 pub static RTC: Mutex<CriticalSectionRawMutex, RefCell<Option<Rtc>>> =
     Mutex::new(RefCell::new(None));
-
-bind_interrupts!(struct Irqs {
-    UART7 => usart::InterruptHandler<peripherals::UART7>;
-    UART8 => usart::InterruptHandler<peripherals::UART8>;
-});
-
-statemachine! {
-    transitions: {
-        *Init + Start = WaitForLaunch,
-        WaitForLaunch + Launch = Ascent,
-        Ascent + Apogee = Descent,
-        Descent + MainDeployment = Fuck,
-        Descent + DrogueDeployment = DrogueDescent,
-        DrogueDescent + MainDeployment =  MainDescent,
-        MainDescent + NoMovement = Landed,
-        Fault + FaultCleared = _,
-        _ + FaultDetected = Fault,
-    }
-}
 
 pub struct TimeSink {
     _marker: PhantomData<*const ()>,
@@ -872,26 +852,6 @@ async fn temperature_regulator(
     }
 }
 
-#[embassy_executor::task]
-async fn sm_task(spawner: Spawner, state_machine: StateMachine<Context>) {
-    info!("State Machine task started.");
-
-    loop {
-        match state_machine.state {
-            States::Ascent => {}
-            States::Fault => {}
-            States::Init => {}
-            States::WaitForLaunch => {}
-            States::Descent => {}
-            States::DrogueDescent => {}
-            States::Fuck => {}
-            States::Landed => {}
-            States::MainDescent => {}
-        }
-        Timer::after(Duration::from_millis(1000)).await;
-    }
-}
-
 /// Converts a raw 32-bit ADC value to voltage.
 /// The ADS1262 is a 32-bit ADC, but the effective number of bits is less.
 /// The output is a 32-bit two's complement integer.
@@ -899,6 +859,95 @@ async fn sm_task(spawner: Spawner, state_machine: StateMachine<Context>) {
 const VREF_INTERNAL: f64 = 2.5;
 fn adc_to_voltage(raw_data: i32, vref: f64, gain: u8) -> f64 {
     (raw_data as f64 / 2_147_483_647.0) * (vref / gain as f64)
+}
+
+#[embassy_executor::task]
+async fn adc1(mut adc: Ads1262<SpiDeviceBus<'static, embassy_sync::blocking_mutex::raw::NoopRawMutex, Spi<'static, Blocking>, Output<'static>>, Output<'static>, ExtiInput<'static>>) {
+    loop {
+        // Wait for the DRDY pin to go low, indicating data is ready.
+        adc.drdy.wait_for_low().await;
+
+        let data = adc.read_data();
+        if let Ok((_status, raw_data)) = data {
+            info!("ADC1 Raw Data: {}", raw_data);
+
+            #[cfg(feature = "temperature")]
+            {
+                let volts = adc_to_voltage(raw_data, VREF_INTERNAL, 32);
+                info!("Voltage: {} V", volts);
+                let celsius = thermocouple_converter::voltage_to_celsius(volts);
+                info!("Celsius: {} C", celsius);
+            }
+    
+            #[cfg(feature = "pressure")]
+            {
+                // V_EXCITATION must be defined based on your hardware setup.
+                const V_EXCITATION: f64 = 5.0; 
+                let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
+                info!("Voltage: {} V", volts);
+                let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (5.0 / 3.0))) * volts);
+                info!("Pressure (psi): {}", pressure);
+            }
+    
+            #[cfg(feature = "strain")]
+            {
+                // V_EXCITATION must be defined based on your hardware setup.
+                const V_EXCITATION: f64 = 5.0;
+                let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
+                info!("Voltage: {} V", volts);
+                // let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
+                // info!("Strain: {}", strain);
+            }
+        } else {
+            info!("Failed to read ADC1 data.");
+        }
+
+    }
+}
+
+
+#[embassy_executor::task]
+async fn adc2(mut adc: Ads1262<SpiDeviceBus<'static, embassy_sync::blocking_mutex::raw::NoopRawMutex, Spi<'static, Blocking>, Output<'static>>, Output<'static>, ExtiInput<'static>>) {
+    loop {
+        // Wait for the DRDY pin to go low, indicating data is ready.
+        adc.drdy.wait_for_low().await;
+
+        let data = adc.read_data();
+        if let Ok((_status, raw_data)) = data {
+            info!("ADC2 Raw Data: {}", raw_data);
+
+            #[cfg(feature = "temperature")]
+            {
+                let volts = adc_to_voltage(raw_data, VREF_INTERNAL, 32);
+                info!("Voltage: {} V", volts);
+                let celsius = thermocouple_converter::voltage_to_celsius(volts);
+                info!("Celsius: {} C", celsius);
+            }
+    
+            #[cfg(feature = "pressure")]
+            {
+                // V_EXCITATION must be defined based on your hardware setup.
+                const V_EXCITATION: f64 = 5.0; 
+                let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
+                info!("Voltage: {} V", volts);
+                let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (5.0 / 3.0))) * volts);
+                info!("Pressure (psi): {}", pressure);
+            }
+    
+            #[cfg(feature = "strain")]
+            {
+                // V_EXCITATION must be defined based on your hardware setup.
+                const V_EXCITATION: f64 = 5.0;
+                let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
+                info!("Voltage: {} V", volts);
+                // let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
+                // info!("Strain: {}", strain);
+            }
+        } else {
+            info!("Failed to read ADC2 data.");
+        }
+
+    }
 }
 
 // =================================================================================
@@ -939,6 +988,20 @@ async fn main(spawner: Spawner) {
     }
     // config.rcc.ls = rcc::LsConfig::default_lse();
     let p = embassy_stm32::init(config);
+
+    // --- Sd Setup --- 
+    let sd_card: embedded_sdmmc::SdCard<
+        embedded_hal_bus::spi::RefCellDevice<
+            'static,
+            Spi<'static, embassy_stm32::mode::Blocking>,
+            Output<'static>,
+            Delay,
+        >,
+        Delay,
+    > = sd::setup_sdmmc_interface(p.SPI1, p.PA5, p.PA7, p.PA6, p.PE9);
+
+        let state_machine = StateMachine::new(state_machine::Context {});
+
 
     // --- ADS 126 Setup ---
     let mut adc_spi_config = SpiConfig::default();
@@ -1000,47 +1063,46 @@ async fn main(spawner: Spawner) {
     adc2.send_command(ads::Command::START1).unwrap();
     info!("ADC1 conversion started.");
 
-    // Main loop to read data from ADC1
-    loop {
-        // Wait for the DRDY pin to go low, indicating data is ready.
-        adc1.drdy.wait_for_low().await;
+    // // Main loop to read data from ADC1
+    // loop {
+    //     // Wait for the DRDY pin to go low, indicating data is ready.
+    //     adc1.drdy.wait_for_low().await;
 
-        let data = adc1.read_data();
-        if let Ok((_status, raw_data)) = data {
-            info!("ADC1 Raw Data: {}", raw_data);
+    //     let data = adc1.read_data();
+    //     if let Ok((_status, raw_data)) = data {
+    //         info!("ADC1 Raw Data: {}", raw_data);
 
-            #[cfg(feature = "temperature")]
-            {
-                let volts = adc_to_voltage(raw_data, VREF_INTERNAL, 32);
-                info!("Voltage: {} V", volts);
-                let celsius = thermocouple_converter::voltage_to_celsius(volts);
-                info!("Celsius: {} C", celsius);
-            }
+    //         #[cfg(feature = "temperature")]
+    //         {
+    //             let volts = adc_to_voltage(raw_data, VREF_INTERNAL, 32);
+    //             info!("Voltage: {} V", volts);
+    //             let celsius = thermocouple_converter::voltage_to_celsius(volts);
+    //             info!("Celsius: {} C", celsius);
+    //         }
     
-            #[cfg(feature = "pressure")]
-            {
-                // V_EXCITATION must be defined based on your hardware setup.
-                const V_EXCITATION: f64 = 5.0; 
-                let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
-                info!("Voltage: {} V", volts);
-                let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (2.5 / 3.0))) * volts);
-                info!("Pressure (psi): {}", pressure);
-            }
+    //         #[cfg(feature = "pressure")]
+    //         {
+    //             // V_EXCITATION must be defined based on your hardware setup.
+    //             const V_EXCITATION: f64 = 5.0; 
+    //             let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
+    //             info!("Voltage: {} V", volts);
+    //             let pressure: f64 = ((10000.0 / ((60.0 / 100.0) * (5.0 / 3.0))) * volts);
+    //             info!("Pressure (psi): {}", pressure);
+    //         }
     
-            #[cfg(feature = "strain")]
-            {
-                // V_EXCITATION must be defined based on your hardware setup.
-                const V_EXCITATION: f64 = 5.0;
-                let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
-                info!("Voltage: {} V", volts);
-                // let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
-                // info!("Strain: {}", strain);
-            }
-        } else {
-            info!("Failed to read ADC1 data.");
-        }
-    }
+    //         #[cfg(feature = "strain")]
+    //         {
+    //             // V_EXCITATION must be defined based on your hardware setup.
+    //             const V_EXCITATION: f64 = 5.0;
+    //             let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
+    //             info!("Voltage: {} V", volts);
+    //             // let strain = straingauge_converter::voltage_to_strain_full(volts, 2.0);
+    //             // info!("Strain: {}", strain);
+    //         }
+    //     } else {
+    //         info!("Failed to read ADC1 data.");
+    //     }
+    // }
 
-    // The rest of the code is now unreachable because of the infinite loop above.
-    // You might want to move the SD card and state machine logic into separate tasks.
+    spawner.must_spawn(sm_task(spawner, state_machine))
 }

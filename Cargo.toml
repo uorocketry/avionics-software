@@ -24,7 +24,6 @@ version = "1.1.0"
 
 [workspace.dependencies.messages-prost]
 git = "https://github.com/uorocketry/messages-prost"
-branch = "add-messages"
 
 [workspace.dependencies.panic-probe]
 version = "0.3"
@@ -44,7 +43,7 @@ default-features = false
 version = "0.7.16"
 
 [workspace.dependencies.embedded-alloc]
-version = "0.5.0"
+version = "0.6.0"
 
 [workspace.dependencies.defmt-test]
 version = "0.3.2"
