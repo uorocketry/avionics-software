@@ -1167,7 +1167,7 @@ checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
 [[package]]
 name = "messages-prost"
 version = "0.1.0"
-source = "git+https://github.com/uorocketry/messages-prost#c3d8c83494f0428ed7cb8fbc3633683ed4ab12ee"
+source = "git+https://github.com/uorocketry/messages-prost#c16c21cee30d57b993b0a3a61ed91dd11df8a9f6"
 dependencies = [
  "bitflags 2.9.2",
  "defmt 0.3.100",
@@ -1366,9 +1366,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.99"
+version = "1.0.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56b3997d62ff36d1d0e5616f1e00c4b071680eb3769d56102663c1f0886971e1"
+checksum = "89ae43fd86e4158d6db51ad8e2b80f313af9cc74f5c0e03ccb87de09998732de"
 dependencies = [
  "unicode-ident",
 ]

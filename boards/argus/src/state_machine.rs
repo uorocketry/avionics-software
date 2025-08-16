@@ -1,7 +1,7 @@
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_time::Instant;
-use messages_prost::argus_state::{Event, State};
+use messages_prost::argus_state::State;
 use smlang::statemachine;
 use messages_prost::prost::Message;
 
