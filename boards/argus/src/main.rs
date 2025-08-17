@@ -299,6 +299,7 @@ fn adc_to_voltage(raw_data: i32, vref: f64, gain: u8) -> f64 {
 
 #[embassy_executor::task]
 async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking>, Output<'static>, Delay>, Output<'static>, ExtiInput<'static>>) {
+    let mut sensor_id = 0; 
     loop {
         // Wait for the DRDY pin to go low, indicating data is ready.
         adc.drdy.wait_for_low().await;
@@ -318,7 +319,7 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     node: messages_prost::common::Node::Phoenix.into(),
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusTemperature(
                         messages_prost::sensor::argus::Temperature {
-                            sensor_id: 0,
+                            sensor_id,
                             temperature: celsius
                         },
                     )),
@@ -328,6 +329,26 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     .expect("Failed to encode SBG GPS Position");
 
                 SD_CHANNEL.send(("temperature.txt", buf)).await; 
+                sensor_id += 1; 
+                // update the sensor_id, this is fugly yandre dev ah code 
+                match sensor_id {
+                    0 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                    }
+                    1 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+                    }
+                    2 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+                    }
+                    3 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+                    }
+                    _ => {
+                        sensor_id = 0; 
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                    }
+                }
             }
     
             #[cfg(feature = "pressure")]
@@ -344,7 +365,7 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     node: messages_prost::common::Node::Phoenix.into(),
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusPressure(
                         messages_prost::sensor::argus::Pressure {
-                            sensor_id: 0,
+                            sensor_id,
                             pressure
                         },
                     )),
@@ -354,6 +375,31 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     .expect("Failed to encode SBG GPS Position");
 
                 SD_CHANNEL.send(("pressure.txt", buf)).await; 
+                sensor_id += 1; 
+                // update the sensor_id, this is fugly
+                match sensor_id {
+                    0 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+
+                    }
+                    1 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+
+                    }
+                    2 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+
+                    }
+                    3 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+
+                    }
+                    _ => {
+                        sensor_id = 0; 
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+
+                    }
+                }
             }
     
             #[cfg(feature = "strain")]
@@ -370,7 +416,7 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     node: messages_prost::common::Node::Phoenix.into(),
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusStrain(
                         messages_prost::sensor::argus::Strain {
-                            sensor_id: 0,
+                            sensor_id,
                             strain
                         },
                     )),
@@ -380,6 +426,34 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     .expect("Failed to encode SBG GPS Position");
 
                 SD_CHANNEL.send(("strain.txt", buf)).await; 
+                sensor_id += 1; 
+                // update the sensor_id, this is fugly
+                match sensor_id {
+                    0 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                        
+                    }
+                    1 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+
+                    }
+                    2 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+
+                    }
+                    3 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+
+                    }
+                    4 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN8_POS | register_data::INPMUX_AIN9_NEG);
+
+                    }
+                    _ => {
+                        sensor_id = 0; 
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                    }
+                }
             }
         } else {
             info!("Failed to read ADC1 data.");
@@ -391,6 +465,8 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
 
 #[embassy_executor::task]
 async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking>, Output<'static>, Delay>, Output<'static>, ExtiInput<'static>>) {
+    let mut sensor_id = 0; 
+    
     loop {
         // Wait for the DRDY pin to go low, indicating data is ready.
         adc.drdy.wait_for_low().await;
@@ -411,7 +487,7 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     node: messages_prost::common::Node::Phoenix.into(),
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusTemperature(
                         messages_prost::sensor::argus::Temperature {
-                            sensor_id: 0,
+                            sensor_id,
                             temperature: celsius
                         },
                     )),
@@ -421,6 +497,26 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     .expect("Failed to encode SBG GPS Position");
 
                 SD_CHANNEL.send(("temperature.txt", buf)).await; 
+                sensor_id += 1; 
+                // update the sensor_id, this is fugly
+                match sensor_id {
+                    0 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                    }
+                    1 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+                    }
+                    2 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+                    }
+                    3 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+                    }
+                    _ => {
+                        sensor_id = 0; 
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                    }
+                }
             }
     
             #[cfg(feature = "pressure")]
@@ -437,7 +533,7 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     node: messages_prost::common::Node::Phoenix.into(),
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusPressure(
                         messages_prost::sensor::argus::Pressure {
-                            sensor_id: 0,
+                            sensor_id,
                             pressure
                         },
                     )),
@@ -447,6 +543,31 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     .expect("Failed to encode SBG GPS Position");
 
                 SD_CHANNEL.send(("pressure.txt", buf)).await; 
+                sensor_id += 1; 
+                // update the sensor_id, this is fugly
+                match sensor_id {
+                    0 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                        
+                    }
+                    1 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+
+                    }
+                    2 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+
+                    }
+                    3 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+
+                    }
+                    _ => {
+                        sensor_id = 0; 
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+
+                    }
+                }
             }
     
             #[cfg(feature = "strain")]
@@ -463,7 +584,7 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     node: messages_prost::common::Node::Phoenix.into(),
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusStrain(
                         messages_prost::sensor::argus::Strain {
-                            sensor_id: 0,
+                            sensor_id,
                             strain
                         },
                     )),
@@ -473,6 +594,35 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     .expect("Failed to encode SBG GPS Position");
 
                 SD_CHANNEL.send(("strain.txt", buf)).await; 
+                sensor_id += 1; 
+                // update the sensor_id, this is fugly
+                match sensor_id {
+                    0 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                        
+                    }
+                    1 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+
+                    }
+                    2 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+
+                    }
+                    3 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+
+                    }
+                    4 => {
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN8_POS | register_data::INPMUX_AIN9_NEG);
+
+                    }
+                    _ => {
+                        sensor_id = 0; 
+                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+
+                    }
+                }
             }
         } else {
             info!("Failed to read ADC2 data.");
