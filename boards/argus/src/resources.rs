@@ -6,7 +6,7 @@ use crate::state_machine::Events;
 use core::cell::RefCell;
 use embassy_stm32::rtc::Rtc;
 use embassy_stm32::spi::Spi;
-use embassy_stm32::{bind_interrupts, mode, peripherals, usart};
+use embassy_stm32::{bind_interrupts, can, mode, peripherals, usart};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::channel::Channel;
@@ -30,7 +30,9 @@ pub static ADC_SPI_BUS_CELL: StaticCell<RefCell<Spi<mode::Blocking>>> = StaticCe
 pub static RTC: Mutex<CriticalSectionRawMutex, RefCell<Option<Rtc>>> =
     Mutex::new(RefCell::new(None));
 
-bind_interrupts!(struct Irqs {
+bind_interrupts!(pub struct Irqs {
     UART7 => usart::InterruptHandler<peripherals::UART7>;
     UART8 => usart::InterruptHandler<peripherals::UART8>;
+    FDCAN2_IT0 => can::IT0InterruptHandler<peripherals::FDCAN2>;
+    FDCAN2_IT1 => can::IT1InterruptHandler<peripherals::FDCAN2>;
 });

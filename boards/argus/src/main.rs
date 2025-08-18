@@ -27,8 +27,8 @@ use embassy_stm32::gpio::{Level, Output, Pull, Speed};
 use embassy_stm32::mode::Blocking;
 use embassy_stm32::rtc::Rtc;
 use embassy_stm32::spi::{Config as SpiConfig, Spi};
-use embassy_stm32::time::mhz;
-use embassy_stm32::{mode, peripherals};
+use embassy_stm32::time::{mhz, Hertz};
+use embassy_stm32::{can, mode, peripherals, rcc};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_time::{Delay, Duration, Ticker, Timer};
@@ -175,7 +175,7 @@ where
     // Set gain and data rate. Strain gauges have small outputs, so max gain is often needed.
     adc.write_register(Register::MODE2, register_data::MODE2_GAIN_32 | register_data::MODE2_SPS_100)?;
     // Set input mux to AIN0 and AIN1
-    adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG)?;
+    adc.write_register(Register::INPMUX, register_data::INPMUX_AIN7_POS | register_data::INPMUX_AIN6_NEG)?;
     Ok(())
 }
 
@@ -258,6 +258,7 @@ async fn temperature_regulator(
     loop {
         // Read the raw ADC value from the thermistor pin.
         let adc_raw = adc.blocking_read(&mut temp_pin);
+        info!("{}", adc_raw);
 
         // Convert the raw value to a temperature in Celsius.
         let measurement = adc_to_celsius(adc_raw);
@@ -400,6 +401,7 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
 
                     }
                 }
+                Timer::after_millis(10).await;
             }
     
             #[cfg(feature = "strain")]
@@ -454,6 +456,7 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
                     }
                 }
+
             }
         } else {
             info!("Failed to read ADC1 data.");
@@ -543,31 +546,32 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     .expect("Failed to encode SBG GPS Position");
 
                 SD_CHANNEL.send(("pressure.txt", buf)).await; 
-                sensor_id += 1; 
-                // update the sensor_id, this is fugly
-                match sensor_id {
-                    0 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                // sensor_id += 1; 
+                // // update the sensor_id, this is fugly
+                // match sensor_id {
+                //     0 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
                         
-                    }
-                    1 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+                //     }
+                //     1 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
 
-                    }
-                    2 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+                //     }
+                //     2 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
 
-                    }
-                    3 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+                //     }
+                //     3 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
 
-                    }
-                    _ => {
-                        sensor_id = 0; 
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                //     }
+                //     _ => {
+                //         sensor_id = 0; 
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
 
-                    }
-                }
+                //     }
+                // }
+
             }
     
             #[cfg(feature = "strain")]
@@ -650,8 +654,18 @@ async fn main(spawner: Spawner) {
     {
         use embassy_stm32::rcc::*;
         config.rcc.hsi = Some(HSIPrescaler::DIV1);
+        config.rcc.hse = Some(Hse { freq: Hertz::hz(48_000_000), mode: HseMode::Oscillator });
+        config.rcc.mux.fdcansel = rcc::mux::Fdcansel::HSE;
         config.rcc.csi = true;
         config.rcc.pll1 = Some(Pll {
+            source: PllSource::HSI,
+            prediv: PllPreDiv::DIV4,
+            mul: PllMul::MUL50,
+            divp: Some(PllDiv::DIV2),
+            divq: Some(PllDiv::DIV8), // used by SPI3. 100Mhz.
+            divr: None,
+        });
+        config.rcc.pll2 = Some(Pll {
             source: PllSource::HSI,
             prediv: PllPreDiv::DIV4,
             mul: PllMul::MUL50,
@@ -679,9 +693,16 @@ async fn main(spawner: Spawner) {
             Delay,
         >,
         Delay,
-    > = sd::setup_sdmmc_interface(p.SPI1, p.PA5, p.PA7, p.PA6, p.PE9);
+    > = sd::setup_sdmmc_interface(p.SPI1, p.PA5, p.PA7, p.PA6, p.PC4);
 
         let state_machine = StateMachine::new(state_machine::Context {});
+
+    // --- CAN Setup --- 
+    let mut can = can::CanConfigurator::new(p.FDCAN2, p.PB12, p.PB13, resources::Irqs);
+
+    can.set_bitrate(250_000); 
+
+    let mut can = can.into_normal_mode(); 
 
 
     // --- ADS 126 Setup ---
@@ -744,9 +765,10 @@ async fn main(spawner: Spawner) {
 
     adc1.send_command(ads::Command::START1).unwrap();
     adc2.send_command(ads::Command::START1).unwrap();
-    info!("ADC1 conversion started.");
 
-    spawner.must_spawn(adc1_task(adc1));
+    // spawner.must_spawn(temperature_regulator(Adc::new(p.ADC1), p.PB1, Output::new(p.PE11, Level::Low, Speed::Low)));
+    // spawner.must_spawn(adc1_task(adc1));
     spawner.must_spawn(adc2_task(adc2));
+    spawner.must_spawn(sd::sdmmc_task(sd_card));
     spawner.must_spawn(sm_task(spawner, state_machine))
 }

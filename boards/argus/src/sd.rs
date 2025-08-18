@@ -3,7 +3,7 @@ use core::cell::RefCell;
 use core::marker::PhantomData;
 use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_stm32::mode::Blocking;
-use embassy_stm32::peripherals::{PA5, PA6, PA7, PE9, SPI1};
+use embassy_stm32::peripherals::{PA5, PA6, PA7, PC4, PE9, SPI1};
 use embassy_stm32::spi::{BitOrder, Spi};
 use embassy_stm32::time::mhz;
 use embassy_time::Delay;
@@ -40,7 +40,7 @@ pub fn setup_sdmmc_interface(
     sck: PA5,
     mosi: PA7,
     miso: PA6,
-    cs: PE9,
+    cs: PC4,
 ) -> SdCard<RefCellDevice<'static, Spi<'static, Blocking>, Output<'static>, Delay>, Delay> {
     let mut sd_spi_config = embassy_stm32::spi::Config::default();
 
