@@ -175,7 +175,7 @@ where
     // Set gain and data rate. Strain gauges have small outputs, so max gain is often needed.
     adc.write_register(Register::MODE2, register_data::MODE2_GAIN_32 | register_data::MODE2_SPS_100)?;
     // Set input mux to AIN0 and AIN1
-    adc.write_register(Register::INPMUX, register_data::INPMUX_AIN7_POS | register_data::INPMUX_AIN6_NEG)?;
+    adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::REFMUX_INTERNAL_2_5V_NEG)?;
     Ok(())
 }
 
@@ -332,24 +332,24 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                 SD_CHANNEL.send(("temperature.txt", buf)).await; 
                 sensor_id += 1; 
                 // update the sensor_id, this is fugly yandre dev ah code 
-                match sensor_id {
-                    0 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
-                    }
-                    1 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
-                    }
-                    2 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
-                    }
-                    3 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
-                    }
-                    _ => {
-                        sensor_id = 0; 
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
-                    }
-                }
+                // match sensor_id {
+                //     0 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                //     }
+                //     1 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+                //     }
+                //     2 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+                //     }
+                //     3 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+                //     }
+                //     _ => {
+                //         sensor_id = 0; 
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                //     }
+                // }
             }
     
             #[cfg(feature = "pressure")]
@@ -428,34 +428,34 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     .expect("Failed to encode SBG GPS Position");
 
                 SD_CHANNEL.send(("strain.txt", buf)).await; 
-                sensor_id += 1; 
-                // update the sensor_id, this is fugly
-                match sensor_id {
-                    0 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                // sensor_id += 1; 
+                // // update the sensor_id, this is fugly
+                // match sensor_id {
+                //     0 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
                         
-                    }
-                    1 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+                //     }
+                //     1 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
 
-                    }
-                    2 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+                //     }
+                //     2 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
 
-                    }
-                    3 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+                //     }
+                //     3 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
 
-                    }
-                    4 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN8_POS | register_data::INPMUX_AIN9_NEG);
+                //     }
+                //     4 => {
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN8_POS | register_data::INPMUX_AIN9_NEG);
 
-                    }
-                    _ => {
-                        sensor_id = 0; 
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
-                    }
-                }
+                //     }
+                //     _ => {
+                //         sensor_id = 0; 
+                //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                //     }
+                // }
 
             }
         } else {
@@ -654,8 +654,8 @@ async fn main(spawner: Spawner) {
     {
         use embassy_stm32::rcc::*;
         config.rcc.hsi = Some(HSIPrescaler::DIV1);
-        config.rcc.hse = Some(Hse { freq: Hertz::hz(48_000_000), mode: HseMode::Oscillator });
-        config.rcc.mux.fdcansel = rcc::mux::Fdcansel::HSE;
+        // config.rcc.hse = Some(Hse { freq: Hertz::hz(48_000_000), mode: HseMode::Oscillator });
+        // config.rcc.mux.fdcsansel = rcc::mux::Fdcansel::HSE;
         config.rcc.csi = true;
         config.rcc.pll1 = Some(Pll {
             source: PllSource::HSI,
@@ -698,11 +698,11 @@ async fn main(spawner: Spawner) {
         let state_machine = StateMachine::new(state_machine::Context {});
 
     // --- CAN Setup --- 
-    let mut can = can::CanConfigurator::new(p.FDCAN2, p.PB12, p.PB13, resources::Irqs);
+    // let mut can = can::CanConfigurator::new(p.FDCAN2, p.PB12, p.PB13, resources::Irqs);
 
-    can.set_bitrate(250_000); 
+    // can.set_bitrate(250_000); 
 
-    let mut can = can.into_normal_mode(); 
+    // let mut can = can.into_normal_mode(); 
 
 
     // --- ADS 126 Setup ---
@@ -767,8 +767,8 @@ async fn main(spawner: Spawner) {
     adc2.send_command(ads::Command::START1).unwrap();
 
     // spawner.must_spawn(temperature_regulator(Adc::new(p.ADC1), p.PB1, Output::new(p.PE11, Level::Low, Speed::Low)));
-    // spawner.must_spawn(adc1_task(adc1));
-    spawner.must_spawn(adc2_task(adc2));
+    spawner.must_spawn(adc1_task(adc1));
+    // spawner.must_spawn(adc2_task(adc2));
     spawner.must_spawn(sd::sdmmc_task(sd_card));
     spawner.must_spawn(sm_task(spawner, state_machine))
 }
