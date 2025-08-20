@@ -349,7 +349,6 @@
 //     crc
 // }
 
-
 //! A platform-agnostic driver for the Texas Instruments ADS1262/ADS1263
 //! 32-bit, 38-kSPS, delta-sigma ADC.
 //!
@@ -552,27 +551,27 @@ pub mod register_data {
     pub const INPMUX_AIN0_POS: u8 = 0b0000 << 4;
     pub const INPMUX_AIN1_POS: u8 = 0b0001 << 4;
     pub const INPMUX_AIN2_POS: u8 = 0b0010 << 4;
-    pub const INPMUX_AIN3_POS: u8 = 0b0011 << 4; 
-    pub const INPMUX_AIN4_POS: u8 = 0b0100 << 4; 
-    pub const INPMUX_AIN5_POS: u8 = 0b0101 << 4; 
-    pub const INPMUX_AIN6_POS: u8 = 0b0110 << 4; 
+    pub const INPMUX_AIN3_POS: u8 = 0b0011 << 4;
+    pub const INPMUX_AIN4_POS: u8 = 0b0100 << 4;
+    pub const INPMUX_AIN5_POS: u8 = 0b0101 << 4;
+    pub const INPMUX_AIN6_POS: u8 = 0b0110 << 4;
     pub const INPMUX_AIN7_POS: u8 = 0b0111 << 4;
-    pub const INPMUX_AIN8_POS: u8 = 0b1000 << 4; 
-    pub const INPMUX_AIN9_POS: u8 = 0b1001 << 4; 
-    pub const INPMUX_TEMP_MON_POS: u8 = 0b1011 << 4;     
+    pub const INPMUX_AIN8_POS: u8 = 0b1000 << 4;
+    pub const INPMUX_AIN9_POS: u8 = 0b1001 << 4;
+    pub const INPMUX_TEMP_MON_POS: u8 = 0b1011 << 4;
     pub const INPMUX_AINCOM_POS: u8 = 0b1010 << 4;
 
     pub const INPMUX_AIN0_NEG: u8 = 0b0000;
     pub const INPMUX_AIN1_NEG: u8 = 0b0001;
     pub const INPMUX_AIN2_NEG: u8 = 0b0010;
     pub const INPMUX_AIN3_NEG: u8 = 0b0011;
-    pub const INPMUX_AIN4_NEG: u8 = 0b0100; 
-    pub const INPMUX_AIN5_NEG: u8 = 0b0101; 
-    pub const INPMUX_AIN6_NEG: u8 = 0b0110; 
+    pub const INPMUX_AIN4_NEG: u8 = 0b0100;
+    pub const INPMUX_AIN5_NEG: u8 = 0b0101;
+    pub const INPMUX_AIN6_NEG: u8 = 0b0110;
     pub const INPMUX_AIN7_NEG: u8 = 0b0111;
-    pub const INPMUX_AIN8_NEG: u8 = 0b1000; 
-    pub const INPMUX_AIN9_NEG: u8 = 0b1001; 
-    pub const INPMUX_TEMP_MON_NEG: u8 = 0b1011;     
+    pub const INPMUX_AIN8_NEG: u8 = 0b1000;
+    pub const INPMUX_AIN9_NEG: u8 = 0b1001;
+    pub const INPMUX_TEMP_MON_NEG: u8 = 0b1011;
     pub const INPMUX_AINCOM_NEG: u8 = 0b1010;
 
     // REFMUX Register
@@ -625,7 +624,11 @@ where
     }
 
     /// Writes to a single register.
-    pub fn write_register(&mut self, reg: Register, data: u8) -> Result<(), Error<SPI::Error, RST::Error>> {
+    pub fn write_register(
+        &mut self,
+        reg: Register,
+        data: u8,
+    ) -> Result<(), Error<SPI::Error, RST::Error>> {
         self.spi
             .write(&[Command::WREG as u8 | (reg as u8), 0x00, data])
             .map_err(Error::Spi)
@@ -648,7 +651,11 @@ where
     }
 
     /// Writes to multiple registers starting from `reg`.
-    pub fn write_registers(&mut self, reg: Register, data: &[u8]) -> Result<(), Error<SPI::Error, RST::Error>> {
+    pub fn write_registers(
+        &mut self,
+        reg: Register,
+        data: &[u8],
+    ) -> Result<(), Error<SPI::Error, RST::Error>> {
         self.spi
             .transaction(&mut [
                 Operation::Write(&[Command::WREG as u8 | (reg as u8), data.len() as u8 - 1]),
@@ -663,7 +670,7 @@ where
     }
 
     /// Reads the conversion data.
-    /// Returns a tuple of (status, sensor_id, data).
+    /// Returns a tuple of (status, data).
     pub fn read_data(&mut self) -> Result<(Option<u8>, i32), Error<SPI::Error, RST::Error>> {
         let interface_reg = self.read_register(Register::INTERFACE)?;
         let status_enabled = (interface_reg & register_data::INTERFACE_STATUS) != 0;

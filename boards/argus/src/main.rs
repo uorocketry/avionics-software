@@ -8,10 +8,13 @@ compile_error!(
 );
 
 // mod adc_manager;
-mod sd; 
-mod resources;
 mod ads;
+mod resources;
+mod sd;
 mod state_machine;
+
+#[cfg(feature = "calibration")]
+mod calibration;
 
 use crate::resources::{ADC_SPI_BUS_CELL, HEAP};
 use crate::state_machine::{sm_task, StateMachine};
@@ -19,7 +22,6 @@ use core::cell::RefCell;
 use core::marker::PhantomData;
 use defmt::*;
 use defmt_rtt as _;
-use messages_prost::prost::Message;
 use embassy_executor::Spawner;
 use embassy_stm32::adc::Adc;
 use embassy_stm32::exti::ExtiInput;
@@ -31,21 +33,22 @@ use embassy_stm32::time::{mhz, Hertz};
 use embassy_stm32::{can, mode, peripherals, rcc};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::blocking_mutex::Mutex;
+use embassy_time::Instant;
 use embassy_time::{Delay, Duration, Ticker, Timer};
-use embedded_hal_1::digital::{OutputPin, InputPin};
+use embedded_hal_1::digital::{InputPin, OutputPin};
 use embedded_hal_1::spi::SpiDevice;
 use embedded_hal_bus::spi::RefCellDevice;
 use libm::logf;
+use messages_prost::prost::Message;
 use panic_probe as _;
 use pid::Pid;
 use static_cell::StaticCell;
-use embassy_time::Instant;
 
 use crate::resources::SD_CHANNEL;
 // Use the asynchronous SpiDevice from embassy-embedded-hal
 
-use crate::ads::{Ads1262, Register};
 use crate::ads::register_data;
+use crate::ads::{Ads1262, Command, Register};
 
 /// The target temperature we want to maintain.
 const SETPOINT_TEMP_C: f32 = 25.0;
@@ -141,11 +144,20 @@ where
     // Disable CRC and STATUS bytes for simplicity
     adc.write_register(Register::INTERFACE, register_data::INTERFACE_CRC_NONE)?;
     // Use internal reference, enable VBIAS for open-circuit detection
-    adc.write_register(Register::POWER, register_data::POWER_INTREF | register_data::POWER_VBIAS)?;
+    adc.write_register(
+        Register::POWER,
+        register_data::POWER_INTREF | register_data::POWER_VBIAS,
+    )?;
     // Set gain and data rate
-    adc.write_register(Register::MODE2, register_data::MODE2_GAIN_32 | register_data::MODE2_SPS_20)?;
+    adc.write_register(
+        Register::MODE2,
+        register_data::MODE2_GAIN_32 | register_data::MODE2_SPS_20,
+    )?;
     // Set input mux to AIN0 and AIN1
-    adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG)?;
+    adc.write_register(
+        Register::INPMUX,
+        register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG,
+    )?;
     Ok(())
 }
 
@@ -154,8 +166,8 @@ where
 /// This setup is for ratiometric measurements, using the bridge's excitation
 /// voltage as the reference.
 ///
-/// - ADC Inputs: AIN0 (positive), AIN1 (negative)
-/// - Reference Inputs: AIN2 (positive), AIN3 (negative)
+/// - ADC Inputs: AIN2 (positive), AIN3 (negative)
+/// - Reference Inputs: AVDD (positive), AVSS (negative)
 /// - PGA Gain: 32 (Max for ADS1262)
 /// - Data Rate: 100 SPS
 pub fn configure_adc_for_strain_gauge<SPI, RST, DRDY>(
@@ -170,12 +182,21 @@ where
     adc.write_register(Register::INTERFACE, register_data::INTERFACE_CRC_NONE)?;
     // Disable internal reference
     adc.write_register(Register::POWER, 0x00)?;
-    // Use AIN2/AIN3 as reference for ratiometric measurement
-    adc.write_register(Register::REFMUX, register_data::REFMUX_AVDD_POS | register_data::REFMUX_AVSS_NEG)?;
+    // Use AVDD/AVSS as reference for ratiometric measurement
+    adc.write_register(
+        Register::REFMUX,
+        register_data::REFMUX_AVDD_POS | register_data::REFMUX_AVSS_NEG,
+    )?;
     // Set gain and data rate. Strain gauges have small outputs, so max gain is often needed.
-    adc.write_register(Register::MODE2, register_data::MODE2_GAIN_32 | register_data::MODE2_SPS_100)?;
-    // Set input mux to AIN0 and AIN1
-    adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::REFMUX_INTERNAL_2_5V_NEG)?;
+    adc.write_register(
+        Register::MODE2,
+        register_data::MODE2_GAIN_32 | register_data::MODE2_SPS_100,
+    )?;
+    // Set input mux to AIN2 and AIN3
+    adc.write_register(
+        Register::INPMUX,
+        register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG,
+    )?;
     Ok(())
 }
 
@@ -194,7 +215,6 @@ where
     // Assuming a ratiometric bridge sensor, same as strain gauge
     configure_adc_for_strain_gauge(adc)
 }
-
 
 // =================================================================================
 // Application Tasks
@@ -299,8 +319,14 @@ fn adc_to_voltage(raw_data: i32, vref: f64, gain: u8) -> f64 {
 }
 
 #[embassy_executor::task]
-async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking>, Output<'static>, Delay>, Output<'static>, ExtiInput<'static>>) {
-    let mut sensor_id = 0; 
+async fn adc1_task(
+    mut adc: Ads1262<
+        RefCellDevice<'static, Spi<'static, Blocking>, Output<'static>, Delay>,
+        Output<'static>,
+        ExtiInput<'static>,
+    >,
+) {
+    let mut sensor_id = 0;
     loop {
         // Wait for the DRDY pin to go low, indicating data is ready.
         adc.drdy.wait_for_low().await;
@@ -312,26 +338,30 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
             {
                 let volts = adc_to_voltage(raw_data, VREF_INTERNAL, 32);
                 info!("Voltage: {} V", volts);
-                let celsius = thermocouple_converter::voltage_to_celsius(volts);
-                info!("Celsius: {} C", celsius);
+                if let Some(celsius) = thermocouple_converter::voltage_to_celsius(volts) {
+                    info!("Celsius: {} C", celsius);
 
-                let mut buf: [u8; 255] = [0; 255];
-                let msg = messages_prost::radio::RadioFrame {
-                    node: messages_prost::common::Node::Phoenix.into(),
-                    payload: Some(messages_prost::radio::radio_frame::Payload::ArgusTemperature(
-                        messages_prost::sensor::argus::Temperature {
-                            sensor_id,
-                            temperature: celsius
-                        },
-                    )),
-                    millis_since_start: Instant::now().as_millis()
-                };
-                msg.encode_length_delimited(&mut buf.as_mut())
-                    .expect("Failed to encode SBG GPS Position");
+                    let mut buf: [u8; 255] = [0; 255];
+                    let msg = messages_prost::radio::RadioFrame {
+                        node: messages_prost::common::Node::Phoenix.into(),
+                        payload: Some(
+                            messages_prost::radio::radio_frame::Payload::ArgusTemperature(
+                                messages_prost::sensor::argus::Temperature {
+                                    sensor_id,
+                                    temperature: celsius,
+                                },
+                            ),
+                        ),
+                        millis_since_start: Instant::now().as_millis(),
+                    };
+                    msg.encode_length_delimited(&mut buf.as_mut())
+                        .expect("Failed to encode SBG GPS Position");
 
-                SD_CHANNEL.send(("temperature.txt", buf)).await; 
-                sensor_id += 1; 
-                // update the sensor_id, this is fugly yandre dev ah code 
+                    SD_CHANNEL.send(("temperature.txt", buf)).await;
+                }
+
+                sensor_id += 1;
+                // update the sensor_id, this is fugly yandre dev ah code
                 // match sensor_id {
                 //     0 => {
                 //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
@@ -346,16 +376,16 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                 //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
                 //     }
                 //     _ => {
-                //         sensor_id = 0; 
+                //         sensor_id = 0;
                 //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
                 //     }
                 // }
             }
-    
+
             #[cfg(feature = "pressure")]
             {
                 // V_EXCITATION must be defined based on your hardware setup.
-                const V_EXCITATION: f64 = 5.0; 
+                const V_EXCITATION: f64 = 5.0;
                 let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
                 info!("Voltage: {} V", volts);
                 let pressure: f64 = (10000.0 / ((60.0 / 100.0) * (5.0 / 3.0))) * volts;
@@ -367,43 +397,53 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusPressure(
                         messages_prost::sensor::argus::Pressure {
                             sensor_id,
-                            pressure
+                            pressure,
                         },
                     )),
-                    millis_since_start: Instant::now().as_millis()
+                    millis_since_start: Instant::now().as_millis(),
                 };
                 msg.encode_length_delimited(&mut buf.as_mut())
                     .expect("Failed to encode SBG GPS Position");
 
-                SD_CHANNEL.send(("pressure.txt", buf)).await; 
-                sensor_id += 1; 
+                SD_CHANNEL.send(("pressure.txt", buf)).await;
+                sensor_id += 1;
                 // update the sensor_id, this is fugly
                 match sensor_id {
                     0 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
-
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG,
+                        );
                     }
                     1 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
-
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG,
+                        );
                     }
                     2 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
-
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG,
+                        );
                     }
                     3 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
-
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG,
+                        );
                     }
                     _ => {
-                        sensor_id = 0; 
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
-
+                        sensor_id = 0;
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG,
+                        );
                     }
                 }
                 Timer::after_millis(10).await;
             }
-    
+
             #[cfg(feature = "strain")]
             {
                 // V_EXCITATION must be defined based on your hardware setup.
@@ -417,23 +457,20 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                 let msg = messages_prost::radio::RadioFrame {
                     node: messages_prost::common::Node::Phoenix.into(),
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusStrain(
-                        messages_prost::sensor::argus::Strain {
-                            sensor_id,
-                            strain
-                        },
+                        messages_prost::sensor::argus::Strain { sensor_id, strain },
                     )),
-                    millis_since_start: Instant::now().as_millis()
+                    millis_since_start: Instant::now().as_millis(),
                 };
                 msg.encode_length_delimited(&mut buf.as_mut())
                     .expect("Failed to encode SBG GPS Position");
 
-                SD_CHANNEL.send(("strain.txt", buf)).await; 
-                // sensor_id += 1; 
+                SD_CHANNEL.send(("strain.txt", buf)).await;
+                // sensor_id += 1;
                 // // update the sensor_id, this is fugly
                 // match sensor_id {
                 //     0 => {
                 //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
-                        
+
                 //     }
                 //     1 => {
                 //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
@@ -452,24 +489,27 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
 
                 //     }
                 //     _ => {
-                //         sensor_id = 0; 
+                //         sensor_id = 0;
                 //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
                 //     }
                 // }
-
             }
         } else {
             info!("Failed to read ADC1 data.");
         }
-
     }
 }
 
-
 #[embassy_executor::task]
-async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking>, Output<'static>, Delay>, Output<'static>, ExtiInput<'static>>) {
-    let mut sensor_id = 0; 
-    
+async fn adc2_task(
+    mut adc: Ads1262<
+        RefCellDevice<'static, Spi<'static, Blocking>, Output<'static>, Delay>,
+        Output<'static>,
+        ExtiInput<'static>,
+    >,
+) {
+    let mut sensor_id = 0;
+
     loop {
         // Wait for the DRDY pin to go low, indicating data is ready.
         adc.drdy.wait_for_low().await;
@@ -482,50 +522,69 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
             {
                 let volts = adc_to_voltage(raw_data, VREF_INTERNAL, 32);
                 info!("Voltage: {} V", volts);
-                let celsius = thermocouple_converter::voltage_to_celsius(volts);
-                info!("Celsius: {} C", celsius);
+                if let Some(celsius) = thermocouple_converter::voltage_to_celsius(volts) {
+                    info!("Celsius: {} C", celsius);
 
-                let mut buf: [u8; 255] = [0; 255];
-                let msg = messages_prost::radio::RadioFrame {
-                    node: messages_prost::common::Node::Phoenix.into(),
-                    payload: Some(messages_prost::radio::radio_frame::Payload::ArgusTemperature(
-                        messages_prost::sensor::argus::Temperature {
-                            sensor_id,
-                            temperature: celsius
-                        },
-                    )),
-                    millis_since_start: Instant::now().as_millis()
-                };
-                msg.encode_length_delimited(&mut buf.as_mut())
-                    .expect("Failed to encode SBG GPS Position");
+                    let mut buf: [u8; 255] = [0; 255];
+                    let msg = messages_prost::radio::RadioFrame {
+                        node: messages_prost::common::Node::Phoenix.into(),
+                        payload: Some(
+                            messages_prost::radio::radio_frame::Payload::ArgusTemperature(
+                                messages_prost::sensor::argus::Temperature {
+                                    sensor_id,
+                                    temperature: celsius,
+                                },
+                            ),
+                        ),
+                        millis_since_start: Instant::now().as_millis(),
+                    };
+                    msg.encode_length_delimited(&mut buf.as_mut())
+                        .expect("Failed to encode SBG GPS Position");
 
-                SD_CHANNEL.send(("temperature.txt", buf)).await; 
-                sensor_id += 1; 
+                    SD_CHANNEL.send(("temperature.txt", buf)).await;
+                }
+
+                sensor_id += 1;
                 // update the sensor_id, this is fugly
                 match sensor_id {
                     0 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG,
+                        );
                     }
                     1 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG,
+                        );
                     }
                     2 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG,
+                        );
                     }
                     3 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG,
+                        );
                     }
                     _ => {
-                        sensor_id = 0; 
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
+                        sensor_id = 0;
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG,
+                        );
                     }
                 }
             }
-    
+
             #[cfg(feature = "pressure")]
             {
                 // V_EXCITATION must be defined based on your hardware setup.
-                const V_EXCITATION: f64 = 5.0; 
+                const V_EXCITATION: f64 = 5.0;
                 let volts = adc_to_voltage(raw_data, V_EXCITATION, 32);
                 info!("Voltage: {} V", volts);
                 let pressure: f64 = (10000.0 / ((60.0 / 100.0) * (5.0 / 3.0))) * volts;
@@ -537,21 +596,21 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusPressure(
                         messages_prost::sensor::argus::Pressure {
                             sensor_id,
-                            pressure
+                            pressure,
                         },
                     )),
-                    millis_since_start: Instant::now().as_millis()
+                    millis_since_start: Instant::now().as_millis(),
                 };
                 msg.encode_length_delimited(&mut buf.as_mut())
                     .expect("Failed to encode SBG GPS Position");
 
-                SD_CHANNEL.send(("pressure.txt", buf)).await; 
-                // sensor_id += 1; 
+                SD_CHANNEL.send(("pressure.txt", buf)).await;
+                // sensor_id += 1;
                 // // update the sensor_id, this is fugly
                 // match sensor_id {
                 //     0 => {
                 //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
-                        
+
                 //     }
                 //     1 => {
                 //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
@@ -566,14 +625,13 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
 
                 //     }
                 //     _ => {
-                //         sensor_id = 0; 
+                //         sensor_id = 0;
                 //         adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
 
                 //     }
                 // }
-
             }
-    
+
             #[cfg(feature = "strain")]
             {
                 // V_EXCITATION must be defined based on your hardware setup.
@@ -587,51 +645,59 @@ async fn adc2_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                 let msg = messages_prost::radio::RadioFrame {
                     node: messages_prost::common::Node::Phoenix.into(),
                     payload: Some(messages_prost::radio::radio_frame::Payload::ArgusStrain(
-                        messages_prost::sensor::argus::Strain {
-                            sensor_id,
-                            strain
-                        },
+                        messages_prost::sensor::argus::Strain { sensor_id, strain },
                     )),
-                    millis_since_start: Instant::now().as_millis()
+                    millis_since_start: Instant::now().as_millis(),
                 };
                 msg.encode_length_delimited(&mut buf.as_mut())
                     .expect("Failed to encode SBG GPS Position");
 
-                SD_CHANNEL.send(("strain.txt", buf)).await; 
-                sensor_id += 1; 
+                SD_CHANNEL.send(("strain.txt", buf)).await;
+                sensor_id += 1;
                 // update the sensor_id, this is fugly
                 match sensor_id {
                     0 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
-                        
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG,
+                        );
                     }
                     1 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG);
-
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN2_POS | register_data::INPMUX_AIN3_NEG,
+                        );
                     }
                     2 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG);
-
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN4_POS | register_data::INPMUX_AIN5_NEG,
+                        );
                     }
                     3 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG);
-
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN6_POS | register_data::INPMUX_AIN7_NEG,
+                        );
                     }
                     4 => {
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN8_POS | register_data::INPMUX_AIN9_NEG);
-
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN8_POS | register_data::INPMUX_AIN9_NEG,
+                        );
                     }
                     _ => {
-                        sensor_id = 0; 
-                        adc.write_register(Register::INPMUX, register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG);
-
+                        sensor_id = 0;
+                        adc.write_register(
+                            Register::INPMUX,
+                            register_data::INPMUX_AIN0_POS | register_data::INPMUX_AIN1_NEG,
+                        );
                     }
                 }
             }
         } else {
             info!("Failed to read ADC2 data.");
         }
-
     }
 }
 
@@ -684,7 +750,7 @@ async fn main(spawner: Spawner) {
     // config.rcc.ls = rcc::LsConfig::default_lse();
     let p = embassy_stm32::init(config);
 
-    // --- Sd Setup --- 
+    // --- Sd Setup ---
     let sd_card: embedded_sdmmc::SdCard<
         embedded_hal_bus::spi::RefCellDevice<
             'static,
@@ -695,15 +761,14 @@ async fn main(spawner: Spawner) {
         Delay,
     > = sd::setup_sdmmc_interface(p.SPI1, p.PA5, p.PA7, p.PA6, p.PC4);
 
-        let state_machine = StateMachine::new(state_machine::Context {});
+    let state_machine = StateMachine::new(state_machine::Context {});
 
-    // --- CAN Setup --- 
+    // --- CAN Setup ---
     // let mut can = can::CanConfigurator::new(p.FDCAN2, p.PB12, p.PB13, resources::Irqs);
 
-    // can.set_bitrate(250_000); 
+    // can.set_bitrate(250_000);
 
-    // let mut can = can.into_normal_mode(); 
-
+    // let mut can = can.into_normal_mode();
 
     // --- ADS 126 Setup ---
     let mut adc_spi_config = SpiConfig::default();
@@ -734,6 +799,74 @@ async fn main(spawner: Spawner) {
     adc2.reset(&mut Delay).unwrap();
     info!("ADC1 and ADC2 reset.");
 
+    // =========================================================================
+    // LOAD CALIBRATION VALUES (Normal Operation)
+    // =========================================================================
+    #[cfg(not(feature = "calibration"))]
+    {
+        // IMPORTANT: Manually enter the calibration values obtained from the
+        // calibration suite here.
+        const ADC1_OFCAL: u32 = 0x000000; // Replace with your value
+        const ADC1_FSCAL: u32 = 0x400000; // Replace with your value
+        const ADC2_OFCAL: u32 = 0x000000; // Replace with your value
+        const ADC2_FSCAL: u32 = 0x400000; // Replace with your value
+
+        info!("Loading production calibration values...");
+        // Write the calibration values to the ADC registers
+        let adc1_ofcal_bytes = ADC1_OFCAL.to_be_bytes();
+        adc1.write_registers(
+            Register::OFCAL0,
+            &[
+                adc1_ofcal_bytes[1],
+                adc1_ofcal_bytes[2],
+                adc1_ofcal_bytes[3],
+            ],
+        )
+        .unwrap();
+
+        let adc1_fscal_bytes = ADC1_FSCAL.to_be_bytes();
+        adc1.write_registers(
+            Register::FSCAL0,
+            &[
+                adc1_fscal_bytes[1],
+                adc1_fscal_bytes[2],
+                adc1_fscal_bytes[3],
+            ],
+        )
+        .unwrap();
+
+        let adc2_ofcal_bytes = ADC2_OFCAL.to_be_bytes();
+        adc2.write_registers(
+            Register::OFCAL0,
+            &[
+                adc2_ofcal_bytes[1],
+                adc2_ofcal_bytes[2],
+                adc2_ofcal_bytes[3],
+            ],
+        )
+        .unwrap();
+
+        let adc2_fscal_bytes = ADC2_FSCAL.to_be_bytes();
+        adc2.write_registers(
+            Register::FSCAL0,
+            &[
+                adc2_fscal_bytes[1],
+                adc2_fscal_bytes[2],
+                adc2_fscal_bytes[3],
+            ],
+        )
+        .unwrap();
+
+        info!(
+            "ADC1 OFCAL: {:#08x}, FSCAL: {:#08x}",
+            ADC1_OFCAL, ADC1_FSCAL
+        );
+        info!(
+            "ADC2 OFCAL: {:#08x}, FSCAL: {:#08x}",
+            ADC2_OFCAL, ADC2_FSCAL
+        );
+    }
+
     #[cfg(feature = "temperature")]
     {
         configure_adc_for_thermocouple(&mut adc1).unwrap();
@@ -755,20 +888,46 @@ async fn main(spawner: Spawner) {
         configure_adc_for_strain_gauge(&mut adc2).unwrap();
     }
 
+    // When running calibration, we still need a base configuration.
+    // We'll use the thermocouple config as a default.
+    #[cfg(feature = "calibration")]
+    {
+        configure_adc_for_thermocouple(&mut adc1).unwrap();
+        configure_adc_for_thermocouple(&mut adc2).unwrap();
+        info!("ADCs configured for calibration mode.");
+    }
+
     // Delay for the internal reference to settle if it was enabled.
     // This is required for thermocouple mode.
-    #[cfg(feature = "temperature")]
+    #[cfg(any(feature = "temperature", feature = "calibration"))]
     {
         Timer::after_millis(20).await;
         info!("Waited for internal reference to settle.");
     }
 
-    adc1.send_command(ads::Command::START1).unwrap();
-    adc2.send_command(ads::Command::START1).unwrap();
+    // In normal mode, start ADC conversions. In calibration mode, the
+    // calibration task will control the ADC.
+    #[cfg(not(feature = "calibration"))]
+    {
+        adc1.send_command(ads::Command::START1).unwrap();
+        adc2.send_command(ads::Command::START1).unwrap();
+    }
 
-    // spawner.must_spawn(temperature_regulator(Adc::new(p.ADC1), p.PB1, Output::new(p.PE11, Level::Low, Speed::Low)));
-    spawner.must_spawn(adc1_task(adc1));
-    // spawner.must_spawn(adc2_task(adc2));
-    spawner.must_spawn(sd::sdmmc_task(sd_card));
-    spawner.must_spawn(sm_task(spawner, state_machine))
+    // --- Spawn Tasks ---
+
+    // Spawn the appropriate tasks based on the feature flags.
+    // The calibration task is mutually exclusive with the normal adc tasks.
+    #[cfg(feature = "calibration")]
+    {
+        spawner.must_spawn(calibration::calibration_task(adc1, adc2));
+    }
+
+    #[cfg(not(feature = "calibration"))]
+    {
+        // spawner.must_spawn(temperature_regulator(Adc::new(p.ADC1), p.PB1, Output::new(p.PE11, Level::Low, Speed::Low)));
+        spawner.must_spawn(adc1_task(adc1));
+        spawner.must_spawn(adc2_task(adc2));
+        spawner.must_spawn(sd::sdmmc_task(sd_card));
+        spawner.must_spawn(sm_task(spawner, state_machine));
+    }
 }

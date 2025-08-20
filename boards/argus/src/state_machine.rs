@@ -2,16 +2,16 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_time::Instant;
 use messages_prost::argus_state::State;
-use smlang::statemachine;
 use messages_prost::prost::Message;
+use smlang::statemachine;
 
 use crate::resources::{EVENT_CHANNEL, SD_CHANNEL};
 
 statemachine! {
     transitions: {
         *Init + CalibrationRequested = Calibration,
-        Calibration + Calibrated = Idle, 
-        Idle + CollectionRequested = Collection  
+        Calibration + Calibrated = Idle,
+        Idle + CollectionRequested = Collection
     }
 }
 
@@ -23,9 +23,9 @@ impl From<States> for State {
     fn from(value: States) -> Self {
         match value {
             States::Calibration => State::Calibration,
-            States::Collection => State::Collection, 
-            States::Idle => State::Idle, 
-            States::Init => State::Init
+            States::Collection => State::Collection,
+            States::Idle => State::Idle,
+            States::Init => State::Init,
         }
     }
 }
@@ -37,9 +37,8 @@ pub async fn sm_task(spawner: Spawner, mut state_machine: StateMachine<Context>)
     loop {
         if let Ok(event) = EVENT_CHANNEL.try_receive() {
             state_machine.process_event(event);
-           
-        } 
-        
+        }
+
         match state_machine.state {
             States::Init => {
                 let mut buf: [u8; 255] = [0; 255];
@@ -49,7 +48,7 @@ pub async fn sm_task(spawner: Spawner, mut state_machine: StateMachine<Context>)
                     payload: Some(messages_prost::radio::radio_frame::Payload::PhoenixState(
                         State::Init.into(),
                     )),
-                    millis_since_start: Instant::now().as_millis()
+                    millis_since_start: Instant::now().as_millis(),
                 };
                 msg.encode_length_delimited(&mut buf.as_mut()).unwrap();
                 SD_CHANNEL.send(("state.txt", buf)).await;
@@ -62,7 +61,7 @@ pub async fn sm_task(spawner: Spawner, mut state_machine: StateMachine<Context>)
                     payload: Some(messages_prost::radio::radio_frame::Payload::PhoenixState(
                         State::Idle.into(),
                     )),
-                    millis_since_start: Instant::now().as_millis()
+                    millis_since_start: Instant::now().as_millis(),
                 };
                 msg.encode_length_delimited(&mut buf.as_mut()).unwrap();
                 SD_CHANNEL.send(("state.txt", buf)).await;
@@ -75,10 +74,10 @@ pub async fn sm_task(spawner: Spawner, mut state_machine: StateMachine<Context>)
                     payload: Some(messages_prost::radio::radio_frame::Payload::PhoenixState(
                         State::Calibration.into(),
                     )),
-                    millis_since_start: Instant::now().as_millis()
+                    millis_since_start: Instant::now().as_millis(),
                 };
                 msg.encode_length_delimited(&mut buf.as_mut()).unwrap();
-                SD_CHANNEL.send(("state.txt", buf)).await; 
+                SD_CHANNEL.send(("state.txt", buf)).await;
             }
             States::Collection => {
                 let mut buf: [u8; 255] = [0; 255];
@@ -88,10 +87,10 @@ pub async fn sm_task(spawner: Spawner, mut state_machine: StateMachine<Context>)
                     payload: Some(messages_prost::radio::radio_frame::Payload::PhoenixState(
                         State::Collection.into(),
                     )),
-                    millis_since_start: Instant::now().as_millis()
+                    millis_since_start: Instant::now().as_millis(),
                 };
                 msg.encode_length_delimited(&mut buf.as_mut()).unwrap();
-                SD_CHANNEL.send(("state.txt", buf)).await; 
+                SD_CHANNEL.send(("state.txt", buf)).await;
                 info!("Wait For Launch");
             }
         }

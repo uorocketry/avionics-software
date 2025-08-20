@@ -49,7 +49,7 @@ pub const TYPE_K_COEF: [[f64; 10]; 3] = [
 ];
 
 /// Converts a 32-bit ADC reading to a temperature in celsius.
-pub fn adc_to_celsius(adc_reading: i32) -> f64 {
+pub fn adc_to_celsius(adc_reading: i32) -> Option<f64> {
     voltage_to_celsius(adc_to_voltage(adc_reading))
 }
 
@@ -64,16 +64,16 @@ pub fn adc_to_voltage(adc_reading: i32) -> f64 {
 }
 
 /// Converts voltage to celsius for type K thermocouples.
-pub fn voltage_to_celsius(mut voltage: f64) -> f64 {
+pub fn voltage_to_celsius(mut voltage: f64) -> Option<f64> {
     voltage *= 1000.0;
     return match voltage {
-        -5.891..=0.0 => calc_temp_exponential(voltage, &TYPE_K_COEF[0]),
-        0.0..=20.644 => calc_temp_exponential(voltage, &TYPE_K_COEF[1]),
-        20.644..=54.886 => calc_temp_exponential(voltage, &TYPE_K_COEF[2]),
+        -5.891..=0.0 => Some(calc_temp_exponential(voltage, &TYPE_K_COEF[0])),
+        0.0..=20.644 => Some(calc_temp_exponential(voltage, &TYPE_K_COEF[1])),
+        20.644..=54.886 => Some(calc_temp_exponential(voltage, &TYPE_K_COEF[2])),
 
         // Insane temperature ranges that should never be reached.
         // Hitting this is a strong indicator of a bug in the Argus system.
-        _ => panic!("T < -270 or T > 1372 celcius"),
+        _ => None,
     };
 }
 
@@ -106,31 +106,29 @@ mod tests {
 
     #[test]
     fn voltage_to_celsius_converts_expected_ranges() {
-        let result: f64 = voltage_to_celsius(20.644);
+        let result: f64 = voltage_to_celsius(20.644/ 1000.0).unwrap();
         assert!(499.97 <= result && 500.0 >= result);
 
-        let result: f64 = voltage_to_celsius(6.138);
+        let result: f64 = voltage_to_celsius(6.138/ 1000.0).unwrap();
         assert!(150.01 <= result && 150.03 >= result);
 
-        let result: f64 = voltage_to_celsius(0.039);
+        let result: f64 = voltage_to_celsius(0.039/ 1000.0).unwrap();
         assert!(0.97 <= result && 0.98 >= result);
 
-        let result: f64 = voltage_to_celsius(-0.778);
+        let result: f64 = voltage_to_celsius(-0.778/ 1000.0).unwrap();
         assert!(-20.03 <= result && -20.01 >= result);
 
-        let result: f64 = voltage_to_celsius(10.0);
+        let result: f64 = voltage_to_celsius(10.0/ 1000.0).unwrap();
         assert!(246.1 <= result && 246.3 >= result);
     }
 
     #[test]
-    #[should_panic(expected = "T < -270")]
     fn voltage_to_celsius_panics_on_temp_too_cold() {
-        voltage_to_celsius(-6.0);
+        assert!(voltage_to_celsius(-6.0).is_none());
     }
 
     #[test]
-    #[should_panic(expected = "T > 1372")]
     fn voltage_to_celsius_panics_on_temp_too_hot() {
-        voltage_to_celsius(-6.0);
+        assert!(voltage_to_celsius(-6.0).is_none());
     }
 }

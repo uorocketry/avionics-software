@@ -13,13 +13,13 @@ use embassy_sync::channel::Channel;
 use embedded_alloc::LlffHeap as Heap;
 use static_cell::StaticCell;
 
-
 pub const SD_BUFFER_SIZE: usize = 255;
 
 #[global_allocator]
 pub static HEAP: Heap = Heap::empty();
 
-pub static SD_CHANNEL: Channel<CriticalSectionRawMutex, (&str, [u8; SD_BUFFER_SIZE]), 5> = Channel::new(); // file name, data
+pub static SD_CHANNEL: Channel<CriticalSectionRawMutex, (&str, [u8; SD_BUFFER_SIZE]), 5> =
+    Channel::new(); // file name, data
 pub static EVENT_CHANNEL: Channel<CriticalSectionRawMutex, Events, 2> = Channel::new();
 
 pub static SPI_BUS_CELL: StaticCell<RefCell<Spi<mode::Blocking>>> = StaticCell::new();
