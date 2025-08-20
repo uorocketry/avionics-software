@@ -101,27 +101,27 @@ fn pow(base: f64, exp: i32) -> f64 {
     return result;
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn voltage_to_celsius_converts_expected_ranges() {
-//         let result: f64 = voltage_to_celsius(20.644);
-//         assert!(499.97 <= result && 500.0 >= result);
+    #[test]
+    fn voltage_to_celsius_converts_expected_ranges() {
+        let result: f64 = voltage_to_celsius(20.644);
+        assert!(499.97 <= result && 500.0 >= result);
 
-//         let result: f64 = voltage_to_celsius(6.138);
-//         assert!(150.01 <= result && 150.03 >= result);
+        let result: f64 = voltage_to_celsius(6.138);
+        assert!(150.01 <= result && 150.03 >= result);
 
-//         let result: f64 = voltage_to_celsius(0.039);
-//         assert!(0.97 <= result && 0.98 >= result);
+        let result: f64 = voltage_to_celsius(0.039);
+        assert!(0.97 <= result && 0.98 >= result);
 
-//         let result: f64 = voltage_to_celsius(-0.778);
-//         assert!(-20.03 <= result && -20.01 >= result);
+        let result: f64 = voltage_to_celsius(-0.778);
+        assert!(-20.03 <= result && -20.01 >= result);
 
-//         let result: f64 = voltage_to_celsius(10.0);
-//         assert!(246.1 <= result && 246.3 >= result);
-//     }
+        let result: f64 = voltage_to_celsius(10.0);
+        assert!(246.1 <= result && 246.3 >= result);
+    }
 
 //     #[test]
 //     #[should_panic(expected = "T < -270")]
@@ -134,4 +134,4 @@ fn pow(base: f64, exp: i32) -> f64 {
 //     fn voltage_to_celsius_panics_on_temp_too_hot() {
 //         voltage_to_celsius(-6.0);
 //     }
-// }
+}

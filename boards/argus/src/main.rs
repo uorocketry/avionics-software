@@ -315,10 +315,6 @@ async fn adc1_task(mut adc: Ads1262<RefCellDevice<'static, Spi<'static, Blocking
                 info!("Voltage: {} V", volts);
                 let celsius = thermocouple_converter::voltage_to_celsius(volts);
                 info!("Celsius: {} C", celsius);
-
-                if celsius == 9999.9 { // check for invalid temperature; error handlling is painful
-                    info!("Invalid temperature reading");
-                }
                         
                 let mut buf: [u8; 255] = [0; 255];
                 let msg = messages_prost::radio::RadioFrame {
