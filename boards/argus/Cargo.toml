@@ -3,7 +3,20 @@ name = "argus"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+pressure = []
+temperature = []
+strain = []
+calibration = []
+
+[[bin]]
+name = "argus"
+harness = false
+
+[[test]]
+name = "sd"
+harness = false
+path = "tests/sd.rs"
 
 [dependencies]
 cortex-m = { workspace = true }
@@ -20,7 +33,6 @@ ads126x = {path = "../../crates/ads126x"}
 smlang = {workspace = true}
 libm = "0.2.15"
 messages-prost = { workspace = true }
-# Change stm32h743bi to your chip name, if necessary.
 embassy-stm32 = { version = "0.2.0", features = ["defmt", "stm32h743bi", "time-driver-tim2", "exti", "memory-x", "unstable-pac", "chrono"] }
 embassy-sync = { version = "0.6.2", features = ["defmt"] }
 embassy-embedded-hal = { version = "0.3.0" }
@@ -44,26 +56,7 @@ grounded = "0.2.0"
 pid = "4.0.0"
 thermocouple-converter = { path = "../../crates/thermocouple-converter" }
 straingauge-converter = { path = "../../crates/straingauge-converter" }
+itoa = { version = "1.0.15", features = ["no-panic"] }
 
 [dev-dependencies]
 defmt-test = { workspace = true }
-
-[[test]]
-name = "sd"
-harness = false
-path = "tests/sd.rs"
-
-[[test]]
-name = "adc"
-harness = false
-path = "tests/adc.rs"
-
-[[bin]]
-name = "argus"
-harness = false
-
-[features]
-pressure = []
-temperature = []
-strain = []
-calibration = []
