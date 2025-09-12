@@ -1,19 +1,22 @@
 use embedded_sdmmc::{TimeSource, Timestamp};
 use core::marker::PhantomData;
 
-pub struct SDCardTimeSource {
+/**
+ * Fake time source for the SD card.
+ */
+pub struct FakeTimeSource {
 	_marker: PhantomData<*const ()>,
 }
 
-impl SDCardTimeSource {
+impl FakeTimeSource {
 	pub fn new() -> Self {
-		SDCardTimeSource {
+		FakeTimeSource {
 			_marker: PhantomData,
 		}
 	}
 }
 
-impl TimeSource for SDCardTimeSource {
+impl TimeSource for FakeTimeSource {
 	fn get_timestamp(&self) -> Timestamp {
 		// SHOULD DO: replace with an actual time source like RTC
 		Timestamp {

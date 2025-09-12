@@ -21,7 +21,6 @@ path = "tests/sd.rs"
 [dependencies]
 cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
-common-arm = { path = "../../crates/common-arm" }
 defmt = { workspace = true }
 embedded-alloc = {workspace = true}
 heapless = {workspace = true}
@@ -29,7 +28,6 @@ defmt-rtt = { workspace = true }
 panic-probe = { workspace = true }
 chrono = { workspace = true }
 enum_dispatch = {workspace = true}
-ads126x = {path = "../../crates/ads126x"}
 smlang = {workspace = true}
 libm = "0.2.15"
 messages-prost = { workspace = true }
@@ -41,12 +39,11 @@ embassy-time = { version = "0.4.0", features = ["defmt", "defmt-timestamp-uptime
 embassy-net = { version = "0.7.0", features = ["defmt", "tcp", "dhcpv4", "medium-ethernet", "proto-ipv6", "dns"] }
 embassy-usb = { version = "0.4.0", features = ["defmt"] }
 embassy-futures = { version = "0.1.0" }
-embedded-hal-bus = "0.3.0"
+embedded-hal-bus = { version = "0.3.0", features = ["async", "defmt-03"] }
 embedded-sdmmc = "0.9.0"
-embedded-hal-1 = { package = "embedded-hal", version = "1.0" }
 embedded-hal-async = { version = "1.0" }
 embedded-nal-async = "0.8.0"
-embedded-io-async = { version = "0.6.1" }
+embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
 critical-section = "1.1"
 micromath = "2.0.0"
 stm32-fmc = "0.3.0"
@@ -57,6 +54,7 @@ pid = "4.0.0"
 thermocouple-converter = { path = "../../crates/thermocouple-converter" }
 straingauge-converter = { path = "../../crates/straingauge-converter" }
 itoa = { version = "1.0.15", features = ["no-panic"] }
+embedded-hal = { version = "1.0.0", features = ["defmt-03"] }
 
 [dev-dependencies]
 defmt-test = { workspace = true }

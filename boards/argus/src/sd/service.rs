@@ -1,6 +1,4 @@
-use core::str::FromStr;
-
-use defmt::{debug, error, info, Debug2Format};
+use defmt::{debug, error, Debug2Format};
 use embassy_stm32::spi::{MisoPin, MosiPin, SckPin};
 use embassy_stm32::{gpio, spi, time, Peripheral};
 use embassy_time::Delay;
@@ -10,7 +8,7 @@ use embedded_sdmmc::{Error, Mode, SdCardError, VolumeIdx};
 use heapless::String;
 use static_cell::StaticCell;
 
-use crate::sd::time_source::SDCardTimeSource;
+use crate::sd::time_source::FakeTimeSource;
 use crate::sd::types::{FilePath, Line, OperationScope, SDCardChannel, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice, SDCardSpiRefCell, SDCardVolumeManager};
 use crate::utils::types::AsyncMutex;
 
@@ -62,7 +60,7 @@ impl SDCardService {
 
 		// Embedded SDMMC library setup
 		let sd_card = SDCardInstance::new(spi_device, Delay);
-		let volume_manager: SDCardVolumeManager<MAX_SESSIONS_COUNT, MAX_FILES_COUNT> = SDCardVolumeManager::new_with_limits(sd_card, SDCardTimeSource::new(), 0);
+		let volume_manager: SDCardVolumeManager<MAX_SESSIONS_COUNT, MAX_FILES_COUNT> = SDCardVolumeManager::new_with_limits(sd_card, FakeTimeSource::new(), 0);
 
 		return SDCardService {
 			volume_manager,

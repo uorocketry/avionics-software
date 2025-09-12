@@ -1,13 +1,13 @@
 use embassy_stm32::{gpio, mode, spi};
 use embassy_sync::channel::Channel;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embedded_sdmmc::{Directory, SdCard, VolumeManager};
 use embassy_time::Delay;
+use embedded_sdmmc::{Directory, SdCard, VolumeManager};
 use heapless::String;
 use core::cell::RefCell;
 use embedded_hal_bus::spi::RefCellDevice;
 
-use crate::sd::time_source::SDCardTimeSource;
+use crate::sd::time_source::FakeTimeSource;
 
 // Some typings to make the code more readable
 pub type SDCardSpiBus = spi::Spi<'static, mode::Blocking>; // Has to be blocking for embedded-sdmmc to work
@@ -19,7 +19,7 @@ pub type SDCardInstance = SdCard<SDCardSpiDevice, Delay>;
 
 pub type SDCardVolumeManager<const MAX_SESSIONS_COUNT: usize, const MAX_FILES_COUNT: usize> = VolumeManager <
 	SDCardInstance,
-	SDCardTimeSource,
+	FakeTimeSource,
 	MAX_SESSIONS_COUNT, // MAX_DIRS translates to MaxSessions count because each session is a directory
 	MAX_FILES_COUNT,
 	1
@@ -28,7 +28,7 @@ pub type SDCardVolumeManager<const MAX_SESSIONS_COUNT: usize, const MAX_FILES_CO
 pub type SDCardDirectory<'a, const MAX_SESSIONS_COUNT: usize, const MAX_FILES_COUNT: usize> = Directory<
 	'a,
 	SDCardInstance,
-	SDCardTimeSource,
+	FakeTimeSource,
 	MAX_SESSIONS_COUNT, // MAX_DIRS translates to MaxSessions count because each session is a directory
 	MAX_FILES_COUNT,
 	1
