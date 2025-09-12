@@ -10,7 +10,7 @@ compile_error!(
 mod utils;
 mod sd;
 mod adc;
-mod _main;
+// mod _main;
 
 use defmt::debug;
 use defmt_rtt as _;

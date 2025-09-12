@@ -7,6 +7,11 @@ members = ["boards/*", "crates/*"]
 # compile errors if built directly.
 default-members = ["boards/*"]
 
+[workspace.dependencies.serde]
+version = "1.0.150"
+default-features = false
+features = ["derive"]
+
 [workspace.dependencies.cortex-m]
 version = "0.7.6"
 features = ["critical-section-single-core"]
