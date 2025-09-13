@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[derive(Copy, Clone, Debug)]
 pub enum AnalogChannel {
 	AIN0 = 0,
@@ -70,9 +72,15 @@ pub enum DataRate {
 
 /**
  * Shift the channel's voltage
- * MidSupply: when using single‑ended sensors (like thermocouples, high‑impedance voltage inputs) that would otherwise float with no defined negative return. Biasing them to mid‑supply keeps the measurement within the ADC’s common‑mode input range.
- * None: when using differential sensors (like bridge sensors, 4‑wire RTDs) that already provide a well‑defined return, or if you externally drive the negative terminal.
+ * 
+ * MidSupply: shift to (VREFP - VREFN) / 2
+ * Useful when using single‑ended sensors (like thermocouples, high‑impedance voltage inputs) that would otherwise float with no defined negative return. 
+ * Biasing them to mid‑supply keeps the measurement within the ADC’s common‑mode input range.
+ *
+ * None: No shift
+ * Useful when using differential sensors (like bridge sensors, 4‑wire RTDs) that already provide a well‑defined return, or if you externally drive the negative terminal.
  */
+#[derive(Copy, Clone, Debug)]
 pub enum ChannelShift {
 	MidSupply,
 	None,
@@ -82,6 +90,7 @@ pub enum ChannelShift {
  * Defines the reference voltage for the ADC. 
  * This defines the full-scale-differential input range = VREFP - VREFN / Gain
  */
+#[derive(Copy, Clone, Debug)]
 pub enum ReferenceVoltageSource {
 	Avdd, // REFP = Avdd, REFN = Avss
 	Internal2_5, // REFP = Internal 2.5V REFN = Avss

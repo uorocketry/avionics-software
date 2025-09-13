@@ -1,27 +1,29 @@
 pub mod registers;
 pub mod commands;
-pub mod parameters;
+pub mod types;
 
 use defmt::warn;
 use embassy_time::Timer;
-use embedded_hal::{digital::{InputPin, OutputPin}, spi::Operation};
+use embedded_hal::{digital::{InputPin, OutputPin}};
 use embedded_hal_async::spi::SpiDevice;
 
 use registers::Register;
 use commands::Command;
-use parameters::{ChannelShift, Gain, Filter, DataRate, ReferenceVoltageSource, AnalogChannel, MAX_SIGNED_CODE_SIZE};
+use types::{ChannelShift, Gain, Filter, DataRate, ReferenceVoltageSource, AnalogChannel, MAX_SIGNED_CODE_SIZE};
 
 pub struct Ads1262<SPI, DataReady, Reset, Start> {
 	spi_device: SPI,
 	data_ready: DataReady,
 	reset: Reset,
 	start: Start,
-	channel_shift: ChannelShift,
-	enable_internal_reference_voltage: bool,
-	reference_voltage_source: ReferenceVoltageSource,
-	gain: Gain,
-	filter: Filter,
-	data_rate: DataRate,
+
+	// Configurable parameters for the ADC. After changing call apply_configurations() to apply them to the ADC
+	pub channel_shift: ChannelShift,
+	pub enable_internal_reference_voltage: bool,
+	pub reference_voltage_source: ReferenceVoltageSource,
+	pub gain: Gain,
+	pub filter: Filter,
+	pub data_rate: DataRate,
 }
 
 impl<SPI, E, DataReady, Reset, Start> Ads1262<SPI, DataReady, Reset, Start>
@@ -36,28 +38,24 @@ where
 		data_ready: DataReady,
 		reset: Reset,
 		start: Start,
-		reference_voltage_source: ReferenceVoltageSource,
-		channel_shift: ChannelShift,
-		enable_internal_reference_voltage: bool,
-		gain: Gain,
-		filter: Filter,
-		data_rate: DataRate
 	) -> Self {
 		Self {
 			spi_device,
 			data_ready,
 			reset,
 			start,
-			reference_voltage_source,
-			channel_shift,
-			enable_internal_reference_voltage,
-			gain,
-			filter,
-			data_rate
+
+			// Some default values. These will get configured later
+			reference_voltage_source: ReferenceVoltageSource::Avdd,
+			channel_shift: ChannelShift::None,
+			enable_internal_reference_voltage: true,
+			gain: Gain::G1,
+			filter: Filter::Sinc1,
+			data_rate: DataRate::Sps1200
 		}
 	}
 
-	async fn read_single_ended(
+	pub async fn read_single_ended(
 		&mut self,
 		channel: AnalogChannel,
 	) -> Result<f32, E> {
@@ -67,7 +65,7 @@ where
 		Ok(self.convert_code_to_volts(code))
 	}
 
-	async fn read_differential(
+	pub async fn read_differential(
 		&mut self,
 		positive: AnalogChannel,
 		negative: AnalogChannel
@@ -113,12 +111,9 @@ where
 		// Receiving buffer is 5 bytes: first byte is a dummy byte for the command, next four are the 32-bit result
 		let mut rx = [0u8; 5];
 
-		self.spi_device.transaction(&mut [
-			Operation::Write(&tx),
-			Operation::Read(&mut rx)
-		]).await?;
+		self.spi_device.transfer(&mut rx, &tx).await?;
 
-		// Skip the first part because spi sends a byte for every byte you send it since it's duplex and we're using transaction
+		// Skip the first part because spi sends a byte for every byte you send it since it's duplex and we're using transfer
 		let b = &rx[1..5];
 
 		// Convert the 4 bytes to a signed 32-bit integer
@@ -162,12 +157,9 @@ where
 		// Receiving buffer is 3 bytes: first two are dummy bytes for the opcodes, third is the register value
 		let mut rx = [0u8; 3];
 		let tx = [op1, op2, 0x00];
-		self.spi_device.transaction(&mut [
-			Operation::Write(&tx),
-			Operation::Read(&mut rx)
-		]).await?;
+		self.spi_device.transfer(&mut rx, &tx).await?;
 
-		// Skip the first two bytes because spi sends a byte for every byte you send it since it's duplex and we're using transaction
+		// Skip the first two bytes because spi sends a byte for every byte you send it since it's duplex and we're using transfer
 		Ok(rx[2])
 	}
 
@@ -180,11 +172,14 @@ where
 		}
 	}
 
-	async fn ensure_configured(&mut self) -> Result<(), E> {
+	/**
+	 * Applies the current configuration settings on the driver to the ADC
+	 */
+	pub async fn apply_configurations(&mut self) -> Result<(), E> {
 		self.send_command(Command::STOP1).await?;
 
-		self.ensure_reference_voltage_source_configured().await?;
-		self.ensure_internal_reference_voltage_and_channel_shift_configured().await?;
+		self.apply_reference_voltage_source_configuration().await?;
+		self.apply_internal_reference_voltage_and_channel_shift_configuration().await?;
 
 		// Disable all interface options (status byte, CRC, watchdog)
 		// SHOULDDO: make these configurable
@@ -194,10 +189,10 @@ where
 		// SHOULDDO: make these configurable
 		self.write_register(Register::MODE0, 0x00).await?;
 
-		self.ensure_offset_calibration_configured().await?;
-		self.ensure_full_scale_calibration_configured().await?;
-		self.ensure_filter_configured().await?;
-		self.ensure_gain_and_data_rate_configured().await?;
+		self.apply_offset_calibration_configuration().await?;
+		self.apply_full_scale_calibration_configuration().await?;
+		self.apply_filter_configuration().await?;
+		self.apply_gain_and_data_rate_configuration().await?;
 
 		// Short the channels together before we begin
 		self.set_channels(AnalogChannel::AINCOM, AnalogChannel::AINCOM).await?;
@@ -205,7 +200,7 @@ where
 		Ok(())
 	}
 
-	async fn ensure_reference_voltage_source_configured(&mut self) -> Result<(), E> {
+	async fn apply_reference_voltage_source_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x00;
 
 		match self.reference_voltage_source {
@@ -223,7 +218,7 @@ where
 		Ok(())
 	}
 
-	async fn ensure_internal_reference_voltage_and_channel_shift_configured(&mut self) -> Result<(), E> {
+	async fn apply_internal_reference_voltage_and_channel_shift_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x00;
 
 		if self.enable_internal_reference_voltage {
@@ -241,13 +236,13 @@ where
 		Ok(())
 	}
 
-	async fn ensure_filter_configured(&mut self) -> Result<(), E> {
+	async fn apply_filter_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x0;
 		register_value |= (self.filter as u8) << 5;
 		self.write_register(Register::MODE1, register_value).await
 	}
 
-	async fn ensure_gain_and_data_rate_configured(&mut self) -> Result<(), E> {
+	async fn apply_gain_and_data_rate_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x0;
 		register_value |= (self.gain as u8) << 4;
 		register_value |= self.data_rate as u8;
@@ -256,7 +251,7 @@ where
 		Ok(())
 	}
 
-	async fn ensure_offset_calibration_configured(&mut self) -> Result<(), E> {
+	async fn apply_offset_calibration_configuration(&mut self) -> Result<(), E> {
 		// SHOULD DO: implement
 		self.write_register(Register::OFCAL0, 0x00).await?;
 		self.write_register(Register::OFCAL1, 0x00).await?;
@@ -264,7 +259,7 @@ where
 		Ok(())
 	}
 
-	async fn ensure_full_scale_calibration_configured(&mut self) -> Result<(), E> {
+	async fn apply_full_scale_calibration_configuration(&mut self) -> Result<(), E> {
 		// SHOULD DO: implement
 		Ok(())
 	}
