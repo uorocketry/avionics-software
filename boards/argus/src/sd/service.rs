@@ -1,3 +1,5 @@
+// SHOULD DO: use embedded_hal traits instead of embassy_stm32 types directly
+
 use defmt::{debug, error, Debug2Format};
 use embassy_stm32::spi::{MisoPin, MosiPin, SckPin};
 use embassy_stm32::{gpio, spi, time, Peripheral};
