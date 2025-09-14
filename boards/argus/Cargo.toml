@@ -11,6 +11,7 @@ calibration = []
 
 [[bin]]
 name = "argus"
+path = "src/main.rs"
 harness = false
 
 [[test]]
@@ -22,21 +23,47 @@ path = "tests/sd.rs"
 cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
 defmt = { workspace = true }
-embedded-alloc = {workspace = true}
-heapless = {workspace = true}
+embedded-alloc = { workspace = true }
+heapless = { workspace = true }
 defmt-rtt = { workspace = true }
 panic-probe = { workspace = true }
 chrono = { workspace = true }
-enum_dispatch = {workspace = true}
-smlang = {workspace = true}
+enum_dispatch = { workspace = true }
+smlang = { workspace = true }
 libm = "0.2.15"
 messages-prost = { workspace = true }
-embassy-stm32 = { version = "0.2.0", features = ["defmt", "stm32h743bi", "time-driver-tim2", "exti", "memory-x", "unstable-pac", "chrono"] }
+embassy-stm32 = { version = "0.2.0", features = [
+	"defmt",
+	"stm32h733vg",
+	"time-driver-tim2",
+	"exti",
+	"memory-x",
+	"unstable-pac",
+	"chrono",
+] }
 embassy-sync = { version = "0.6.2", features = ["defmt"] }
 embassy-embedded-hal = { version = "0.3.0" }
-embassy-executor = { version = "0.7.0", features = ["nightly", "task-arena-size-10240", "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
-embassy-time = { version = "0.4.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
-embassy-net = { version = "0.7.0", features = ["defmt", "tcp", "dhcpv4", "medium-ethernet", "proto-ipv6", "dns"] }
+embassy-executor = { version = "0.7.0", features = [
+	"nightly",
+	"task-arena-size-10240",
+	"arch-cortex-m",
+	"executor-thread",
+	"executor-interrupt",
+	"defmt",
+] }
+embassy-time = { version = "0.4.0", features = [
+	"defmt",
+	"defmt-timestamp-uptime",
+	"tick-hz-32_768",
+] }
+embassy-net = { version = "0.7.0", features = [
+	"defmt",
+	"tcp",
+	"dhcpv4",
+	"medium-ethernet",
+	"proto-ipv6",
+	"dns",
+] }
 embassy-usb = { version = "0.4.0", features = ["defmt"] }
 embassy-futures = { version = "0.1.0" }
 embedded-hal-bus = { version = "0.3.0", features = ["async", "defmt-03"] }
