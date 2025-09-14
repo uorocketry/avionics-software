@@ -23,9 +23,7 @@ pub struct ThermocoupleReading {
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub
-enum Thermocouple
-{
+pub enum Thermocouple {
 	Channel1 = 0,
 	Channel2 = 1,
 	Channel3 = 2,
@@ -42,6 +40,7 @@ impl Thermocouple {
 			_ => panic!("Invalid thermocouple channel index: {}", value),
 		}
 	}
+
 	pub fn to_analog_input_channel_pair(&self) -> (AnalogChannel, AnalogChannel) {
 		match self {
 			Thermocouple::Channel1 => (AnalogChannel::AIN0, AnalogChannel::AIN1),

@@ -2,14 +2,13 @@ pub mod commands;
 pub mod registers;
 pub mod types;
 
+use commands::Command;
 use defmt::warn;
 use embassy_time::Timer;
-use embedded_hal::{digital::{InputPin, OutputPin}};
+use embedded_hal::digital::{InputPin, OutputPin};
 use embedded_hal_async::spi::SpiDevice;
-
 use registers::Register;
-use commands::Command;
-use types::{ChannelShift, Gain, Filter, DataRate, ReferenceVoltageSource, AnalogChannel, MAX_SIGNED_CODE_SIZE};
+use types::{AnalogChannel, ChannelShift, DataRate, Filter, Gain, ReferenceVoltageSource, MAX_SIGNED_CODE_SIZE};
 
 pub struct Ads1262<SPI, DataReady, Reset, Start> {
 	spi_device: SPI,
@@ -28,17 +27,12 @@ pub struct Ads1262<SPI, DataReady, Reset, Start> {
 
 impl<SPI, E, DataReady, Reset, Start> Ads1262<SPI, DataReady, Reset, Start>
 where
-	SPI: SpiDevice<Error=E>,
+	SPI: SpiDevice<Error = E>,
 	DataReady: InputPin,
 	Reset: OutputPin,
 	Start: OutputPin,
 {
-	pub fn new(
-		spi_device: SPI,
-		data_ready: DataReady,
-		reset: Reset,
-		start: Start,
-	) -> Self {
+	pub fn new(spi_device: SPI, data_ready: DataReady, reset: Reset, start: Start) -> Self {
 		Self {
 			spi_device,
 			data_ready,
@@ -51,25 +45,18 @@ where
 			enable_internal_reference_voltage: true,
 			gain: Gain::G1,
 			filter: Filter::Sinc1,
-			data_rate: DataRate::Sps1200
+			data_rate: DataRate::Sps1200,
 		}
 	}
 
-	pub async fn read_single_ended(
-		&mut self,
-		channel: AnalogChannel,
-	) -> Result<f32, E> {
+	pub async fn read_single_ended(&mut self, channel: AnalogChannel) -> Result<f32, E> {
 		self.set_channels(channel, AnalogChannel::AINCOM).await?;
 		self.wait_for_next_data().await;
 		let code = self.read_data_code().await?;
 		Ok(self.convert_code_to_volts(code))
 	}
 
-	pub async fn read_differential(
-		&mut self,
-		positive: AnalogChannel,
-		negative: AnalogChannel
-	) -> Result<f32, E> {
+	pub async fn read_differential(&mut self, positive: AnalogChannel, negative: AnalogChannel) -> Result<f32, E> {
 		self.set_channels(positive, negative).await?;
 		self.wait_for_next_data().await;
 		let code = self.read_data_code().await?;
@@ -89,24 +76,17 @@ where
 		Ok(())
 	}
 
-	async fn set_channels(
-		&mut self,
-		positive: AnalogChannel,
-		negative: AnalogChannel
-	) -> Result<(), E> {
+	async fn set_channels(&mut self, positive: AnalogChannel, negative: AnalogChannel) -> Result<(), E> {
 		// Shift positive channel to the left by 4 bits and combine with negative channel using bitwise OR
 		// | dddd | dddd |
 		// | AINP | AINN |
 
-		self.write_register(
-			Register::INPMUX,
-			((positive as u8) << 4) | (negative as u8)
-		).await
+		self.write_register(Register::INPMUX, ((positive as u8) << 4) | (negative as u8)).await
 	}
 
 	async fn read_data_code(&mut self) -> Result<i32, E> {
 		// Send the RDATA1 command followed by 4 dummy bytes to read the 32-bit result 4 * 8 = 32 bits
-		let tx = [ Command::RDATA1 as u8, 0, 0, 0, 0];
+		let tx = [Command::RDATA1 as u8, 0, 0, 0, 0];
 
 		// Receiving buffer is 5 bytes: first byte is a dummy byte for the command, next four are the 32-bit result
 		let mut rx = [0u8; 5];
@@ -172,9 +152,7 @@ where
 		}
 	}
 
-	/**
-	 * Applies the current configuration settings on the driver to the ADC
-	 */
+	/// Applies the current configuration settings on the driver to the ADC
 	pub async fn apply_configurations(&mut self) -> Result<(), E> {
 		self.send_command(Command::STOP1).await?;
 
@@ -207,11 +185,11 @@ where
 			ReferenceVoltageSource::Avdd => {
 				register_value |= 0b100 << 3; // AVDD
 				register_value |= 0b100; // AVSS
-			},
+			}
 			ReferenceVoltageSource::Internal2_5 => {
 				register_value |= 0b000 << 3; // INTERNAL 2.5V
 				register_value |= 0b100; // AVSS
-			},
+			}
 		}
 
 		self.write_register(Register::REFMUX, register_value).await?;

@@ -1,9 +1,7 @@
 #[repr(u8)]
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug)]
-pub
-enum Register
-{
+pub enum Register {
 	// Device ID register. Lets you confirm you’re talking to an ADS1262 and check silicon revision.
 	ID = 0x00,
 

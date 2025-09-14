@@ -1,5 +1,5 @@
 use crate::adc::driver::types::{ChannelShift, DataRate, Gain};
-use crate::adc::service::{AdcService, AdcError};
+use crate::adc::service::{AdcError, AdcService};
 use crate::temperature::types::{Thermocouple, ThermocoupleReading};
 
 /// Temperature traits for ADC service. Enabled by the "temperature" feature.
@@ -26,7 +26,7 @@ impl<const ADC_COUNT: usize> TemperatureAdcService for AdcService<ADC_COUNT> {
 		let thermocouple_reading = ThermocoupleReading {
 			timestamp: 0, // Placeholder for actual timestamp logic
 			voltage,
-			compensated_temperature: 0.0, // Placeholder for actual compensation logic
+			compensated_temperature: 0.0,   // Placeholder for actual compensation logic
 			uncompensated_temperature: 0.0, // Placeholder for actual reading
 			cold_junction_temperature: 0.0, // Placeholder for actual cold junction temperature
 		};
