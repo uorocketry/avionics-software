@@ -10,15 +10,12 @@ use static_cell::StaticCell;
 #[allow(dead_code)]
 static ADC_SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex,spi::Spi<'static, mode::Async>>> = StaticCell::new();
 
-/**
- * Acts as an orchestration layer for multiple ADC drivers.
- * Variants of this service can be created for different purposes, such as temperature, strain, pressure, etc.
- */
+/// Acts as an orchestration layer for multiple ADC drivers.
+/// Variants of this service can be created for different purposes, such as temperature, strain, pressure, etc.
 pub struct AdcService<const ADC_COUNT: usize = 2> {
 	pub drivers: [AdcDriver; ADC_COUNT],
 }
 
-/* */
 impl<const ADC_COUNT: usize> AdcService<ADC_COUNT> {
 	pub fn new<T: spi::Instance>(
 		peri: impl Peripheral<P = T> + 'static,
@@ -58,10 +55,7 @@ impl<const ADC_COUNT: usize> AdcService<ADC_COUNT> {
 	}
 }
 
-
-/**
- * Config object passed to AdcService for each ADC
- */
+/// Config object passed to AdcService for each ADC
 pub struct AdcConfig {
 	pub chip_select: gpio::AnyPin,
 	pub data_ready: gpio::AnyPin,
@@ -82,7 +76,5 @@ type AdcDriver = Ads1262<
 	gpio::Output<'static>, // Start pin (output)
 >;
 
-/**
- * The Spi device error type for the ADC driver
- */
+/// The Spi device error type for the ADC driver
 pub type AdcError = embassy_embedded_hal::shared_bus::SpiDeviceError<spi::Error, core::convert::Infallible>;

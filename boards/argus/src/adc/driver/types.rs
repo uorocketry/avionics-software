@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
 #[derive(Copy, Clone, Debug)]
-pub enum AnalogChannel {
+pub
+enum AnalogChannel
+{
 	AIN0 = 0,
 	AIN1 = 1,
 	AIN2 = 2,
@@ -20,7 +22,9 @@ pub enum AnalogChannel {
  */
 #[repr(u8)]
 #[derive(Copy, Clone, Debug)]
-pub enum Gain {
+pub
+enum Gain
+{
 	G1 = 0b000,
 	G2 = 0b001,
 	G4 = 0b010,
@@ -37,7 +41,9 @@ pub enum Gain {
  */
 #[repr(u8)]
 #[derive(Copy, Clone, Debug)]
-pub enum Filter {
+pub
+enum Filter
+{
 	Sinc1 = 0, // 0b000,
 	Sinc2 = 1, // 0b001,
 	Sinc3 = 2, // 0b010,
@@ -51,7 +57,9 @@ pub enum Filter {
  */
 #[repr(u8)]
 #[derive(Copy, Clone, Debug)]
-pub enum DataRate {
+pub
+enum DataRate
+{
 	Sps2_5 = 0, // 0b0000,
 	Sps5 = 1, // 0b0001,
 	Sps10 = 2, // 0b0010,
@@ -81,7 +89,9 @@ pub enum DataRate {
  * Useful when using differential sensors (like bridge sensors, 4‑wire RTDs) that already provide a well‑defined return, or if you externally drive the negative terminal.
  */
 #[derive(Copy, Clone, Debug)]
-pub enum ChannelShift {
+pub
+enum ChannelShift
+{
 	MidSupply,
 	None,
 }
@@ -91,7 +101,9 @@ pub enum ChannelShift {
  * This defines the full-scale-differential input range = VREFP - VREFN / Gain
  */
 #[derive(Copy, Clone, Debug)]
-pub enum ReferenceVoltageSource {
+pub
+enum ReferenceVoltageSource
+{
 	Avdd, // REFP = Avdd, REFN = Avss
 	Internal2_5, // REFP = Internal 2.5V REFN = Avss
 }
@@ -104,8 +116,6 @@ impl ReferenceVoltageSource {
 	}
 }
 
-/**
- * The 32 bit signed integer value read from the ADC ranges from this negative value to this positive value.
- * This is used to convert the raw ADC code to a voltage.
- */
+/// The 32 bit signed integer value read from the ADC ranges from this negative value to this positive value.
+/// This is used to convert the raw ADC code to a voltage.
 pub const MAX_SIGNED_CODE_SIZE: f64 = 2147483648.0; // 2^31

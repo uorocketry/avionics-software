@@ -39,7 +39,9 @@ pub type Line = String<255>;
 
 // Represents the scope of a read/write operation
 #[derive(defmt::Format)]
-pub enum OperationScope {
+pub
+enum OperationScope
+{
 	Root, // Reads/Writes the file in the absolute path specified
 	CurrentSession // Reads/Writes the file in the current session directory
 }

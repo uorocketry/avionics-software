@@ -23,7 +23,9 @@ pub struct ThermocoupleReading {
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Thermocouple {
+pub
+enum Thermocouple
+{
 	Channel1 = 0,
 	Channel2 = 1,
 	Channel3 = 2,

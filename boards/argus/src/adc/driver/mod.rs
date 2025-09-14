@@ -1,5 +1,5 @@
-pub mod registers;
 pub mod commands;
+pub mod registers;
 pub mod types;
 
 use defmt::warn;

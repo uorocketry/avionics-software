@@ -1,6 +1,8 @@
 #[repr(u8)]
 #[derive(Copy, Clone, Debug)]
-pub enum Command {
+pub
+enum Command
+{
 	// No Operation.
 	// Safe placeholder that does nothing — can be used when you need to clock the SPI bus without triggering any action.
 	NOP	= 0x00,

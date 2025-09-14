@@ -293,14 +293,12 @@ impl SDCardService {
 	}
 }
 
-/**
- * Get the name of a file or directory from its basename i.e. remove the extension
- * Example: foo.txt -> foo
- */
-fn get_name_from_basename<'b>(bytes: &'b[u8]) -> &'b str {
+/// Get the name of a file or directory from its basename i.e. remove the extension
+/// Example: foo.txt -> foo
+fn get_name_from_basename<'b>(bytes: &'b[u8]) -> &'b str{
 	let mut end = bytes.len();
 	while end > 0 && bytes[end - 1] == b' ' {
 		end -= 1;
 	}
-	return core::str::from_utf8(&bytes[..end]).unwrap()
+	return core::str::from_utf8(&bytes[..end]).unwrap();
 }

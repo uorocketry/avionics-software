@@ -7,9 +7,9 @@
 // 	"You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'."
 // );
 
-mod utils;
-mod sd;
 mod adc;
+mod sd;
+mod utils;
 
 #[cfg(feature = "temperature")]
 mod temperature;
@@ -28,14 +28,16 @@ use sd::task::sd_card_task;
 use adc::service::AdcService;
 use crate::adc::service::AdcConfig;
 
-
 // All services are singletons held in a static cell to initialize after peripherals are available
 // And wrapped around a mutex so they can be accessed safely from multiple async tasks
 static SD_CARD_SERVICE: StaticCell<AsyncMutex<SDCardService>> = StaticCell::new();
 static ADC_SERVICE: StaticCell<AsyncMutex<AdcService>> = StaticCell::new();
 
 #[embassy_executor::main]
-async fn main(spawner: Spawner) {
+async fn main(
+	spawner: Spawner,
+)
+{
 	let peripherals = configure_hal();
 
 	let sd_card_service = SD_CARD_SERVICE.init(

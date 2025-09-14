@@ -2,9 +2,7 @@ use crate::adc::driver::types::{ChannelShift, DataRate, Gain};
 use crate::adc::service::{AdcService, AdcError};
 use crate::temperature::types::{Thermocouple, ThermocoupleReading};
 
-/**
- * Temperature traits for ADC service. Enabled by the "temperature" feature.
- */
+/// Temperature traits for ADC service. Enabled by the "temperature" feature.
 pub trait TemperatureAdcService {
 	async fn configure_for_temperature_measurement(&mut self) -> Result<(), AdcError>;
 	async fn read_thermocouple(&mut self, adc_index: usize, channel_index: usize) -> Result<ThermocoupleReading, AdcError>;
