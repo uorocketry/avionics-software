@@ -37,8 +37,35 @@ static ADC_SERVICE: StaticCell<AsyncMutex<AdcService>> = StaticCell::new();
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	let peripherals = configure_hal();
-	let sd_card_service = SD_CARD_SERVICE.init(AsyncMutex::new(SDCardService::new(peripherals.SPI1, peripherals.PA5, peripherals.PA7, peripherals.PA6, peripherals.PC4)));
-	let adc_service = ADC_SERVICE.init(AsyncMutex::new(AdcService::new(peripherals.SPI4, peripherals.PE2, peripherals.PE6, peripherals.PE5, peripherals.DMA1_CH0, peripherals.DMA1_CH1, [AdcConfig { chip_select: peripherals.PE1.degrade(), data_ready: peripherals.PB9.degrade(), reset: peripherals.PE0.degrade(), start: peripherals.PB0.degrade() }, AdcConfig { chip_select: peripherals.PB8.degrade(), data_ready: peripherals.PB6.degrade(), reset: peripherals.PB7.degrade(), start: peripherals.PB1.degrade() }])));
+	let sd_card_service = SD_CARD_SERVICE.init(AsyncMutex::new(SDCardService::new(
+		peripherals.SPI1,
+		peripherals.PA5,
+		peripherals.PA7,
+		peripherals.PA6,
+		peripherals.PC4,
+	)));
+	let adc_service = ADC_SERVICE.init(AsyncMutex::new(AdcService::new(
+		peripherals.SPI4,
+		peripherals.PE2,
+		peripherals.PE6,
+		peripherals.PE5,
+		peripherals.DMA1_CH0,
+		peripherals.DMA1_CH1,
+		[
+			AdcConfig {
+				chip_select: peripherals.PE1.degrade(),
+				data_ready: peripherals.PB9.degrade(),
+				reset: peripherals.PE0.degrade(),
+				start: peripherals.PB0.degrade(),
+			},
+			AdcConfig {
+				chip_select: peripherals.PB8.degrade(),
+				data_ready: peripherals.PB6.degrade(),
+				reset: peripherals.PB7.degrade(),
+				start: peripherals.PB1.degrade(),
+			},
+		],
+	)));
 
 	#[cfg(feature = "temperature")]
 	spawner.must_spawn(temperature::task::temperature_task(adc_service));

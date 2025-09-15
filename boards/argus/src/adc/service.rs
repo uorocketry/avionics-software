@@ -18,7 +18,15 @@ pub struct AdcService<const ADC_COUNT: usize = 2> {
 }
 
 impl<const ADC_COUNT: usize> AdcService<ADC_COUNT> {
-	pub fn new<T: spi::Instance>(peri: impl Peripheral<P = T> + 'static, sck: impl Peripheral<P = impl spi::SckPin<T>> + 'static, mosi: impl Peripheral<P = impl spi::MosiPin<T>> + 'static, miso: impl Peripheral<P = impl spi::MisoPin<T>> + 'static, tx_dma: impl Peripheral<P = impl spi::TxDma<T>> + 'static, rx_dma: impl Peripheral<P = impl spi::RxDma<T>> + 'static, adc_configs: [AdcConfig; ADC_COUNT]) -> Self {
+	pub fn new<T: spi::Instance>(
+		peri: impl Peripheral<P = T> + 'static,
+		sck: impl Peripheral<P = impl spi::SckPin<T>> + 'static,
+		mosi: impl Peripheral<P = impl spi::MosiPin<T>> + 'static,
+		miso: impl Peripheral<P = impl spi::MisoPin<T>> + 'static,
+		tx_dma: impl Peripheral<P = impl spi::TxDma<T>> + 'static,
+		rx_dma: impl Peripheral<P = impl spi::RxDma<T>> + 'static,
+		adc_configs: [AdcConfig; ADC_COUNT],
+	) -> Self {
 		let mut spi_config = spi::Config::default();
 		spi_config.frequency = mhz(8);
 		spi_config.mode = spi::MODE_1;

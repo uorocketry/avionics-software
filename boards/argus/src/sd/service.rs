@@ -9,7 +9,10 @@ use heapless::String;
 use static_cell::StaticCell;
 
 use crate::sd::time_source::FakeTimeSource;
-use crate::sd::types::{FilePath, Line, OperationScope, SDCardChannel, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice, SDCardSpiRefCell, SDCardVolumeManager};
+use crate::sd::types::{
+	FilePath, Line, OperationScope, SDCardChannel, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice,
+	SDCardSpiRefCell, SDCardVolumeManager,
+};
 use crate::utils::types::AsyncMutex;
 
 // Maximum number of session directories allowed
@@ -36,7 +39,13 @@ pub struct SDCardService {
 }
 
 impl SDCardService {
-	pub fn new<T: spi::Instance>(peri: impl Peripheral<P = T> + 'static, sck: impl Peripheral<P = impl SckPin<T>> + 'static, mosi: impl Peripheral<P = impl MosiPin<T>> + 'static, miso: impl Peripheral<P = impl MisoPin<T>> + 'static, cs: impl Peripheral<P = impl gpio::Pin> + 'static) -> Self {
+	pub fn new<T: spi::Instance>(
+		peri: impl Peripheral<P = T> + 'static,
+		sck: impl Peripheral<P = impl SckPin<T>> + 'static,
+		mosi: impl Peripheral<P = impl MosiPin<T>> + 'static,
+		miso: impl Peripheral<P = impl MisoPin<T>> + 'static,
+		cs: impl Peripheral<P = impl gpio::Pin> + 'static,
+	) -> Self {
 		// Only the SD Card is on this SPI Bus so the driver, mutex and, ref cell can be stored here and not shared
 		let mut spi_config = spi::Config::default();
 		spi_config.frequency = time::mhz(16);
@@ -54,13 +63,20 @@ impl SDCardService {
 
 		// Embedded SDMMC library setup
 		let sd_card = SDCardInstance::new(spi_device, Delay);
-		let volume_manager: SDCardVolumeManager<MAX_SESSIONS_COUNT, MAX_FILES_COUNT> = SDCardVolumeManager::new_with_limits(sd_card, FakeTimeSource::new(), 0);
+		let volume_manager: SDCardVolumeManager<MAX_SESSIONS_COUNT, MAX_FILES_COUNT> =
+			SDCardVolumeManager::new_with_limits(sd_card, FakeTimeSource::new(), 0);
 
-		return SDCardService { volume_manager, current_session: None };
+		return SDCardService {
+			volume_manager,
+			current_session: None,
+		};
 	}
 
 	// Closure that handles accessing root directory
-	pub fn with_root<T, E>(&mut self, f: impl for<'b> FnOnce(SDCardDirectory<'b, MAX_SESSIONS_COUNT, MAX_FILES_COUNT>) -> Result<T, Error<SdCardError>>) -> Result<T, Error<SdCardError>> {
+	pub fn with_root<T, E>(
+		&mut self,
+		f: impl for<'b> FnOnce(SDCardDirectory<'b, MAX_SESSIONS_COUNT, MAX_FILES_COUNT>) -> Result<T, Error<SdCardError>>,
+	) -> Result<T, Error<SdCardError>> {
 		debug!("Opening root directory");
 		let volume = self.volume_manager.open_volume(VolumeIdx(0))?;
 		let root_dir = volume.open_root_dir()?;
@@ -84,12 +100,20 @@ impl SDCardService {
 	}
 
 	// Non-blocking write that queues the message to be written by the async task
-	pub async fn enqueue_write(scope: OperationScope, path: FilePath, line: Line) {
+	pub async fn enqueue_write(
+		scope: OperationScope,
+		path: FilePath,
+		line: Line,
+	) {
 		debug!("Enqueuing write to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
 		SD_CARD_CHANNEL.send((scope, path, line)).await;
 	}
 
-	pub fn delete(&mut self, scope: OperationScope, path: FilePath) {
+	pub fn delete(
+		&mut self,
+		scope: OperationScope,
+		path: FilePath,
+	) {
 		debug!("Deleting from SD card: {:?}, {:?}", scope, path.as_str());
 
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure
@@ -112,7 +136,12 @@ impl SDCardService {
 	}
 
 	// Blocking write that immediately writes the message to the SD card
-	pub fn write(&mut self, scope: OperationScope, path: FilePath, line: Line) -> Result<(), Error<SdCardError>> {
+	pub fn write(
+		&mut self,
+		scope: OperationScope,
+		path: FilePath,
+		line: Line,
+	) -> Result<(), Error<SdCardError>> {
 		debug!("Writing to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
 
 		// Ensure session directory is created if writing to current session
@@ -137,7 +166,12 @@ impl SDCardService {
 		})
 	}
 
-	pub fn read<F: FnMut(&Line)>(&mut self, scope: OperationScope, path: FilePath, mut handle_line: F) -> Result<(), Error<SdCardError>> {
+	pub fn read<F: FnMut(&Line)>(
+		&mut self,
+		scope: OperationScope,
+		path: FilePath,
+		mut handle_line: F,
+	) -> Result<(), Error<SdCardError>> {
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure
 
 		let session = match scope {

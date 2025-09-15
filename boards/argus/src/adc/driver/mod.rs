@@ -32,7 +32,12 @@ where
 	Reset: OutputPin,
 	Start: OutputPin,
 {
-	pub fn new(spi_device: SPI, data_ready: DataReady, reset: Reset, start: Start) -> Self {
+	pub fn new(
+		spi_device: SPI,
+		data_ready: DataReady,
+		reset: Reset,
+		start: Start,
+	) -> Self {
 		Self {
 			spi_device,
 			data_ready,
@@ -49,14 +54,21 @@ where
 		}
 	}
 
-	pub async fn read_single_ended(&mut self, channel: AnalogChannel) -> Result<f32, E> {
+	pub async fn read_single_ended(
+		&mut self,
+		channel: AnalogChannel,
+	) -> Result<f32, E> {
 		self.set_channels(channel, AnalogChannel::AINCOM).await?;
 		self.wait_for_next_data().await;
 		let code = self.read_data_code().await?;
 		Ok(self.convert_code_to_volts(code))
 	}
 
-	pub async fn read_differential(&mut self, positive: AnalogChannel, negative: AnalogChannel) -> Result<f32, E> {
+	pub async fn read_differential(
+		&mut self,
+		positive: AnalogChannel,
+		negative: AnalogChannel,
+	) -> Result<f32, E> {
 		self.set_channels(positive, negative).await?;
 		self.wait_for_next_data().await;
 		let code = self.read_data_code().await?;
@@ -72,12 +84,19 @@ where
 		Ok(())
 	}
 
-	async fn send_command(&mut self, command: Command) -> Result<(), E> {
+	async fn send_command(
+		&mut self,
+		command: Command,
+	) -> Result<(), E> {
 		self.spi_device.write(&[command as u8]).await?;
 		Ok(())
 	}
 
-	async fn set_channels(&mut self, positive: AnalogChannel, negative: AnalogChannel) -> Result<(), E> {
+	async fn set_channels(
+		&mut self,
+		positive: AnalogChannel,
+		negative: AnalogChannel,
+	) -> Result<(), E> {
 		// Shift positive channel to the left by 4 bits and combine with negative channel using bitwise OR
 		// | dddd | dddd |
 		// | AINP | AINN |
@@ -110,13 +129,20 @@ where
 		Ok(code)
 	}
 
-	pub fn convert_code_to_volts(&self, code: i32) -> f32 {
+	pub fn convert_code_to_volts(
+		&self,
+		code: i32,
+	) -> f32 {
 		// Convert a 32‑bit two’s‑complement code to volts, using current VREF and PGA gain.
 		let full_scale_range: f32 = self.reference_range.to_volts() / (self.gain as u8 as f32);
 		(code as f64 / MAX_SIGNED_CODE_SIZE) as f32 * full_scale_range
 	}
 
-	async fn write_register(&mut self, register: Register, value: u8) -> Result<(), E> {
+	async fn write_register(
+		&mut self,
+		register: Register,
+		value: u8,
+	) -> Result<(), E> {
 		// Mask to 5 bits just in case, to remove the leading bits
 		let mut address = register as u8;
 		address = address & 0x1F;
@@ -132,7 +158,10 @@ where
 		Ok(())
 	}
 
-	async fn read_register(&mut self, register: Register) -> Result<u8, E> {
+	async fn read_register(
+		&mut self,
+		register: Register,
+	) -> Result<u8, E> {
 		let mut address = register as u8;
 		// Mask to 5 bits just in case, to remove the leading bits
 		address = address & 0x1F;
