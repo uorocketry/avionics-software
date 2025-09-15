@@ -3,23 +3,23 @@ pub mod registers;
 pub mod types;
 
 use commands::Command;
-use defmt::warn;
+use defmt::{debug, warn};
 use embassy_time::Timer;
 use embedded_hal::digital::{InputPin, OutputPin};
 use embedded_hal_async::spi::SpiDevice;
 use registers::Register;
-use types::{AnalogChannel, ChannelShift, DataRate, Filter, Gain, ReferenceVoltageSource, MAX_SIGNED_CODE_SIZE};
+use types::{AnalogChannel, DataRate, Filter, Gain, ReferenceRange, MAX_SIGNED_CODE_SIZE};
 
 pub struct Ads1262<SPI, DataReady, Reset, Start> {
 	spi_device: SPI,
 	data_ready: DataReady,
 	reset: Reset,
 	start: Start,
+	last_set_channel_pair: (AnalogChannel, AnalogChannel),
 
 	// Configurable parameters for the ADC. After changing call apply_configurations() to apply them to the ADC
-	pub channel_shift: ChannelShift,
-	pub enable_internal_reference_voltage: bool,
-	pub reference_voltage_source: ReferenceVoltageSource,
+	pub enable_internal_reference: bool,
+	pub reference_range: ReferenceRange,
 	pub gain: Gain,
 	pub filter: Filter,
 	pub data_rate: DataRate,
@@ -38,11 +38,11 @@ where
 			data_ready,
 			reset,
 			start,
+			last_set_channel_pair: (AnalogChannel::AINCOM, AnalogChannel::AINCOM),
 
 			// Some default values. These will get configured later
-			reference_voltage_source: ReferenceVoltageSource::Avdd,
-			channel_shift: ChannelShift::None,
-			enable_internal_reference_voltage: true,
+			reference_range: ReferenceRange::Avdd,
+			enable_internal_reference: true,
 			gain: Gain::G1,
 			filter: Filter::Sinc1,
 			data_rate: DataRate::Sps1200,
@@ -60,7 +60,8 @@ where
 		self.set_channels(positive, negative).await?;
 		self.wait_for_next_data().await;
 		let code = self.read_data_code().await?;
-		Ok(self.convert_code_to_volts(code))
+		let volts = self.convert_code_to_volts(code);
+		Ok(volts)
 	}
 
 	pub async fn reset_hardware(&mut self) -> Result<(), E> {
@@ -81,7 +82,15 @@ where
 		// | dddd | dddd |
 		// | AINP | AINN |
 
-		self.write_register(Register::INPMUX, ((positive as u8) << 4) | (negative as u8)).await
+		if (positive, negative) == self.last_set_channel_pair {
+			// No need to set the same channel pair again
+			return Ok(());
+		}
+
+		self.write_register(Register::INPMUX, ((positive as u8) << 4) | (negative as u8)).await?;
+		self.last_set_channel_pair = (positive, negative);
+
+		Ok(())
 	}
 
 	async fn read_data_code(&mut self) -> Result<i32, E> {
@@ -103,7 +112,7 @@ where
 
 	pub fn convert_code_to_volts(&self, code: i32) -> f32 {
 		// Convert a 32‑bit two’s‑complement code to volts, using current VREF and PGA gain.
-		let full_scale_range: f32 = self.reference_voltage_source.to_volts() / (self.gain as u8 as f32);
+		let full_scale_range: f32 = self.reference_range.to_volts() / (self.gain as u8 as f32);
 		(code as f64 / MAX_SIGNED_CODE_SIZE) as f32 * full_scale_range
 	}
 
@@ -156,8 +165,8 @@ where
 	pub async fn apply_configurations(&mut self) -> Result<(), E> {
 		self.send_command(Command::STOP1).await?;
 
-		self.apply_reference_voltage_source_configuration().await?;
-		self.apply_internal_reference_voltage_and_channel_shift_configuration().await?;
+		self.apply_reference_range_configuration().await?;
+		self.apply_internal_reference_configuration().await?;
 
 		// Disable all interface options (status byte, CRC, watchdog)
 		// SHOULDDO: make these configurable
@@ -178,15 +187,15 @@ where
 		Ok(())
 	}
 
-	async fn apply_reference_voltage_source_configuration(&mut self) -> Result<(), E> {
+	async fn apply_reference_range_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x00;
 
-		match self.reference_voltage_source {
-			ReferenceVoltageSource::Avdd => {
+		match self.reference_range {
+			ReferenceRange::Avdd => {
 				register_value |= 0b100 << 3; // AVDD
 				register_value |= 0b100; // AVSS
 			}
-			ReferenceVoltageSource::Internal2_5 => {
+			ReferenceRange::Internal2_5 => {
 				register_value |= 0b000 << 3; // INTERNAL 2.5V
 				register_value |= 0b100; // AVSS
 			}
@@ -196,18 +205,11 @@ where
 		Ok(())
 	}
 
-	async fn apply_internal_reference_voltage_and_channel_shift_configuration(&mut self) -> Result<(), E> {
+	async fn apply_internal_reference_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x00;
 
-		if self.enable_internal_reference_voltage {
+		if self.enable_internal_reference {
 			register_value |= 1 << 0;
-		}
-
-		if matches!(self.channel_shift, ChannelShift::MidSupply) {
-			if matches!(self.reference_voltage_source, ReferenceVoltageSource::Internal2_5) {
-				warn!("Channel shift is set to mid-supply while ADC reference is internal 2.5V. This leads to the zero point being at ADC max.");
-			}
-			register_value |= 1 << 1;
 		}
 
 		self.write_register(Register::POWER, register_value).await?;
@@ -235,6 +237,13 @@ where
 		self.write_register(Register::OFCAL1, 0x00).await?;
 		self.write_register(Register::OFCAL2, 0x00).await?;
 		Ok(())
+	}
+
+	pub async fn get_id_and_revision(&mut self) -> Result<(u8, u8), E> {
+		let id = self.read_register(Register::ID).await?;
+		let device_id = (id >> 5) & 0x07; // bits 7:5
+		let revision_id = id & 0x1F; // bits 4:0
+		Ok((device_id, revision_id))
 	}
 
 	async fn apply_full_scale_calibration_configuration(&mut self) -> Result<(), E> {

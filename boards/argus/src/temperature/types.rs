@@ -6,19 +6,19 @@ use crate::adc::driver::types::AnalogChannel;
 #[derive(Debug, Clone, Copy, Format)]
 pub struct ThermocoupleReading {
 	// Timestamp of the reading in milliseconds since epoch
-	pub timestamp: u64,
+	pub milliseconds_as_of_epoch: u64,
 
 	// Thermocouple voltage difference measured in millivolts
-	pub voltage: f32,
+	pub voltage_in_millivolts: f32,
 
 	// Cold-junction-compensated temperature of the thermocouple in degrees Celsius
-	pub compensated_temperature: f32,
+	pub compensated_temperature_in_celsius: Option<f32>,
 
 	// Uncompensated temperature of the thermocouple in degrees Celsius
-	pub uncompensated_temperature: f32,
+	pub uncompensated_temperature_in_celsius: Option<f32>,
 
 	// Temperature of the cold junction in degrees Celsius
-	pub cold_junction_temperature: f32,
+	pub cold_junction_temperature_in_celsius: Option<f32>,
 }
 
 #[repr(u8)]

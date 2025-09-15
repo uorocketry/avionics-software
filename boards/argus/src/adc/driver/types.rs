@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum AnalogChannel {
 	AIN0 = 0,
 	AIN1 = 1,
@@ -13,6 +13,25 @@ pub enum AnalogChannel {
 	AIN8 = 8,
 	AIN9 = 9,
 	AINCOM = 10,
+}
+
+impl AnalogChannel {
+	pub fn from(value: u8) -> Self {
+		match value {
+			0 => AnalogChannel::AIN0,
+			1 => AnalogChannel::AIN1,
+			2 => AnalogChannel::AIN2,
+			3 => AnalogChannel::AIN3,
+			4 => AnalogChannel::AIN4,
+			5 => AnalogChannel::AIN5,
+			6 => AnalogChannel::AIN6,
+			7 => AnalogChannel::AIN7,
+			8 => AnalogChannel::AIN8,
+			9 => AnalogChannel::AIN9,
+			10 => AnalogChannel::AINCOM,
+			_ => panic!("Invalid AnalogChannel value: {}", value),
+		}
+	}
 }
 
 /// Preset Gain values from ADS126x datasheet
@@ -64,32 +83,18 @@ pub enum DataRate {
 	Sps38400 = 15, // 0b1111,
 }
 
-/// Shift the channel's voltage
-///
-/// MidSupply: shift to (VREFP - VREFN) / 2
-/// Useful when using single‑ended sensors (like thermocouples, high‑impedance voltage inputs) that would otherwise float with no defined negative return.
-/// Biasing them to mid‑supply keeps the measurement within the ADC’s common‑mode input range.
-///
-/// None: No shift
-/// Useful when using differential sensors (like bridge sensors, 4‑wire RTDs) that already provide a well‑defined return, or if you externally drive the negative terminal.
-#[derive(Copy, Clone, Debug)]
-pub enum ChannelShift {
-	MidSupply,
-	None,
-}
-
 /// Defines the reference voltage for the ADC.
 /// This defines the full-scale-differential input range = VREFP - VREFN / Gain
 #[derive(Copy, Clone, Debug)]
-pub enum ReferenceVoltageSource {
+pub enum ReferenceRange {
 	Avdd,        // REFP = Avdd, REFN = Avss
 	Internal2_5, // REFP = Internal 2.5V REFN = Avss
 }
-impl ReferenceVoltageSource {
+impl ReferenceRange {
 	pub fn to_volts(&self) -> f32 {
 		match self {
-			ReferenceVoltageSource::Avdd => 5.0,
-			ReferenceVoltageSource::Internal2_5 => 2.5,
+			ReferenceRange::Avdd => 5.0,
+			ReferenceRange::Internal2_5 => 2.5,
 		}
 	}
 }
