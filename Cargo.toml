@@ -27,9 +27,9 @@ git = "https://github.com/uorocketry/messages-prost"
 
 [workspace.dependencies.panic-probe]
 version = "0.3"
-features = ["print-defmt"] 
+features = ["print-defmt"]
 
-[workspace.dependencies.defmt] 
+[workspace.dependencies.defmt]
 version = "0.3.2"
 
 [workspace.dependencies.defmt-rtt]

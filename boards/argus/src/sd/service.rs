@@ -92,8 +92,8 @@ impl SDCardService {
 		debug!("Starting SD card write loop.");
 		loop {
 			let (scope, path, line) = SD_CARD_CHANNEL.receiver().receive().await;
-			if service_mutex.lock().await.write(scope, path, line).is_err() {
-				error!("Could not write to SD card.");
+			if let Err(error) = service_mutex.lock().await.write(scope, path, line) {
+				error!("Could not write to SD card: {}", Debug2Format(&error));
 				continue;
 			}
 		}
@@ -117,7 +117,6 @@ impl SDCardService {
 		debug!("Deleting from SD card: {:?}, {:?}", scope, path.as_str());
 
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure
-
 		let session = match scope {
 			OperationScope::CurrentSession => Some(self.current_session.as_ref().unwrap().clone()),
 			_ => None,

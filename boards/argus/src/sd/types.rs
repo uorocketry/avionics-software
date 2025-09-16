@@ -35,7 +35,7 @@ pub type SDCardDirectory<'a, const MAX_SESSIONS_COUNT: usize, const MAX_FILES_CO
 	1,
 >;
 
-pub type FilePath = String<64>;
+pub type FilePath = String<12>; // FAT 8.3 format only allows 8 chars for name, 3 for extension and 1 for the dot
 pub type Line = String<255>;
 
 // Represents the scope of a read/write operation

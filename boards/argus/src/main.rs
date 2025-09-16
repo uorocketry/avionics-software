@@ -8,6 +8,7 @@
 // );
 
 mod adc;
+mod csv;
 mod sd;
 mod utils;
 
@@ -67,8 +68,12 @@ async fn main(spawner: Spawner) {
 		],
 	)));
 
+	// Spawn tasks needed for temperature board
 	#[cfg(feature = "temperature")]
-	spawner.must_spawn(temperature::task::temperature_task(adc_service));
+	{
+		spawner.must_spawn(temperature::task::measure_and_enqueue_temperature_readings(adc_service));
+		spawner.must_spawn(temperature::task::log_temperature_reading_to_sd_card(adc_service, sd_card_service));
+	}
 
 	spawner.must_spawn(sd_card_task(sd_card_service));
 	spawner.must_spawn(test_sd_card());
