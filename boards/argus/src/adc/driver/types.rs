@@ -1,5 +1,67 @@
 #![allow(dead_code)]
 
+#[repr(u8)]
+#[derive(Copy, Clone, Debug)]
+pub enum Command {
+	// No Operation.
+	// Safe placeholder that does nothing — can be used when you need to clock the SPI bus without triggering any action.
+	NOP = 0x00,
+
+	// Issues a soft reset of the ADC’s digital core.
+	// Equivalent to toggling the RESET pin, but done via SPI. This clears registers to default values.
+	RESET = 0x06,
+
+	// Starts ADC1 conversions (the main 32-bit delta-sigma converter).
+	// After this, the device begins sampling and toggling DRDY when results are ready.
+	START1 = 0x08,
+
+	// Stops ADC1 conversions. The modulator halts, DRDY no longer pulses, and power use is reduced until restarted.
+	STOP1 = 0x0A,
+
+	// Reads the latest conversion result from ADC1.
+	// You issue this command, then immediately read the output data bytes over SPI.
+	RDATA1 = 0x12,
+}
+
+#[repr(u8)]
+#[allow(non_camel_case_types)]
+#[derive(Copy, Clone, Debug)]
+pub enum Register {
+	// Device ID register. Lets you confirm you’re talking to an ADS1262 and check silicon revision.
+	ID = 0x00,
+
+	// Power and reference control. Controls enabling the internal 2.5 V reference (INTREF), power-down behavior, etc.
+	POWER = 0x01,
+
+	// Serial interface options. Can enable/disable appending the status byte, CRC, or watchdog timeout to data frames.
+	INTERFACE = 0x02,
+
+	// Conversion mode control. Sets things like chop mode, run/standby, reference reversal, and conversion delay.
+	MODE0 = 0x03,
+
+	// Filter and sensor bias. Selects digital filter (Sinc1/2/3/4 or FIR) and optional sensor bias current magnitude/polarity.
+	MODE1 = 0x04,
+
+	// Gain and data rate. Configures PGA gain (×1…×32), bypass, and the output data rate.
+	MODE2 = 0x05,
+
+	// Input multiplexer. Chooses which analog channel is positive (INP) and which is negative (INN).
+	INPMUX = 0x06,
+
+	// Offset calibration registers. Store a 24-bit value to correct zero-offset error.
+	OFCAL0 = 0x07,
+	OFCAL1 = 0x08,
+	OFCAL2 = 0x09,
+
+	// Full-scale calibration registers. Store a 24-bit value to correct gain/scale error.
+	FSCAL0 = 0x0A,
+	FSCAL1 = 0x0B,
+	FSCAL2 = 0x0C,
+
+	// Reference multiplexer register
+	REFMUX = 0x0F,
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum AnalogChannel {
 	AIN0 = 0,

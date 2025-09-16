@@ -1,14 +1,9 @@
-pub mod commands;
-pub mod registers;
 pub mod types;
 
-use commands::Command;
-use defmt::{debug, warn};
 use embassy_time::Timer;
 use embedded_hal::digital::{InputPin, OutputPin};
 use embedded_hal_async::spi::SpiDevice;
-use registers::Register;
-use types::{AnalogChannel, DataRate, Filter, Gain, ReferenceRange, MAX_SIGNED_CODE_SIZE};
+use types::{AnalogChannel, Command, DataRate, Filter, Gain, ReferenceRange, Register, MAX_SIGNED_CODE_SIZE};
 
 pub struct Ads1262<SPI, DataReady, Reset, Start> {
 	spi_device: SPI,
