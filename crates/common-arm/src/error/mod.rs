@@ -80,7 +80,6 @@
 //!     spawn_after!(sensor_send, 2.secs());
 //! });
 //! ```
-//!
 
 pub mod error_manager;
 pub mod hydra_error;
