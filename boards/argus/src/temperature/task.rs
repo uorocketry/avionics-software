@@ -4,7 +4,7 @@ use defmt::debug;
 use serde_csv_core::Writer;
 
 use crate::adc::service::AdcService;
-use crate::csv::types::SerializeCSV;
+use crate::sd::csv::types::SerializeCSV;
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FilePath, OperationScope};
 use crate::temperature::service::TemperatureAdcService;

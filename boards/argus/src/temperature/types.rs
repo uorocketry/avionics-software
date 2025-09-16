@@ -5,7 +5,8 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channe
 use heapless::String;
 use serde::Serialize;
 
-use crate::{adc::driver::types::AnalogChannel, csv::types::SerializeCSV};
+use crate::adc::driver::types::AnalogChannel;
+use crate::sd::csv::types::SerializeCSV;
 
 // Represents a single temperature reading from a thermocouple channel
 #[derive(Debug, Clone, Copy, Format, Serialize)]

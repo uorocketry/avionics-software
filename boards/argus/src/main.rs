@@ -8,7 +8,6 @@
 // );
 
 mod adc;
-mod csv;
 mod sd;
 mod serial;
 mod utils;
