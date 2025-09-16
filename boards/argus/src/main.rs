@@ -10,29 +10,35 @@
 mod adc;
 mod csv;
 mod sd;
+mod serial;
 mod utils;
 
 #[cfg(feature = "temperature")]
 mod temperature;
 
-use adc::service::AdcService;
+use adc::service::{AdcConfig, AdcService};
 use defmt::info;
 use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::Pin;
+use embassy_stm32::{bind_interrupts, peripherals, usart};
 use panic_probe as _;
 use sd::service::SDCardService;
 use sd::task::{sd_card_task, test_sd_card};
+use serial::SerialService;
 use static_cell::StaticCell;
 use utils::hal::configure_hal;
 use utils::types::AsyncMutex;
 
-use crate::adc::service::AdcConfig;
+bind_interrupts!(struct InterruptRequests {
+	UART7 => usart::InterruptHandler<peripherals::UART7>;
+});
 
 // All services are singletons held in a static cell to initialize after peripherals are available
 // And wrapped around a mutex so they can be accessed safely from multiple async tasks
 static SD_CARD_SERVICE: StaticCell<AsyncMutex<SDCardService>> = StaticCell::new();
 static ADC_SERVICE: StaticCell<AsyncMutex<AdcService>> = StaticCell::new();
+static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -67,6 +73,21 @@ async fn main(spawner: Spawner) {
 			},
 		],
 	)));
+	let serial_service = SERIAL_SERVICE.init(AsyncMutex::new(
+		SerialService::new(
+			peripherals.UART7,
+			peripherals.PE8,
+			peripherals.PE7,
+			InterruptRequests,
+			peripherals.DMA1_CH2,
+			peripherals.DMA1_CH3,
+			115200,
+		)
+		.unwrap(),
+	));
+
+	spawner.must_spawn(sd_card_task(sd_card_service));
+	spawner.must_spawn(test_sd_card());
 
 	// Spawn tasks needed for temperature board
 	#[cfg(feature = "temperature")]
@@ -74,7 +95,4 @@ async fn main(spawner: Spawner) {
 		spawner.must_spawn(temperature::task::measure_and_enqueue_temperature_readings(adc_service));
 		spawner.must_spawn(temperature::task::log_temperature_reading_to_sd_card(adc_service, sd_card_service));
 	}
-
-	spawner.must_spawn(sd_card_task(sd_card_service));
-	spawner.must_spawn(test_sd_card());
 }
