@@ -30,8 +30,6 @@ use static_cell::StaticCell;
 use utils::hal::configure_hal;
 use utils::types::AsyncMutex;
 
-use crate::config::ADC_COUNT;
-
 // Mapping of NVIC interrupts to Embassy interrupt handlers
 bind_interrupts!(struct InterruptRequests {
 	UART7 => usart::InterruptHandler<peripherals::UART7>;
