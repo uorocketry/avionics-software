@@ -1,23 +1,25 @@
+use core::convert::Infallible;
+
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
+use embassy_embedded_hal::shared_bus::SpiDeviceError;
 use embassy_stm32::Peripheral;
 use embassy_stm32::{gpio, mode, spi, time::mhz};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use static_cell::StaticCell;
 
 use crate::adc::driver::Ads1262;
+use crate::config::ADC_COUNT;
 
 // HACK: Use a static cell to hold the SPI bus shared between multiple ADC instances since we can't have self-referencing structs
 // i.e. AdcService holding multiple ADC instances that each hold a reference to the same SPI bus that the ADC service also owns
-#[allow(dead_code)]
 static ADC_SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex, spi::Spi<'static, mode::Async>>> = StaticCell::new();
 
 /// Acts as an orchestration layer for multiple ADC drivers.
-/// Variants of this service can be created for different purposes, such as temperature, strain, pressure, etc.
-pub struct AdcService<const ADC_COUNT: usize = 2> {
+pub struct AdcService {
 	pub drivers: [AdcDriver; ADC_COUNT],
 }
 
-impl<const ADC_COUNT: usize> AdcService<ADC_COUNT> {
+impl AdcService {
 	pub fn new<T: spi::Instance>(
 		peri: impl Peripheral<P = T> + 'static,
 		sck: impl Peripheral<P = impl spi::SckPin<T>> + 'static,
@@ -64,4 +66,4 @@ type AdcDriver = Ads1262<
 >;
 
 /// The Spi device error type for the ADC driver
-pub type AdcError = embassy_embedded_hal::shared_bus::SpiDeviceError<spi::Error, core::convert::Infallible>;
+pub type AdcError = SpiDeviceError<spi::Error, Infallible>;

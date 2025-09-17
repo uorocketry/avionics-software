@@ -8,33 +8,24 @@ use embedded_sdmmc::{Error, Mode, SdCardError, VolumeIdx};
 use heapless::String;
 use static_cell::StaticCell;
 
+use crate::sd::config::{MAX_DIRS, MAX_FILES};
 use crate::sd::time_source::FakeTimeSource;
 use crate::sd::types::{
-	FilePath, Line, OperationScope, SDCardChannel, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice,
-	SDCardSpiRefCell, SDCardVolumeManager,
+	FileName, Line, OperationScope, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice, SDCardSpiRefCell,
+	SDCardVolumeManager, SdOperationQueue,
 };
 use crate::utils::types::AsyncMutex;
-
-// Maximum number of session directories allowed
-const MAX_SESSIONS_COUNT: usize = 4;
-
-// Max number of files before embedded-sdmmc overflows
-const MAX_FILES_COUNT: usize = 4;
-
-// Max number of messages allowed in the channel before it locks up until the channel clears
-const QUEUE_SIZE: usize = 8;
 
 // Hack: During SDCardService initialization, SpiMutex needs to be passed by reference to SpiDevice and they both need to be encapsulated within SDCardService
 // Which is not possible because rust does not allow self-referencing structs so it's being made static cell instead of maintained inside SDCardService which is a singleton anyways
 // Cannot be a pure static because it depends on peripherals which become available later
 static SD_CARD_SPI_REFCELL: StaticCell<SDCardSpiRefCell> = StaticCell::new();
 
-// Channel to allow deferring the action of writing to the sd card
-#[allow(dead_code)]
-static SD_CARD_CHANNEL: SDCardChannel<QUEUE_SIZE> = SDCardChannel::new();
+// Channel for queueing write operations
+static SD_OPERATION_QUEUE: SdOperationQueue = SdOperationQueue::new();
 
 pub struct SDCardService {
-	volume_manager: SDCardVolumeManager<MAX_SESSIONS_COUNT, MAX_FILES_COUNT>,
+	volume_manager: SDCardVolumeManager<MAX_DIRS, MAX_FILES>,
 	current_session: Option<String<3>>, // Wrapped around option to so if None session has not been created yet
 }
 
@@ -63,8 +54,7 @@ impl SDCardService {
 
 		// Embedded SDMMC library setup
 		let sd_card = SDCardInstance::new(spi_device, Delay);
-		let volume_manager: SDCardVolumeManager<MAX_SESSIONS_COUNT, MAX_FILES_COUNT> =
-			SDCardVolumeManager::new_with_limits(sd_card, FakeTimeSource::new(), 0);
+		let volume_manager: SDCardVolumeManager<MAX_DIRS, MAX_FILES> = SDCardVolumeManager::new_with_limits(sd_card, FakeTimeSource::new(), 0);
 
 		return SDCardService {
 			volume_manager,
@@ -75,7 +65,7 @@ impl SDCardService {
 	// Closure that handles accessing root directory
 	pub fn with_root<T, E>(
 		&mut self,
-		f: impl for<'b> FnOnce(SDCardDirectory<'b, MAX_SESSIONS_COUNT, MAX_FILES_COUNT>) -> Result<T, Error<SdCardError>>,
+		f: impl for<'b> FnOnce(SDCardDirectory<'b, MAX_DIRS, MAX_FILES>) -> Result<T, Error<SdCardError>>,
 	) -> Result<T, Error<SdCardError>> {
 		debug!("Opening root directory");
 		let volume = self.volume_manager.open_volume(VolumeIdx(0))?;
@@ -91,7 +81,7 @@ impl SDCardService {
 
 		debug!("Starting SD card write loop.");
 		loop {
-			let (scope, path, line) = SD_CARD_CHANNEL.receiver().receive().await;
+			let (scope, path, line) = SD_OPERATION_QUEUE.receiver().receive().await;
 			if let Err(error) = service_mutex.lock().await.write(scope, path, line) {
 				error!("Could not write to SD card: {}", Debug2Format(&error));
 				continue;
@@ -102,17 +92,17 @@ impl SDCardService {
 	// Non-blocking write that queues the message to be written by the async task
 	pub async fn enqueue_write(
 		scope: OperationScope,
-		path: FilePath,
+		path: FileName,
 		line: Line,
 	) {
 		debug!("Enqueuing write to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
-		SD_CARD_CHANNEL.send((scope, path, line)).await;
+		SD_OPERATION_QUEUE.send((scope, path, line)).await;
 	}
 
 	pub fn delete(
 		&mut self,
 		scope: OperationScope,
-		path: FilePath,
+		path: FileName,
 	) {
 		debug!("Deleting from SD card: {:?}, {:?}", scope, path.as_str());
 
@@ -138,7 +128,7 @@ impl SDCardService {
 	pub fn write(
 		&mut self,
 		scope: OperationScope,
-		path: FilePath,
+		path: FileName,
 		line: Line,
 	) -> Result<(), Error<SdCardError>> {
 		debug!("Writing to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
@@ -168,7 +158,7 @@ impl SDCardService {
 	pub fn read<F: FnMut(&Line)>(
 		&mut self,
 		scope: OperationScope,
-		path: FilePath,
+		path: FileName,
 		mut handle_line: F,
 	) -> Result<(), Error<SdCardError>> {
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure

@@ -80,5 +80,5 @@ impl SerialService {
 	}
 }
 
-type AsyncUart = Uart<'static, mode::Async>;
-type AsyncUartError = <AsyncUart as embedded_io_async::ErrorType>::Error;
+pub type AsyncUart = Uart<'static, mode::Async>;
+pub type AsyncUartError = <AsyncUart as embedded_io_async::ErrorType>::Error;

@@ -8,6 +8,7 @@ use embedded_hal_bus::spi::RefCellDevice;
 use embedded_sdmmc::{Directory, SdCard, VolumeManager};
 use heapless::String;
 
+use crate::sd::config::{MAX_LINE_LENGTH, QUEUE_SIZE};
 use crate::sd::time_source::FakeTimeSource;
 
 // Some typings to make the code more readable
@@ -18,25 +19,26 @@ pub type SDCardSpiDevice = RefCellDevice<'static, SDCardSpiBus, SDCardChipSelect
 
 pub type SDCardInstance = SdCard<SDCardSpiDevice, Delay>;
 
-pub type SDCardVolumeManager<const MAX_SESSIONS_COUNT: usize, const MAX_FILES_COUNT: usize> = VolumeManager<
+pub type SDCardVolumeManager<const MAX_DIRS: usize, const MAX_FILES: usize> = VolumeManager<
 	SDCardInstance,
 	FakeTimeSource,
-	MAX_SESSIONS_COUNT, // MAX_DIRS translates to MaxSessions count because each session is a directory
-	MAX_FILES_COUNT,
+	MAX_DIRS, // MAX_DIRS translates to MaxSessions count because each session is a directory
+	MAX_FILES,
 	1,
 >;
 
-pub type SDCardDirectory<'a, const MAX_SESSIONS_COUNT: usize, const MAX_FILES_COUNT: usize> = Directory<
+pub type SDCardDirectory<'a, const MAX_DIRS: usize, const MAX_FILES: usize> = Directory<
 	'a,
 	SDCardInstance,
 	FakeTimeSource,
-	MAX_SESSIONS_COUNT, // MAX_DIRS translates to MaxSessions count because each session is a directory
-	MAX_FILES_COUNT,
+	MAX_DIRS, // MAX_DIRS translates to MaxSessions count because each session is a directory
+	MAX_FILES,
 	1,
 >;
 
-pub type FilePath = String<12>; // FAT 8.3 format only allows 8 chars for name, 3 for extension and 1 for the dot
-pub type Line = String<255>;
+pub type FileName = String<12>; // FAT 8.3 format only allows 8 chars for name, 3 for extension and 1 for the dot
+pub type DirectoryName = String<8>; // Max directory name length in FAT 8.3 is 8 characters
+pub type Line = String<MAX_LINE_LENGTH>; // A line to be written to the SD card
 
 // Represents the scope of a read/write operation
 #[derive(defmt::Format)]
@@ -45,4 +47,4 @@ pub enum OperationScope {
 	CurrentSession, // Reads/Writes the file in the current session directory
 }
 
-pub type SDCardChannel<const CHANNEL_SIZE: usize> = Channel<CriticalSectionRawMutex, (OperationScope, FilePath, Line), CHANNEL_SIZE>;
+pub type SdOperationQueue = Channel<CriticalSectionRawMutex, (OperationScope, FileName, Line), QUEUE_SIZE>;

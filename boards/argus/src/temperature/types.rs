@@ -5,8 +5,18 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channe
 use heapless::String;
 use serde::Serialize;
 
-use crate::adc::driver::types::AnalogChannel;
+use crate::config::AdcDevice;
 use crate::sd::csv::types::SerializeCSV;
+use crate::sd::types::Line;
+use crate::temperature::config::{ThermocoupleChannel, QUEUE_SIZE};
+
+// Represents a linear transformation applied to raw thermocouple voltage readings to get degrees Celsius
+// temperature_in_celsius = raw_voltage * gain + offset
+#[derive(Debug, Clone, Copy, Format, Serialize, Default)]
+pub struct ValueTransformation {
+	pub gain: f32,
+	pub offset: f32,
+}
 
 // Represents a single temperature reading from a thermocouple channel
 #[derive(Debug, Clone, Copy, Format, Serialize)]
@@ -28,7 +38,7 @@ pub struct ThermocoupleReading {
 }
 
 impl SerializeCSV for ThermocoupleReading {
-	fn get_header() -> String<255> {
+	fn get_header() -> Line {
 		String::from_str(
 			"Timestamp (ms),\
 			Voltage (mV),\
@@ -40,39 +50,4 @@ impl SerializeCSV for ThermocoupleReading {
 	}
 }
 
-/// Defines the association between a thermocouple and the analog input pair it uses
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize)]
-pub enum ThermocoupleChannel {
-	Channel1 = 0,
-	Channel2 = 1,
-	Channel3 = 2,
-	Channel4 = 3,
-}
-
-impl ThermocoupleChannel {
-	pub fn len() -> usize {
-		4
-	}
-
-	pub fn from(value: usize) -> Self {
-		match value {
-			0 => ThermocoupleChannel::Channel1,
-			1 => ThermocoupleChannel::Channel2,
-			2 => ThermocoupleChannel::Channel3,
-			3 => ThermocoupleChannel::Channel4,
-			_ => panic!("Invalid thermocouple channel index: {}", value),
-		}
-	}
-
-	pub fn to_analog_input_channel_pair(&self) -> (AnalogChannel, AnalogChannel) {
-		match self {
-			ThermocoupleChannel::Channel1 => (AnalogChannel::AIN0, AnalogChannel::AIN1),
-			ThermocoupleChannel::Channel2 => (AnalogChannel::AIN2, AnalogChannel::AIN3),
-			ThermocoupleChannel::Channel3 => (AnalogChannel::AIN4, AnalogChannel::AIN5),
-			ThermocoupleChannel::Channel4 => (AnalogChannel::AIN6, AnalogChannel::AIN7),
-		}
-	}
-}
-
-pub type AdcIndex = usize;
-pub type ThermocoupleReadingChannel = Channel<CriticalSectionRawMutex, (AdcIndex, ThermocoupleChannel, ThermocoupleReading), 20>;
+pub type ThermocoupleReadingChannel = Channel<CriticalSectionRawMutex, (AdcDevice, ThermocoupleChannel, ThermocoupleReading), QUEUE_SIZE>;

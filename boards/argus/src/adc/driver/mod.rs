@@ -10,6 +10,8 @@ pub struct Ads1262<SPI, DataReady, Reset, Start> {
 	data_ready: DataReady,
 	reset: Reset,
 	start: Start,
+
+	// Cache the last set channel pair to avoid redundant SPI writes
 	last_set_channel_pair: (AnalogChannel, AnalogChannel),
 
 	// Configurable parameters for the ADC. After changing call apply_configurations() to apply them to the ADC
