@@ -1,0 +1,86 @@
+// Embassy tasks that need to run for temperature measurement and logging
+use core::fmt::Write;
+
+use defmt::debug;
+use serde_csv_core::Writer;
+
+use crate::config::{AdcDevice, ADC_COUNT};
+use crate::sd::csv::types::SerializeCSV;
+use crate::sd::service::SDCardService;
+use crate::sd::types::{FileName, OperationScope};
+use crate::temperature::config::{ThermocoupleChannel, CHANNEL_COUNT};
+use crate::temperature::service::TemperatureService;
+use crate::temperature::types::{ThermocoupleReading, ThermocoupleReadingChannel};
+use crate::utils::types::AsyncMutex;
+
+// A channel for buffering the temperature readings and decoupling the logging to sd task from the measurement task
+static THERMOCOUPLE_READING_CHANNEL: ThermocoupleReadingChannel = ThermocoupleReadingChannel::new();
+
+// Task that iterates through the ADCs and channels, measures the temperature, and enqueues the readings to a channel
+#[embassy_executor::task]
+pub async fn measure_and_enqueue_temperature_readings(temperature_service_mutex: &'static AsyncMutex<TemperatureService>) {
+	// Configure the ADCs for temperature measurement
+	temperature_service_mutex.lock().await.configure_adcs().await.unwrap();
+
+	loop {
+		let mut temperature_service = temperature_service_mutex.lock().await;
+
+		for adc_index in 0..ADC_COUNT {
+			for channel_index in 0..CHANNEL_COUNT {
+				let adc = AdcDevice::from(adc_index);
+				let channel = ThermocoupleChannel::from(channel_index);
+				let data = temperature_service.read_thermocouple(adc, channel).await;
+				match data {
+					Ok(data) => {
+						debug!("ADC {} Channel {}: {}", adc, channel, data);
+						THERMOCOUPLE_READING_CHANNEL.send((adc, channel, data)).await;
+					}
+					Err(error) => {
+						debug!("Error reading ADC {} Channel {}: {:?}", adc, channel, error);
+						continue;
+					}
+				}
+			}
+		}
+	}
+}
+
+// Task for picking up the readings from the channel and logging them to the SD card
+#[embassy_executor::task]
+pub async fn log_temperature_reading_to_sd_card(sd_service_mutex: &'static AsyncMutex<SDCardService>) {
+	initialize_csv_files(sd_service_mutex).await;
+
+	// Continuously write the readings to sd as they come in from the channel
+	let mut csv_writer = Writer::new();
+	loop {
+		let (adc, channel, reading) = THERMOCOUPLE_READING_CHANNEL.receive().await;
+		let path = get_path_from_adc_and_channel(adc as usize, channel as usize);
+		let line = reading.to_csv_line(&mut csv_writer);
+		SDCardService::enqueue_write(OperationScope::CurrentSession, path, line).await;
+	}
+}
+
+// Create the files and write the CSV headers before starting the logging loop
+async fn initialize_csv_files(sd_service_mutex: &'static AsyncMutex<SDCardService>) {
+	let mut sd_service = sd_service_mutex.lock().await;
+
+	// Ignore because if the SD card isn't mounted we don't want to panic
+	let _ = sd_service.ensure_session_created();
+	for adc_index in 0..ADC_COUNT {
+		for channel in 0..CHANNEL_COUNT {
+			let path = get_path_from_adc_and_channel(adc_index, channel);
+
+			// Ignore because if the SD card isn't mounted we don't want to panic
+			let _ = sd_service.write(OperationScope::CurrentSession, path, ThermocoupleReading::get_header());
+		}
+	}
+}
+
+fn get_path_from_adc_and_channel(
+	adc_index: usize,
+	channel: usize,
+) -> FileName {
+	let mut path = FileName::new();
+	write!(path, "T_{}_{}.csv", adc_index, channel).unwrap();
+	path
+}

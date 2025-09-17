@@ -1,0 +1,9 @@
+hard_tabs = true
+group_imports = "StdExternalCrate"
+reorder_imports = true
+reorder_modules = true
+reorder_impl_items = true
+max_width = 150
+normalize_comments = true
+brace_style = "PreferSameLine"
+fn_params_layout = "Vertical"

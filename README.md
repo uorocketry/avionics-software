@@ -24,3 +24,7 @@ uORocketry's rocket instrumentation system.
 ## Helpful VSCode Extensions 
 - probe-rs.probe-rs-debugger
 - rust-lang.rust-analyzer
+
+## Useful Tools
+### Cargo Size
+`rustup component add llvm-tools-preview`
