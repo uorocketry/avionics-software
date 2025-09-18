@@ -2,7 +2,6 @@ use core::future::Future;
 
 use defmt::{debug, error};
 use embassy_futures::select::{select, Either};
-use serde::de;
 
 use crate::{
 	state_machine::types::{Context, Events, StateMachine, StateReceiver, StateWatch, States},
