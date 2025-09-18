@@ -36,7 +36,7 @@ jobs:
         name: "Install cargo-make"
         with:
           command: install
-          args: --force cargo-make
+          args: --force cargo-make cargo-fmt
       - uses: actions-rs/cargo@v1
         name: "Check formatting"
         with:

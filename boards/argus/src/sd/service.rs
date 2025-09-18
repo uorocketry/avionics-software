@@ -133,8 +133,12 @@ impl SDCardService {
 	) -> Result<(), Error<SdCardError>> {
 		debug!("Writing to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
 
+		// Ensure session directory is created if writing to current session
 		let session = match scope {
-			OperationScope::CurrentSession => Some(self.current_session.as_ref().unwrap().clone()),
+			OperationScope::CurrentSession => {
+				self.ensure_session_created()?;
+				Some(self.current_session.as_ref().unwrap().clone())
+			}
 			_ => None,
 		};
 
