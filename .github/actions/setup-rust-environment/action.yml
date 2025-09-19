@@ -3,8 +3,10 @@
 name: Setup Rust Environment
 description: Install deps, ARM toolchain, and Rust toolchain
 inputs:
-  cargo-dependencies:
-    description: List of cargo dependencies to install (space separated)
+  cache-key:
+    description: The key to use for caching the Rust environment
+    required: true
+
 runs:
   using: composite
   steps:
@@ -25,13 +27,13 @@ runs:
       with:
         toolchain: stable
         target: thumbv7em-none-eabihf
+        components: rustfmt
 
     - name: Install Cargo Dependencies
-      if: ${{ inputs.cargo-dependencies != '' }}
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args: --force ${{ inputs.cargo-dependencies }}
+        args: --force cargo-make
 
     - name: Cache Build Files
       uses: actions/cache@v3
@@ -42,4 +44,4 @@ runs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ inputs.cache-key }}
