@@ -5,7 +5,7 @@ use embassy_sync::{
 };
 use smlang::statemachine;
 
-use crate::state_machine::config::MAX_CONCURRENT_TASKS;
+use argus::state_machine::config::MAX_CONCURRENT_TASKS;
 
 // We're only using smlang's state transition locking feature, not their action/guard
 statemachine! {

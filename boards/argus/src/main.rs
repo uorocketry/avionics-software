@@ -7,17 +7,14 @@
 // 	"You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'."
 // );
 
-mod adc;
-mod config;
-mod sd;
-mod serial;
-mod state_machine;
-mod utils;
-
-#[cfg(feature = "temperature")]
-mod temperature;
-
-use adc::service::{AdcConfig, AdcService};
+use argus::adc::service::{AdcConfig, AdcService};
+use argus::sd::service::SDCardService;
+use argus::sd::task::{sd_card_task, test_sd_card};
+use argus::serial::service::SerialService;
+use argus::state_machine::service::{StateMachineOrchestrator, StateMachineWorker};
+use argus::state_machine::types::Events;
+use argus::utils::hal::configure_hal;
+use argus::utils::types::AsyncMutex;
 use defmt::info;
 use defmt_rtt as _;
 use embassy_executor::Spawner;
@@ -25,15 +22,7 @@ use embassy_stm32::gpio::Pin;
 use embassy_stm32::{bind_interrupts, peripherals, usart};
 use embassy_time::Timer;
 use panic_probe as _;
-use sd::service::SDCardService;
-use sd::task::{sd_card_task, test_sd_card};
-use serial::service::SerialService;
-use state_machine::service::{StateMachineOrchestrator, StateMachineWorker};
 use static_cell::StaticCell;
-use utils::hal::configure_hal;
-use utils::types::AsyncMutex;
-
-use crate::state_machine::types::Events;
 
 // Mapping of NVIC interrupts to Embassy interrupt handlers
 bind_interrupts!(struct InterruptRequests {

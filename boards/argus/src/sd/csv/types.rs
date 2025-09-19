@@ -4,7 +4,7 @@ use heapless::String;
 use serde::Serialize;
 use serde_csv_core::Writer;
 
-use crate::sd::types::Line;
+use argus::sd::types::Line;
 
 pub trait SerializeCSV: Serialize {
 	fn get_header() -> Line;

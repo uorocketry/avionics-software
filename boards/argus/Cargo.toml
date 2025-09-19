@@ -9,11 +9,6 @@ temperature = []
 strain = []
 calibration = []
 
-[[bin]]
-name = "argus"
-path = "src/main.rs"
-harness = false
-
 [[test]]
 name = "sd"
 harness = false

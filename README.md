@@ -27,4 +27,6 @@ uORocketry's rocket instrumentation system.
 
 ## Useful Tools
 ### Cargo Size
+Shows you the memory size breakdown of a compiled Rust binary.
+
 `rustup component add llvm-tools-preview`

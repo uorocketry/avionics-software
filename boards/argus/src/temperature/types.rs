@@ -5,10 +5,10 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channe
 use heapless::String;
 use serde::Serialize;
 
-use crate::config::AdcDevice;
-use crate::sd::csv::types::SerializeCSV;
-use crate::sd::types::Line;
-use crate::temperature::config::{ThermocoupleChannel, QUEUE_SIZE};
+use argus::config::AdcDevice;
+use argus::sd::csv::types::SerializeCSV;
+use argus::sd::types::Line;
+use argus::temperature::config::{ThermocoupleChannel, QUEUE_SIZE};
 
 // Represents a linear transformation applied to raw thermocouple voltage readings to get degrees Celsius
 // temperature_in_celsius = raw_voltage * gain + offset

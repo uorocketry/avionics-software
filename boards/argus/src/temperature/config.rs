@@ -2,7 +2,7 @@
 use defmt::Format;
 use serde::Serialize;
 
-use crate::adc::driver::types::AnalogChannel;
+use argus::adc::driver::types::AnalogChannel;
 
 // Number of thermocouple channels per ADC
 // Note: Not to get confused with the number of analog input channels on each ADC
