@@ -7,44 +7,38 @@ on:
 name: Build Verification
 
 jobs:
-  build_environment:
-    name: Build Environment Setup
+  setup_environment:
+    name: Setup Environment
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Setup Rust Environment
         uses: ./.github/actions/setup-rust-environment/
-        with:
-          embedded: true
-          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
   formatting:
     name: Check for Formatting Issues
-    needs: build_environment
+    needs: setup_environment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Restore Rust Environment Cache
-        uses: ./.github/actions/restore-environment-cache/
-        with:
-          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
 
       - name: Check Formatting
         run: cargo fmt -- --check
 
   build_pressure:
     name: Build with Pressure Feature
-    needs: build_environment
+    needs: setup_environment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Restore Rust Environment Cache
-        uses: ./.github/actions/restore-environment-cache/
-        with:
-          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
 
       - name: "Build with Pressure Feature"
         uses: actions-rs/cargo@v1
@@ -54,16 +48,14 @@ jobs:
 
   build_temperature:
     name: Build with Temperature Feature
-    needs: build_environment
+    needs: setup_environment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Restore Rust Environment Cache
-        uses: ./.github/actions/restore-environment-cache/
-        with:
-          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
 
       - name: "Build with Temperature Feature"
         uses: actions-rs/cargo@v1
@@ -73,16 +65,14 @@ jobs:
 
   build_strain:
     name: Build with Strain Feature
-    needs: build_environment
+    needs: setup_environment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Restore Rust Environment Cache
-        uses: ./.github/actions/restore-environment-cache/
-        with:
-          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
 
       - name: "Build with Strain Feature"
         uses: actions-rs/cargo@v1
@@ -92,7 +82,7 @@ jobs:
 
   test:
     name: Run Host Tests
-    needs: build_environment
+    needs: setup_environment
     runs-on: ubuntu-latest
     env:
       RUST_MIN_STACK: 8388608
@@ -100,10 +90,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Restore Rust Environment Cache
-        uses: ./.github/actions/restore-environment-cache/
-        with:
-          cache-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
 
       - uses: actions-rs/cargo@v1
         name: "Run Host Tests"

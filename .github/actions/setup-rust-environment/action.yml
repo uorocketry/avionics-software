@@ -2,10 +2,6 @@
 # to take advantage of caching and other features they provide. It runs faster with the vendor actions.
 name: Setup Rust Environment
 description: Install deps, ARM toolchain, and Rust toolchain
-inputs:
-  cache-key:
-    description: The key to use for caching the Rust environment
-    required: true
 
 runs:
   using: composite
@@ -23,7 +19,6 @@ runs:
 
     - name: Install Rust Toolchain for Embedded Development
       uses: actions-rs/toolchain@v1
-      if: ${{ inputs.embedded == 'true' }}
       with:
         toolchain: stable
         target: thumbv7em-none-eabihf
@@ -44,4 +39,4 @@ runs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ inputs.cache-key }}
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
