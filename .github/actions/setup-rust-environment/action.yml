@@ -6,6 +6,17 @@ description: Install deps, ARM toolchain, and Rust toolchain
 runs:
   using: composite
   steps:
+    - name: Cache/Restore Build Files
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
     - name: Install APT Dependencies
       shell: bash
       run: |
@@ -29,14 +40,3 @@ runs:
       with:
         command: install
         args: --force cargo-make
-
-    - name: Cache Build Files
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
