@@ -1,8 +1,6 @@
 // Embassy tasks that need to run for temperature measurement and logging
 use core::fmt::Write;
 
-use defmt::debug;
-
 use argus::config::{AdcDevice, ADC_COUNT};
 use argus::sd::csv::types::SerializeCSV;
 use argus::sd::service::SDCardService;
@@ -13,6 +11,7 @@ use argus::temperature::config::{ThermocoupleChannel, CHANNEL_COUNT};
 use argus::temperature::service::TemperatureService;
 use argus::temperature::types::{ThermocoupleReading, ThermocoupleReadingChannel};
 use argus::utils::types::AsyncMutex;
+use defmt::debug;
 
 // A channel for buffering the temperature readings and decoupling the logging to sd task from the measurement task
 static THERMOCOUPLE_READING_CHANNEL: ThermocoupleReadingChannel = ThermocoupleReadingChannel::new();

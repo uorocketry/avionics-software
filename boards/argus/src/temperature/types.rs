@@ -1,14 +1,13 @@
 use core::str::FromStr;
 
-use defmt::Format;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
-use heapless::String;
-use serde::Serialize;
-
 use argus::config::AdcDevice;
 use argus::sd::csv::types::SerializeCSV;
 use argus::sd::types::Line;
 use argus::temperature::config::{ThermocoupleChannel, QUEUE_SIZE};
+use defmt::Format;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+use heapless::String;
+use serde::Serialize;
 
 // Represents a linear transformation applied to raw thermocouple voltage readings to get degrees Celsius
 // temperature_in_celsius = raw_voltage * gain + offset

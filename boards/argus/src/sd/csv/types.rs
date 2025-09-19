@@ -1,10 +1,9 @@
 use core::str::FromStr;
 
+use argus::sd::types::Line;
 use heapless::String;
 use serde::Serialize;
 use serde_csv_core::Writer;
-
-use argus::sd::types::Line;
 
 pub trait SerializeCSV: Serialize {
 	fn get_header() -> Line;

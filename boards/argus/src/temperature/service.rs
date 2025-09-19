@@ -1,6 +1,3 @@
-use embassy_time::Instant;
-use heapless::String;
-
 use argus::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
 use argus::adc::service::{AdcError, AdcService};
 use argus::config::{AdcDevice, ADC_COUNT};
@@ -9,6 +6,8 @@ use argus::serial::service::{AsyncUartError, SerialService};
 use argus::temperature::config::{ThermocoupleChannel, CHANNEL_COUNT};
 use argus::temperature::types::{ThermocoupleReading, ValueTransformation};
 use argus::utils::types::AsyncMutex;
+use embassy_time::Instant;
+use heapless::String;
 
 pub struct TemperatureService {
 	// Other services are passed by a mutex to ensure safe concurrent access

@@ -1,5 +1,7 @@
 use core::cell::RefCell;
 
+use argus::sd::config::{MAX_LINE_LENGTH, QUEUE_SIZE};
+use argus::sd::time_source::FakeTimeSource;
 use embassy_stm32::{gpio, mode, spi};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
@@ -7,9 +9,6 @@ use embassy_time::Delay;
 use embedded_hal_bus::spi::RefCellDevice;
 use embedded_sdmmc::{Directory, SdCard, VolumeManager};
 use heapless::String;
-
-use argus::sd::config::{MAX_LINE_LENGTH, QUEUE_SIZE};
-use argus::sd::time_source::FakeTimeSource;
 
 // Some typings to make the code more readable
 pub type SDCardSpiBus = spi::Spi<'static, mode::Blocking>; // Has to be blocking for embedded-sdmmc to work

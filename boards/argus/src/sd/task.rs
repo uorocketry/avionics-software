@@ -1,11 +1,10 @@
 use core::fmt::Write;
 use core::str::FromStr;
 
-use heapless::String;
-
 use argus::sd::service::SDCardService;
 use argus::sd::types::OperationScope;
 use argus::utils::types::AsyncMutex;
+use heapless::String;
 
 #[embassy_executor::task]
 pub async fn sd_card_task(sd_service: &'static AsyncMutex<SDCardService>) {
