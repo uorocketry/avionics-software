@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup Rust Environment
-        uses: ./.github/actions/setup-rust-environment.yml
+        uses: ./.github/actions/setup-rust-environment/
         with:
           embedded: true
           cargo-dependencies: "cargo-make cargo-fmt"
