@@ -1,13 +1,14 @@
 use core::convert::Infallible;
 
-use argus::adc::driver::Ads1262;
-use argus::config::ADC_COUNT;
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_embedded_hal::shared_bus::SpiDeviceError;
 use embassy_stm32::Peripheral;
 use embassy_stm32::{gpio, mode, spi, time::mhz};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use static_cell::StaticCell;
+
+use crate::adc::driver::Ads1262;
+use crate::config::ADC_COUNT;
 
 // HACK: Use a static cell to hold the SPI bus shared between multiple ADC instances since we can't have self-referencing structs
 // i.e. AdcService holding multiple ADC instances that each hold a reference to the same SPI bus that the ADC service also owns

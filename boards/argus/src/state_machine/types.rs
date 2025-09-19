@@ -1,10 +1,11 @@
-use argus::state_machine::config::MAX_CONCURRENT_TASKS;
 use defmt::Format;
 use embassy_sync::{
 	blocking_mutex::raw::CriticalSectionRawMutex,
 	watch::{Receiver, Watch},
 };
 use smlang::statemachine;
+
+use crate::state_machine::config::MAX_CONCURRENT_TASKS;
 
 // We're only using smlang's state transition locking feature, not their action/guard
 statemachine! {

@@ -1,12 +1,5 @@
 // SHOULD DO: use embedded_hal traits instead of embassy_stm32 types directly
 
-use argus::sd::config::{MAX_DIRS, MAX_FILES};
-use argus::sd::time_source::FakeTimeSource;
-use argus::sd::types::{
-	FileName, Line, OperationScope, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice, SDCardSpiRefCell,
-	SDCardVolumeManager, SdOperationQueue,
-};
-use argus::utils::types::AsyncMutex;
 use defmt::{debug, error, Debug2Format};
 use embassy_stm32::spi::{MisoPin, MosiPin, SckPin};
 use embassy_stm32::{gpio, spi, time, Peripheral};
@@ -14,6 +7,14 @@ use embassy_time::Delay;
 use embedded_sdmmc::{Error, Mode, SdCardError, VolumeIdx};
 use heapless::String;
 use static_cell::StaticCell;
+
+use crate::sd::config::{MAX_DIRS, MAX_FILES};
+use crate::sd::time_source::FakeTimeSource;
+use crate::sd::types::{
+	FileName, Line, OperationScope, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice, SDCardSpiRefCell,
+	SDCardVolumeManager, SdOperationQueue,
+};
+use crate::utils::types::AsyncMutex;
 
 // Hack: During SDCardService initialization, SpiMutex needs to be passed by reference to SpiDevice and they both need to be encapsulated within SDCardService
 // Which is not possible because rust does not allow self-referencing structs so it's being made static cell instead of maintained inside SDCardService which is a singleton anyways
