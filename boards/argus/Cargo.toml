@@ -9,6 +9,9 @@ temperature = []
 strain = []
 calibration = []
 
+[lib]
+harness = false
+
 [[test]]
 name = "sd"
 harness = false
@@ -79,6 +82,4 @@ itoa = { version = "1.0.15", features = ["no-panic"] }
 embedded-hal = { version = "1.0.0", features = ["defmt-03"] }
 serde-csv-core = { version = "0.3.2", features = ["defmt"] }
 serde = { workspace = true, features = ["derive", "serde_derive"] }
-
-[dev-dependencies]
-defmt-test = { workspace = true }
+embedded-test = { version = "0.6.2", features = ["defmt", "embassy"] }

@@ -1,11 +1,11 @@
 // SHOULD DO: use embedded_hal traits instead of embassy_stm32 types directly
 
-use defmt::{debug, error, Debug2Format};
+use defmt::{debug, error, info, Debug2Format};
 use embassy_stm32::spi::{MisoPin, MosiPin, SckPin};
 use embassy_stm32::{gpio, spi, time, Peripheral};
 use embassy_time::Delay;
 use embedded_sdmmc::{Error, Mode, SdCardError, VolumeIdx};
-use heapless::String;
+use heapless::{String, Vec};
 use static_cell::StaticCell;
 
 use crate::sd::config::{MAX_DIRS, MAX_FILES};
@@ -103,7 +103,7 @@ impl SDCardService {
 		&mut self,
 		scope: OperationScope,
 		path: FileName,
-	) {
+	) -> Result<(), Error<SdCardError>> {
 		debug!("Deleting from SD card: {:?}, {:?}", scope, path.as_str());
 
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure
@@ -118,10 +118,14 @@ impl SDCardService {
 				OperationScope::CurrentSession => root_dir.open_dir(session.unwrap().as_str())?,
 			};
 
-			directory.delete_file_in_dir(path.as_str())?;
+			let result = directory.delete_file_in_dir(path.as_str());
+			match result {
+				Ok(()) => {}               // Cool
+				Err(Error::NotFound) => {} // If file not found, consider it deleted
+				Err(e) => return Err(e),   // Propagate other errors
+			}
 			Ok(())
 		})
-		.unwrap();
 	}
 
 	// Blocking write that immediately writes the message to the SD card
@@ -129,9 +133,14 @@ impl SDCardService {
 		&mut self,
 		scope: OperationScope,
 		path: FileName,
-		line: Line,
+		mut line: Line,
 	) -> Result<(), Error<SdCardError>> {
 		debug!("Writing to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
+
+		// Ensure line ends with newline
+		if !line.as_str().ends_with("\n") {
+			let _ = line.push('\n'); // Ignore capacity error
+		}
 
 		// Ensure session directory is created if writing to current session
 		let session = match scope {
@@ -155,13 +164,32 @@ impl SDCardService {
 		})
 	}
 
-	pub fn read<F: FnMut(&Line)>(
+	pub fn read_fixed_number_of_lines<const LINES_COUNT: usize>(
+		&mut self,
+		scope: OperationScope,
+		path: FileName,
+	) -> Result<Vec<Line, LINES_COUNT>, Error<SdCardError>> {
+		let mut lines: Vec<Line, LINES_COUNT> = Vec::new();
+		self.read(scope, path, |line| {
+			if lines.len() < LINES_COUNT {
+				lines.push(line.clone()).ok(); // Ignore capacity error
+				return true;
+			} else {
+				return false;
+			}
+		})?;
+		Ok(lines)
+	}
+
+	pub fn read<F: (FnMut(&Line) -> bool)>(
 		&mut self,
 		scope: OperationScope,
 		path: FileName,
 		mut handle_line: F,
 	) -> Result<(), Error<SdCardError>> {
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure
+
+		debug!("Reading from SD card: {:?}, {:?}", scope, path.as_str());
 
 		let session = match scope {
 			OperationScope::CurrentSession => Some(self.current_session.as_ref().unwrap().clone()),
@@ -197,7 +225,9 @@ impl SDCardService {
 					match read_byte {
 						b'\n' => {
 							// End of line (LF). Emit and clear.
-							handle_line(&line);
+							if handle_line(&line) == false {
+								return Ok(()); // Stop reading if handler returns false
+							}
 							line.clear();
 						}
 						b'\r' => {
@@ -207,7 +237,9 @@ impl SDCardService {
 							// Push char if capacity allows; if full, emit as a line-chunk and continue
 							if line.push(read_byte as char).is_err() {
 								// Buffer full — emit current chunk as a line
-								handle_line(&line);
+								if handle_line(&line) == false {
+									return Ok(()); // Stop reading if handler returns false
+								}
 								line.clear();
 								// Try pushing the current char again. It will fit on empty.
 								let _ = line.push(read_byte as char);

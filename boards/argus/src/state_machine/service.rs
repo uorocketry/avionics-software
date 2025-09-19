@@ -60,7 +60,7 @@ impl StateMachineWorker {
 		mut action: Act,
 	) -> Result<(), Err>
 	where
-		Act: FnMut((&'static AsyncMutex<StateMachineOrchestrator>)) -> Fut,
+		Act: FnMut(&'static AsyncMutex<StateMachineOrchestrator>) -> Fut,
 		Fut: Future<Output = Result<(), Err>>, {
 		// Runs indefinitely
 		loop {

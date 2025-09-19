@@ -1,9 +1,13 @@
-mod adc;
-mod config;
-mod sd;
-mod serial;
-mod state_machine;
-mod utils;
+#![feature(impl_trait_in_assoc_type)]
+#![no_std]
+#![no_main]
+
+pub mod adc;
+pub mod config;
+pub mod sd;
+pub mod serial;
+pub mod state_machine;
+pub mod utils;
 
 #[cfg(feature = "temperature")]
-mod temperature;
+pub mod temperature;

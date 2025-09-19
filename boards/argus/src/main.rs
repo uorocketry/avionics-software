@@ -38,7 +38,7 @@ static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new()
 static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrator>> = StaticCell::new();
 
 #[cfg(feature = "temperature")]
-static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<temperature::service::TemperatureService>> = StaticCell::new();
+static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::TemperatureService>> = StaticCell::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -95,8 +95,8 @@ async fn main(spawner: Spawner) {
 	// Spawn tasks needed for temperature board
 	#[cfg(feature = "temperature")]
 	{
-		use temperature::service::TemperatureService;
-		use temperature::task;
+		use argus::temperature::service::TemperatureService;
+		use argus::temperature::task;
 
 		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(adc_service, sd_service, serial_service)));
 		spawner.must_spawn(task::measure_and_enqueue_temperature_readings(
