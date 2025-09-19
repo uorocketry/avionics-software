@@ -1,33 +1,45 @@
+# A lot of these actions could have been a bash command but we're using predefined actions
+# to take advantage of caching and other features they provide. It runs faster with the vendor actions.
 name: Setup Rust Environment
 description: Install deps, ARM toolchain, and Rust toolchain
 inputs:
-  embedded:
-    description: "Set to true to install the embedded development tools"
-    required: false
-    default: "true"
   cargo-dependencies:
     description: List of cargo dependencies to install (space separated)
 runs:
   using: composite
   steps:
-    - name: Install Dependencies
+    - name: Install APT Dependencies
       shell: bash
       run: |
         sudo apt update
         sudo apt install -y cmake protobuf-compiler
+
     - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
-      shell: bash
-      run: |
-        sudo apt update
-        sudo apt install -y gcc-arm-none-eabi binutils-arm-none-eabi
-    - name: Install Rust toolchain
-      shell: bash
-      run: rustup install stable
-    - name: Install Embedded Development Dependencies
-      shell: bash
+      uses: carlosperate/arm-none-eabi-gcc-action@v1
+      with:
+        release: "12.2.Rel1"
+
+    - name: Install Rust Toolchain for Embedded Development
+      uses: actions-rs/toolchain@v1
       if: ${{ inputs.embedded == 'true' }}
-      run: rustup target add thumbv7em-none-eabihf
+      with:
+        toolchain: stable
+        target: thumbv7em-none-eabihf
+
     - name: Install Cargo Dependencies
-      shell: bash
       if: ${{ inputs.cargo-dependencies != '' }}
-      run: cargo install --force ${{ inputs.cargo-dependencies }}
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args: --force ${{ inputs.cargo-dependencies }}
+
+    - name: Cache Build Files
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
