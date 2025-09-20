@@ -4,10 +4,14 @@ Welcome to the uORocketry's avionics software monorepo. This is where we house a
 
 # Monorepo Structure
 ## Boards
-Boards and their embedded code can be found at `boards/*`. See [boards/README.md](./boards/README.md).
+Embedded software developed for each of our boards can be found at `boards/*`. 
 
-## Crates
-Common logic shared between boards and possibly ground station can be found at `common/*`. See [common/README.md](./common/README.md).
+See [boards/README.md](./boards/README.md) for more details.
+
+## Common Logic
+Common logic shared between boards and possibly ground station can be found at `common/*`. 
+
+See [common/README.md](./common/README.md).
 
 ## Ground Station
 Coming soon...
