@@ -18,6 +18,7 @@ uORocketry's Rocket Instrumentation System
 ### Workspace Utilities
 - Install `cargo-make` (used by CI/tasks): `cargo install cargo-make`
 - Install `rustfmt` used for linting: `rustup component add rustfmt`
+- Install `cargo-sort` used for cleaning up `Cargo.toml` files. `cargo install cargo-sort`
 
 ### Flashing and Logging
 - Install probe-rs tools: `cargo install probe-rs-tools`

@@ -1,10 +1,11 @@
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
 # This runner needs to be parametric so we can pass in the chip name
-runner = "probe-rs run --chip STM32H733VGTx --protocol swd"
+runner = "probe-rs run --chip ${PROBE_RS_CHIP} --protocol swd"
 rustflags = ["-C", "link-arg=-Tlink.x", "-C", "link-arg=-Tdefmt.x"]
 
 [env]
 DEFMT_LOG = "debug"
+PROBE_RS_CHIP = "STM32H733VGTx"
 
 [build]
 target = "thumbv7em-none-eabihf" # Cortex-M4F and Cortex-M7F (with FPU)

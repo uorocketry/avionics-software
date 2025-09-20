@@ -12,7 +12,7 @@
             "flashingConfig": {
                 "flashingEnabled": true
             },
-            "chip": "STM32H733VGTx",
+            "chip": "${input:chip}",
             "coreConfigs": [
                 {
                     "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/argus",
@@ -22,10 +22,22 @@
     ],
     "inputs": [
         {
+            "id": "chip",
+            "type": "pickString",
+            "description": "Which chip are you using?",
+            "options": [
+                "STM32H733VGTx"
+            ]
+        },
+        {
             "id": "task",
             "type": "pickString",
             "description": "Which task would you like to run?",
-            "options": ["strain", "temperature", "pressure"]
+            "options": [
+                "strain",
+                "temperature",
+                "pressure"
+            ]
         }
     ]
 }

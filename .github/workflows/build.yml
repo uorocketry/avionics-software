@@ -20,6 +20,9 @@ jobs:
       - name: Check Formatting
         run: cargo fmt -- --check
 
+      - name: Check Cargo.toml Sorting
+        run: cargo sort --check
+
   build_pressure:
     name: Build with Pressure Feature
     runs-on: ubuntu-latest

@@ -7,10 +7,9 @@ members = ["boards/*", "crates/*"]
 # compile errors if built directly.
 default-members = ["boards/*"]
 
-[workspace.dependencies.serde]
-version = "1.0.150"
+[workspace.dependencies.chrono]
+git = "https://github.com/uorocketry/chrono"
 default-features = false
-features = ["derive"]
 
 [workspace.dependencies.cortex-m]
 version = "0.7.6"
@@ -19,37 +18,38 @@ features = ["critical-section-single-core"]
 [workspace.dependencies.cortex-m-rt]
 version = "0.7.1"
 
-[workspace.dependencies.nb]
-version = "1.1.0"
-
-[workspace.dependencies.messages-prost]
-git = "https://github.com/uorocketry/messages-prost"
-
-[workspace.dependencies.panic-probe]
-version = "0.3"
-features = ["print-defmt"]
-
 [workspace.dependencies.defmt]
 version = "0.3.2"
 
 [workspace.dependencies.defmt-rtt]
 version = "0.4"
 
-[workspace.dependencies.chrono]
-git = "https://github.com/uorocketry/chrono"
-default-features = false
-
-[workspace.dependencies.heapless]
-version = "0.7.16"
+[workspace.dependencies.defmt-test]
+version = "0.3.2"
 
 [workspace.dependencies.embedded-alloc]
 version = "0.6.0"
 
-[workspace.dependencies.defmt-test]
-version = "0.3.2"
-
 [workspace.dependencies.enum_dispatch]
 version = "0.3.11"
+
+[workspace.dependencies.heapless]
+version = "0.7.16"
+
+[workspace.dependencies.messages-prost]
+git = "https://github.com/uorocketry/messages-prost"
+
+[workspace.dependencies.nb]
+version = "1.1.0"
+
+[workspace.dependencies.panic-probe]
+version = "0.3"
+features = ["print-defmt"]
+
+[workspace.dependencies.serde]
+version = "1.0.150"
+default-features = false
+features = ["derive"]
 
 [workspace.dependencies.smlang]
 version = "0.8.0"
