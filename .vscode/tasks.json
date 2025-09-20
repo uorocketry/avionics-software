@@ -4,17 +4,17 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build-strain",
+            "label": "build-argus-strain",
             "type": "shell",
             "command": "cargo build --bin argus -F strain"
         },
         {
-            "label": "build-pressure",
+            "label": "build-argus-pressure",
             "type": "shell",
             "command": "cargo build --bin argus -F pressure"
         },
         {
-            "label": "build-temperature",
+            "label": "build-argus-temperature",
             "type": "shell",
             "command": "cargo build --bin argus -F temperature"
         }

@@ -88,7 +88,7 @@ dependencies = [
  "heapless 0.9.1",
  "itoa",
  "libm",
- "messages-prost 0.1.0 (git+https://github.com/uorocketry/messages-prost)",
+ "messages-prost",
  "micromath",
  "panic-probe",
  "pid",
@@ -241,7 +241,7 @@ dependencies = [
  "embedded-io-async",
  "embedded-nal-async",
  "heapless 0.7.17",
- "messages-prost 0.1.0 (git+https://github.com/uorocketry/messages-prost)",
+ "messages-prost",
  "nb 1.1.0",
  "panic-probe",
 ]
@@ -1004,6 +1004,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "glob"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
+
+[[package]]
 name = "grounded"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1270,21 +1276,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags 2.9.2",
  "defmt 0.3.100",
- "heapless 0.8.0",
- "mavlink",
- "prost",
- "prost-build",
- "serde",
- "ublox",
-]
-
-[[package]]
-name = "messages-prost"
-version = "0.1.0"
-source = "git+https://github.com/uorocketry/messages-prost#c16c21cee30d57b993b0a3a61ed91dd11df8a9f6"
-dependencies = [
- "bitflags 2.9.2",
- "defmt 0.3.100",
+ "glob",
  "heapless 0.8.0",
  "mavlink",
  "prost",

@@ -34,7 +34,7 @@ version = "0.3.11"
 version = "0.9.1"
 
 [workspace.dependencies.messages-prost]
-git = "https://github.com/uorocketry/messages-prost"
+path = "./crates/messages-prost"
 
 [workspace.dependencies.nb]
 version = "1.1.0"

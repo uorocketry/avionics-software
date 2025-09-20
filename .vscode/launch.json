@@ -7,32 +7,38 @@
         {
             "type": "probe-rs-debug",
             "request": "launch",
-            "name": "Probe-rs Debug",
-            "preLaunchTask": "build-${input:task}",
+            "name": "Debug Argus",
+            "preLaunchTask": "build-argus-${input:argus-variant}",
             "flashingConfig": {
                 "flashingEnabled": true
             },
-            "chip": "${input:chip}",
+            "chip": "STM32H733VGTx",
             "coreConfigs": [
                 {
                     "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/argus",
                 }
-            ]
-        }
+            ],
+        },
+        {
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "name": "Debug Phoenix",
+            "flashingConfig": {
+                "flashingEnabled": true
+            },
+            "chip": "STM32H733VGTx",
+            "coreConfigs": [
+                {
+                    "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/phoenix",
+                }
+            ],
+        },
     ],
     "inputs": [
         {
-            "id": "chip",
+            "id": "argus-variant",
             "type": "pickString",
-            "description": "Which chip are you using?",
-            "options": [
-                "STM32H733VGTx"
-            ]
-        },
-        {
-            "id": "task",
-            "type": "pickString",
-            "description": "Which task would you like to run?",
+            "description": "Which Argus variant would you like to run?",
             "options": [
                 "strain",
                 "temperature",
