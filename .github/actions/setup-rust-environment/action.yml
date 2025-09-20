@@ -17,6 +17,13 @@ runs:
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+    - name: Disable man-db (skip Manual Page Installs)
+      shell: bash
+      run: |
+        echo 'path-exclude /usr/share/man/*' | sudo tee /etc/dpkg/dpkg.cfg.d/01_nodoc
+        echo 'path-exclude /usr/share/doc/*' | sudo tee -a /etc/dpkg/dpkg.cfg.d/01_nodoc
+        echo 'path-exclude /usr/share/doc-base/*' | sudo tee -a /etc/dpkg/dpkg.cfg.d/01_nodoc
+
     - name: Install APT Dependencies
       shell: bash
       run: |
@@ -39,4 +46,4 @@ runs:
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args: cargo-make
+        args: --force cargo-make
