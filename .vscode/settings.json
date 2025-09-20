@@ -1,4 +1,5 @@
 {
+    // Default cargo target is for embedded. Use Rust Target extension to dynamically change it based on project.
     "rust-analyzer.cargo.target": "thumbv7em-none-eabihf",
     "rust-analyzer.cargo.features": [
         "pressure",

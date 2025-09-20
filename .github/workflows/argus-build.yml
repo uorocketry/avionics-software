@@ -3,6 +3,8 @@ on:
   push:
     branches: [ master ]
   pull_request:
+    paths:
+      - 'boards/argus/**'
   workflow_dispatch:
 name: Build Verification
 
@@ -17,8 +19,16 @@ jobs:
       - name: Setup Rust Environment (Cached)
         uses: ./.github/actions/setup-rust-environment/
 
+      - name: Install Formatting Dependencies
+        run: |
+          cargo install cargo-sort
+          rustup component add rustfmt
+
       - name: Check Formatting
         run: cargo fmt -- --check
+
+      - name: Check Cargo.toml Sorting
+        run: cargo sort --check
 
   build_pressure:
     name: Build with Pressure Feature
@@ -31,10 +41,8 @@ jobs:
         uses: ./.github/actions/setup-rust-environment/
 
       - name: "Build with Pressure Feature"
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --features pressure
+        run: cargo build --release --features pressure
+        working-directory: boards/argus
 
   build_temperature:
     name: Build with Temperature Feature
@@ -47,10 +55,8 @@ jobs:
         uses: ./.github/actions/setup-rust-environment/
 
       - name: "Build with Temperature Feature"
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --features temperature
+        run: cargo build --release --features temperature
+        working-directory: boards/argus
 
   build_strain:
     name: Build with Strain Feature
@@ -63,10 +69,8 @@ jobs:
         uses: ./.github/actions/setup-rust-environment/
 
       - name: "Build with Strain Feature"
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --features strain
+        run: cargo build --release --features strain
+        working-directory: boards/argus
 
   test:
     name: Run Host Tests

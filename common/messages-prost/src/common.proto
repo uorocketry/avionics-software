@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package messages_prost.common;
+
+enum Node {
+  NODE_UNSPECIFIED = 0;
+  PRESSURE_BOARD = 1;
+  TEMPERATURE_BOARD = 2;
+  STRAIN_BOARD = 3;
+  GROUND_STATION = 4;
+  PHOENIX = 5;
+}
+
+enum ErrorContext {
+  GroundStation = 0;
+  UnkownCanMessage = 1;
+  UnknownRadioMessage = 2;
+  UnkownProstMessage = 3;
+  NoRadioTransfer = 4;
+}

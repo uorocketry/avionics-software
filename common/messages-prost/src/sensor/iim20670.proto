@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package messages_prost.iim20670;
+
+import "common.proto";
+
+// An enum to represent the SPI communication status, based on Table 13.
+enum SpiStatus {
+  SPI_STATUS_RESERVED = 0;
+  SPI_STATUS_SUCCESS = 1;
+  SPI_STATUS_IN_PROGRESS = 2; // Data not ready or self-test is enabled
+  SPI_STATUS_ERROR = 3;
+}
+
+// An enum for the selectable accelerometer full-scale ranges, from Table 17.
+// This is crucial for interpreting the raw accelerometer data.
+enum AccelFullScale {
+  ACCEL_FS_UNSPECIFIED = 0;
+  ACCEL_FS_16_384G = 1;
+  ACCEL_FS_32_768G = 2;
+  ACCEL_FS_2_048G = 3;
+  ACCEL_FS_4_096G = 4;
+}
+
+// An enum for the selectable gyroscope full-scale ranges, from Table 18.
+// This is crucial for interpreting the raw gyroscope data.
+enum GyroFullScale {
+  GYRO_FS_UNSPECIFIED = 0;
+  GYRO_FS_328_DPS = 1;   // 100 LSB/dps
+  GYRO_FS_655_DPS = 2;   // 50 LSB/dps
+  GYRO_FS_1311_DPS = 3;  // 25 LSB/dps
+  GYRO_FS_1966_DPS = 4;  // 16.67 LSB/dps
+  GYRO_FS_218_DPS = 5;   // 150 LSB/dps
+  GYRO_FS_437_DPS = 6;   // 75 LSB/dps
+  GYRO_FS_874_DPS = 7;   // 37.5 LSB/dps
+}
+
+// A generic message to represent a 3-axis vector.
+// Using sint32 for 16-bit signed values from the sensor's ADCs.
+message Vector3 {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+// This is the main message to hold a complete data frame from the IIM-20670.
+message ImuData {
+  // A timestamp for when the reading was taken, e.g., Unix time in microseconds.
+  uint64 timestamp_us = 1;
+
+  // The 3-axis gyroscope data.
+  // The raw integer values must be divided by the sensitivity for the
+  // configured full-scale range to get degrees per second (dps).
+  // From registers: gyro_x_data, gyro_y_data, gyro_z_data
+  Vector3 gyroscope = 2;
+
+  // The 3-axis high-resolution accelerometer data.
+  // The raw integer values must be scaled by the configured full-scale
+  // range to get the value in g's.
+  // From registers: accel_x_data, accel_y_data, accel_z_data
+  Vector3 accelerometer = 3;
+
+  // The device contains two temperature sensors.
+  // The raw value is a 16-bit signed integer.
+  // Temp (°C) = 25 + (raw_value / 20.0)
+  // From register: temp1_data
+  sint32 temperature_1 = 4;
+
+  // From register: temp2_data
+  sint32 temperature_2 = 5;
+
+  // Configuration settings active when this data was captured.
+  // It's important to store these with the data for correct interpretation.
+  AccelFullScale accelerometer_fs = 6;
+  GyroFullScale gyroscope_fs = 7;
+
+  // Status of the SPI transaction that fetched this data.
+  SpiStatus spi_status = 8;
+
+  // The datasheet also mentions a low-resolution accelerometer output.
+  // You can include it if your application uses it.
+  // From registers: accel_x_data_lr, accel_y_data_lr, accel_z_data_lr
+  Vector3 low_resolution_accelerometer = 9;
+}
+
+message Imu {
+    common.Node node = 1; 
+    ImuData data = 2; 
+}

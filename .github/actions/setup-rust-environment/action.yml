@@ -41,10 +41,9 @@ runs:
       with:
         toolchain: stable
         target: thumbv7em-none-eabihf
-        components: rustfmt
 
     - name: Install Cargo Dependencies
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args: --force cargo-make
+        args: --force cargo-make cargo-sort
