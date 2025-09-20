@@ -41,6 +41,7 @@ jobs:
       - name: "Build with Pressure Feature"
         uses: actions-rs/cargo@v1
         with:
+          working-directory: boards/argus
           command: build
           args: --release --features pressure
 
@@ -58,6 +59,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
+          working-directory: boards/argus
           args: --release --features temperature
 
   build_strain:
@@ -74,6 +76,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
+          working-directory: boards/argus
           args: --release --features strain
 
   test:
