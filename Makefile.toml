@@ -9,39 +9,38 @@ default_to_workspace = false
 # -----------------------
 
 [tasks.test-host]
-dependencies = [
-    "test-thermocouple",
-]
+dependencies = ["test-thermocouple-converter"]
 
 # -----------------------
 # Embedded Testing
 # -----------------------
 
-[tasks.test-device]
+[tasks.test-embedded]
 dependencies = [
-    "test-temperature-board",
-    "test-pressure-board",
-    "test-strain-board",
-    "test-common-arm",
+    "test-argus-temperature",
+    "test-argus-pressure",
+    "test-argus-strain",
 ]
 
-[tasks.test-common-arm]
+[tasks.test-argus-temperature]
 command = "cargo"
-args = ["test", "-p", "common-arm", "${@}"]
+args = ["test", "-p", "argus", "--features", "temperature", "${@}"]
 
-[tasks.test-temperature-board]
+[tasks.test-argus-pressure]
 command = "cargo"
-args = ["test", "-p", "temperature", "${@}"]
+args = ["test", "-p", "argus", "--features", "pressure", "${@}"]
 
-[tasks.test-pressure-board]
+[tasks.test-argus-strain]
 command = "cargo"
-args = ["test", "-p", "pressure", "${@}"]
+args = ["test", "-p", "argus", "--features", "strain", "${@}"]
 
-[tasks.test-strain-board]
+[tasks.test-thermocouple-converter]
 command = "cargo"
-args = ["test", "-p", "strain", "${@}"]
-
-[tasks.test-thermocouple]
-command = "cargo"
-args = ["test", "-p", "thermocouple-converter", "--target", "${CARGO_MAKE_RUST_TARGET_TRIPLE}"]
-env = {RUST_MIN_STACK = "8388608"}
+args = [
+    "test",
+    "-p",
+    "thermocouple-converter",
+    "--target",
+    "${CARGO_MAKE_RUST_TARGET_TRIPLE}",
+]
+env = { RUST_MIN_STACK = "8388608" }
