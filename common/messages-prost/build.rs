@@ -1,7 +1,8 @@
-use glob::glob;
-use prost_build::Config;
 use std::io::Result;
 use std::path::PathBuf;
+
+use glob::glob;
+use prost_build::Config;
 
 fn main() -> Result<()> {
 	let mut config = Config::new();
