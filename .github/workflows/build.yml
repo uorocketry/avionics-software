@@ -7,17 +7,8 @@ on:
 name: Build Verification
 
 jobs:
-  setup_environment:
-    name: Setup Environment
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Rust Environment
-        uses: ./.github/actions/setup-rust-environment/
-
   formatting:
     name: Check for Formatting Issues
-    needs: setup_environment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,7 +22,6 @@ jobs:
 
   build_pressure:
     name: Build with Pressure Feature
-    needs: setup_environment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -48,7 +38,6 @@ jobs:
 
   build_temperature:
     name: Build with Temperature Feature
-    needs: setup_environment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -65,7 +54,6 @@ jobs:
 
   build_strain:
     name: Build with Strain Feature
-    needs: setup_environment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -82,7 +70,6 @@ jobs:
 
   test:
     name: Run Host Tests
-    needs: setup_environment
     runs-on: ubuntu-latest
     env:
       RUST_MIN_STACK: 8388608
