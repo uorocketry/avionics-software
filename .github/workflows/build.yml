@@ -17,6 +17,11 @@ jobs:
       - name: Setup Rust Environment (Cached)
         uses: ./.github/actions/setup-rust-environment/
 
+      - name: Install Formatting Dependencies
+        run: |
+          cargo install cargo-sort
+          rustup component add rustfmt
+
       - name: Check Formatting
         run: cargo fmt -- --check
 
