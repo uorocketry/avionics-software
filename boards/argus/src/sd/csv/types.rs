@@ -8,10 +8,8 @@ use crate::sd::types::Line;
 
 pub trait SerializeCSV: Serialize {
 	fn get_header() -> Line;
-	fn to_csv_line(
-		&self,
-		writer: &mut Writer,
-	) -> Line {
+	fn to_csv_line(&self) -> Line {
+		let mut writer = Writer::new();
 		let mut line = [0; 255];
 		writer.serialize(&self, &mut line).unwrap();
 		let line_str = core::str::from_utf8(&line).unwrap();

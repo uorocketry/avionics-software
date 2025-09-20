@@ -3,76 +3,35 @@ on:
   push:
     branches: [ master ]
   pull_request:
-
-name: Build
-
+  workflow_dispatch:
+name: Build Verification
 
 jobs:
   formatting:
-    name: Check for formatting issues
+    name: Check for Formatting Issues
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install packages
-        run: sudo apt update && sudo apt install -y cmake protobuf-compiler
-      - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
-        uses: carlosperate/arm-none-eabi-gcc-action@v1
-        with:
-          release: '12.2.Rel1'
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: thumbv7em-none-eabihf
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
-        name: "Install cargo-make"
-        with:
-          command: install
-          args: --force cargo-make
-      - uses: actions-rs/cargo@v1
-        name: "Check formatting"
-        with:
-          command: fmt
-          args: --check
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
+
+      - name: Check Formatting
+        run: cargo fmt -- --check
+
   build_pressure:
     name: Build with Pressure Feature
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install packages
-        run: sudo apt update && sudo apt install -y cmake protobuf-compiler
-      - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
-        uses: carlosperate/arm-none-eabi-gcc-action@v1
-        with:
-          release: '12.2.Rel1'
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: thumbv7em-none-eabihf
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
-        name: "Install cargo-make"
-        with:
-          command: install
-          args: --force cargo-make
-      - uses: actions-rs/cargo@v1
-        name: "Build with Pressure Feature"
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
+
+      - name: "Build with Pressure Feature"
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --features pressure
@@ -81,33 +40,14 @@ jobs:
     name: Build with Temperature Feature
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install packages
-        run: sudo apt update && sudo apt install -y cmake
-      - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
-        uses: carlosperate/arm-none-eabi-gcc-action@v1
-        with:
-          release: '12.2.Rel1'
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: thumbv7em-none-eabihf
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
-        name: "Install cargo-make"
-        with:
-          command: install
-          args: --force cargo-make
-      - uses: actions-rs/cargo@v1
-        name: "Build with Temperature Feature"
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
+
+      - name: "Build with Temperature Feature"
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --features temperature
@@ -116,52 +56,30 @@ jobs:
     name: Build with Strain Feature
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install packages
-        run: sudo apt update && sudo apt install -y cmake protobuf-compiler
-      - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
-        uses: carlosperate/arm-none-eabi-gcc-action@v1
-        with:
-          release: '12.2.Rel1'
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: thumbv7em-none-eabihf
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
-        name: "Install cargo-make"
-        with:
-          command: install
-          args: --force cargo-make
-      - uses: actions-rs/cargo@v1
-        name: "Build with Strain Feature"
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
+
+      - name: "Build with Strain Feature"
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --features strain
+
   test:
+    name: Run Host Tests
     runs-on: ubuntu-latest
     env:
       RUST_MIN_STACK: 8388608
     steps:
-      - uses: actions/checkout@v2
-      - name: Install packages
-        run: sudo apt update && sudo apt install -y cmake protobuf-compiler
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions-rs/cargo@v1
-        name: "Install cargo-make"
-        with:
-          command: install
-          args: --force cargo-make
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/setup-rust-environment/
+
       - uses: actions-rs/cargo@v1
         name: "Run Host Tests"
         with:

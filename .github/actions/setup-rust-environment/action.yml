@@ -1,0 +1,50 @@
+# A lot of these actions could have been a bash command but we're using predefined actions
+# to take advantage of caching and other features they provide. It runs faster with the vendor actions.
+name: Setup Rust Environment
+description: Install deps, ARM toolchain, and Rust toolchain
+
+runs:
+  using: composite
+  steps:
+    - name: Cache/Restore Build Files
+      id: cache-check
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Disable man-db (skip Manual Page Installs)
+      shell: bash
+      run: |
+        echo 'path-exclude /usr/share/man/*' | sudo tee /etc/dpkg/dpkg.cfg.d/01_nodoc
+        echo 'path-exclude /usr/share/doc/*' | sudo tee -a /etc/dpkg/dpkg.cfg.d/01_nodoc
+        echo 'path-exclude /usr/share/doc-base/*' | sudo tee -a /etc/dpkg/dpkg.cfg.d/01_nodoc
+
+    - name: Install APT Dependencies
+      shell: bash
+      run: |
+        sudo apt update
+        sudo apt install -y cmake protobuf-compiler
+
+    - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
+      uses: carlosperate/arm-none-eabi-gcc-action@v1
+      with:
+        release: "12.2.Rel1"
+
+    - name: Install Rust Toolchain for Embedded Development
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: thumbv7em-none-eabihf
+        components: rustfmt
+
+    - name: Install Cargo Dependencies
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args: --force cargo-make
