@@ -75,8 +75,8 @@ serde-csv-core = { version = "0.3.2", features = ["defmt"] }
 smlang = { workspace = true }
 static_cell = "2"
 stm32-fmc = "0.3.0"
-straingauge-converter = { path = "../../crates/straingauge-converter" }
-thermocouple-converter = { path = "../../crates/thermocouple-converter" }
+straingauge-converter = { path = "../../common/straingauge-converter" }
+thermocouple-converter = { path = "../../common/thermocouple-converter" }
 
 [[test]]
 name = "sd"

@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 
-members = ["boards/*", "crates/*"]
+members = ["boards/*", "common/*"]
 
 # Specify which members to build by default. Some libraries, such as messages, contain dev-dependencies that will give
 # compile errors if built directly.
@@ -34,7 +34,7 @@ version = "0.3.11"
 version = "0.9.1"
 
 [workspace.dependencies.messages-prost]
-path = "./crates/messages-prost"
+path = "./common/messages-prost"
 
 [workspace.dependencies.nb]
 version = "1.1.0"
