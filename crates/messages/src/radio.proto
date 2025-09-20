@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package messages_prost.radio;
+
+import "common.proto";
+import "sbg.proto";
+import "gps.proto";
+import "sensor/argus.proto";
+import "sensor/madgwick.proto";
+import "sensor/iim20670.proto";
+import "sensor/ms5611.proto";
+import "log.proto";
+import "argus_state.proto";
+import "phoenix_state.proto";
+import "command.proto";
+
+message RadioFrame {
+  messages_prost.common.Node node = 1;
+  oneof payload {
+    messages_prost.sbg.SbgData sbg = 2;
+    messages_prost.gps.Gps gps = 3;
+    messages_prost.madgwick.Madgwick madgwick = 4;
+    messages_prost.iim20670.Imu iim20670 = 5;
+    messages_prost.ms5611.Barometer barometer = 6;
+    messages_prost.log.Log log = 7;
+    messages_prost.phoenix_state.State phoenix_state = 8;
+    messages_prost.command.Command command = 9;
+    messages_prost.phoenix_state.Event phoenix_event = 10;
+    messages_prost.argus_state.Event argus_event = 11; 
+    messages_prost.argus_state.State argus_state = 12;  
+    messages_prost.argus.Pressure argus_pressure = 13;
+    messages_prost.argus.Temperature argus_temperature = 14; 
+    messages_prost.argus.Strain argus_strain = 15; 
+  }
+  uint64 millis_since_start = 16; 
+}
+
+

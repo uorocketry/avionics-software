@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package messages_prost.gps;
+
+message Gps {
+    bytes data = 1;
+}

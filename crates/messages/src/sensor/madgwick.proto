@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package messages_prost.madgwick;
+
+import "common.proto";
+
+message Quaternion {
+    float w = 1;
+    float x = 2;
+    float y = 3; 
+    float z = 4;
+}
+
+message Madgwick {
+    common.Node node = 1; 
+    Quaternion data = 2; 
+}

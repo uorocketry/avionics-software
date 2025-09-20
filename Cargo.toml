@@ -24,9 +24,6 @@ version = "0.3.2"
 [workspace.dependencies.defmt-rtt]
 version = "0.4"
 
-[workspace.dependencies.defmt-test]
-version = "0.3.2"
-
 [workspace.dependencies.embedded-alloc]
 version = "0.6.0"
 
@@ -34,7 +31,7 @@ version = "0.6.0"
 version = "0.3.11"
 
 [workspace.dependencies.heapless]
-version = "0.7.16"
+version = "0.9.1"
 
 [workspace.dependencies.messages-prost]
 git = "https://github.com/uorocketry/messages-prost"

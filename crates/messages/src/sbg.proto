@@ -1,0 +1,307 @@
+syntax = "proto3";
+
+package messages_prost.sbg;
+
+import "common.proto";
+
+// region Vector3
+message Vector3 {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+// endregion Vector3
+
+// region Ekf
+enum EkfStatusFlag {
+  EKF_STATUS_NONE           = 0;
+  EKF_STATUS_ATTITUDE_VALID = 1;      // 0x01
+  EKF_STATUS_HEADING_VALID  = 2;      // 0x02
+  EKF_STATUS_VELOCITY_VALID = 4;      // 0x04
+  EKF_STATUS_POSITION_VALID = 8;      // 0x08
+  EKF_STATUS_VERT_REF_USED  = 16;     // 0x10
+  EKF_STATUS_MAG_REF_USED   = 32;     // 0x20
+  EKF_STATUS_GPS1_VEL_USED  = 64;     // 0x40
+  EKF_STATUS_GPS1_POS_USED  = 128;    // 0x80
+  EKF_STATUS_GPS1_HDT_USED  = 256;    // 0x100
+  EKF_STATUS_GPS2_VEL_USED  = 512;    // 0x200
+  EKF_STATUS_GPS2_POS_USED  = 1024;   // 0x400
+  EKF_STATUS_GPS2_HDT_USED  = 2048;   // 0x800
+  EKF_STATUS_ODO_USED       = 4096;   // 0x1000
+  EKF_STATUS_DVL_BT_USED    = 8192;   // 0x2000
+  EKF_STATUS_DVL_WT_USED    = 16384;  // 0x4000
+  EKF_STATUS_USER_POS_USED  = 32768;  // 0x8000
+  EKF_STATUS_USER_VEL_USED  = 65536;  // 0x10000
+  EKF_STATUS_USER_HEADING_USED = 131072; // 0x20000
+  EKF_STATUS_USBL_USED      = 262144; // 0x40000
+  EKF_STATUS_AIR_DATA_USED  = 524288; // 0x80000
+  EKF_STATUS_ZUPT_USED      = 1048576; // 0x100000
+  EKF_STATUS_ALIGN_VALID    = 2097152; // 0x200000
+  EKF_STATUS_DEPTH_USED     = 4194304; // 0x400000
+}
+
+// Use a uint32 to store the bitmask, and keep the solution mode as a separate field
+message EkfStatus {
+  uint32 flags = 2; // Bitmask of EkfStatusFlag values.
+}
+// endregion Ekf
+
+// region UtcTime
+enum ClockStatus {
+  CLOCK_STATUS_UNSPECIFIED = 0;
+  CLOCK_ERROR = 1;
+  FREE_RUNNING = 2;
+  STEERING = 3;
+  CLOCK_VALID = 4;
+}
+
+enum UtcStatus {
+  UTC_STATUS_UNSPECIFIED = 0;
+  UTC_INVALID = 1;
+  NO_LEAP_SEC = 2;
+  UTC_VALID = 3;
+}
+
+message UtcTimeStatus {
+  ClockStatus clock_status = 1;
+  UtcStatus utc_status = 2;
+}
+// endregion UtcTime
+
+//region Air
+enum AirStatusFlag {
+  AIR_STATUS_NONE           = 0;
+  AIR_STATUS_TIME_IS_DELAY  = 1;    // 0x01
+  AIR_STATUS_PRESSURE_ABS_VALID = 2; // 0x02
+  AIR_STATUS_ALTITUDE_VALID = 4;    // 0x04
+  AIR_STATUS_PRESSURE_DIFF_VALID = 8; // 0x08
+  AIR_STATUS_AIRSPEED_VALID = 16;   // 0x10
+  AIR_STATUS_TEMPERATURE_VALID = 32; // 0x20
+}
+
+message AirStatus {
+  uint32 flags = 1; // Bitmask of AirStatusFlag values.
+}
+// endregion Air
+
+// region Imu
+enum ImuStatusFlag {
+  IMU_STATUS_NONE           = 0;
+  IMU_STATUS_COM_OK         = 1;    // 0x01
+  IMU_STATUS_TEST_PASS      = 2;    // 0x02
+  IMU_STATUS_ACCEL_X_PASS   = 4;    // 0x04
+  IMU_STATUS_ACCEL_Y_PASS   = 8;    // 0x08
+  IMU_STATUS_ACCEL_Z_PASS   = 16;   // 0x10
+  IMU_STATUS_GYRO_X_PASS    = 32;   // 0x20
+  IMU_STATUS_GYRO_Y_PASS    = 64;   // 0x40
+  IMU_STATUS_GYRO_Z_PASS    = 128;  // 0x80
+  IMU_STATUS_ACCELS_IN_RANGE = 256; // 0x100
+  IMU_STATUS_GYROS_IN_RANGE  = 512; // 0x200
+}
+
+// Use a uint32 to store the bitmask
+message ImuStatus {
+  uint32 flags = 1; // Bitmask of ImuStatusFlag values.
+}
+// endregion Imu
+
+// region Gps
+enum GpsPositionStatusE {
+  GPS_POSITION_STATUS_E_UNSPECIFIED = 0;
+  SOL_COMPUTED = 1;
+  INSUFFICIENT_OBS = 2;
+  GPS_INTERNAL_ERROR = 3;
+  HEIGHT_LIMIT = 4;
+}
+
+enum GpsPositionType {
+  GPS_POSITION_TYPE_UNSPECIFIED = 0;
+  NO_SOLUTION = 1;
+  UNKNOWN_TYPE = 2;
+  SINGLE = 3;
+  PSEUDO_RANGE_DIFF = 4;
+  SBAS = 5;
+  OMNI_STAR = 6;
+  RTK_FLOAT = 7;
+  RTK_INT = 8;
+  PPP_FLOAT = 9;
+  PPP_INT = 10;
+  FIXED = 11;
+}
+
+message GpsPositionStatus {
+    GpsPositionStatusE status = 1;
+    GpsPositionType type = 2;
+}
+
+enum GpsVelStatusE {
+  GPS_VEL_STATUS_E_UNSPECIFIED = 0;
+  VEL_SOL_COMPUTED = 1;
+  VEL_INSUFFICIENT_OBS = 2;
+  VEL_INTERNAL_ERROR = 3;
+  VEL_LIMIT = 4;
+}
+
+enum GpsVelType {
+  GPS_VEL_TYPE_UNSPECIFIED = 0;
+  VEL_NO_SOLUTION = 1;
+  VEL_UNKNOWN_TYPE = 2;
+  DOPPLER = 3;
+  DIFFERENTIAL = 4;
+}
+
+message GpsVelStatus {
+    GpsVelStatusE status = 1;
+    GpsVelType type = 2;
+}
+
+message GpsPosData {
+    double latitude = 1;
+    double longitude = 2;
+    uint32 time_of_week = 3;
+    float undulation = 4;
+    double altitude = 5;
+    float latitude_accuracy = 6;
+    float longitude_accuracy = 7;
+    float altitude_accuracy = 8;
+    uint32 num_sv_used = 9;
+    uint32 base_station_id = 10;
+    uint32 differential_age = 11;
+}
+
+message GpsPos {
+    uint32 time_stamp = 1;
+    GpsPositionStatus status = 2;
+    optional GpsPosData data = 3;
+}
+
+message GpsVelData {
+  Vector3 velocity = 1;
+  Vector3 velocity_acc = 2;
+  float course = 3;
+  float course_acc = 4;
+  uint32 time_of_week = 5;
+}
+
+message GpsVel {
+    uint32 time_stamp = 1;
+    GpsVelStatus status = 2;
+    optional GpsVelData data = 3;
+}
+// endregion Gps
+
+message UtcTimeData {
+    uint32 year = 1;
+    int32 month = 2;
+    int32 day = 3;
+    int32 hour = 4;
+    int32 minute = 5;
+    int32 second = 6;
+    int32 nano_second = 7;
+    uint32 gps_time_of_week = 8;
+}
+
+message UtcTime {
+    uint32 time_stamp = 1;
+    UtcTimeStatus status = 2;
+    optional UtcTimeData data = 3;
+}
+
+// endregion Ekf
+
+// region Air
+message Air {
+    uint32 time_stamp = 1;
+    AirStatus status = 2;
+    optional AirData data = 3;
+}
+
+message AirData {
+    float pressure_abs = 1;
+    float altitude = 2;
+    float pressure_diff = 3;
+    float true_airspeed = 4;
+    float air_temperature = 5;
+}
+// endregion Air
+
+// region Imu
+message ImuGyroData {
+  Vector3 gyroscopes = 1;
+  Vector3 delta_angle = 2;
+}
+
+message ImuAccelData {
+  Vector3 accelerometers = 1;
+  Vector3 delta_velocity = 2;
+}
+
+message Imu {
+    uint32 time_stamp = 1;
+    ImuStatus status = 2;
+    optional ImuGyroData gyroscopes = 3;
+    optional ImuAccelData accelerometers = 4;
+    optional float temperature = 5;
+}
+// endregion Imu
+
+// region EkfQuat
+message Quaternion {
+  double w = 1;
+  double x = 2;
+  double y = 3;
+  double z = 4;
+}
+
+message QuaternionData {
+  Quaternion quaternion = 1;
+  Vector3 euler_std_dev = 2;
+}
+
+message EkfQuat {
+    uint32 time_stamp = 1;
+    EkfStatus status = 2;
+    optional QuaternionData data = 3;
+}
+// endregion EkfQuat
+
+// region EkfNav
+message EkfNav {
+    uint32 time_stamp = 1; // Time in us since the sensor power up.
+    EkfStatus status = 2; // EKF solution status bitmask and enum.
+    optional EkfVelocityData velocity = 3;
+    optional EkfPositionData position = 4;
+    optional float undulation = 5;
+}
+
+message EkfVelocityData {
+  Vector3 velocity = 1; // North, East, Down velocity in m.s^-1. (length 3)
+  Vector3 velocity_std_dev = 2; // North, East, Down velocity 1 sigma standard deviation in m.s^-1. (length 3)
+}
+
+message EkfPositionData {
+  Vector3 position = 1;
+  Vector3 position_std_dev = 2;
+}
+// endregion EkfNav
+
+// endregion Gps
+
+// region Sbg
+message SbgData {
+  oneof data {
+    GpsPos gps_pos = 1;
+    UtcTime utc_time = 2;
+    Imu imu = 3;
+    EkfQuat ekf_quat = 4;
+    EkfNav ekf_nav = 5;
+    GpsVel gps_vel = 6;
+    Air air = 7;
+  }
+}
+
+message SbgMessage {
+    common.Node node = 1; 
+    SbgData data = 2; 
+}
+// endregion Sbg

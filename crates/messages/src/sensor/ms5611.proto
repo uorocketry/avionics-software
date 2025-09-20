@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package messages_prost.ms5611;
+
+// MS5611 barometric pressure sensor
+message Barometer {
+  float pressure_kpa = 1;        // Pressure in kilopascals
+  float temperature_celsius = 2;  // Temperature in degrees Celsius
+}
