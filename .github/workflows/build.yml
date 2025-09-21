@@ -3,10 +3,10 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    # paths:
-    #   - '.github/workflows/argus/**'
-    #   - 'boards/argus/**'
-    #   - 'common/**' # because argus has some dependencies on common
+    paths:
+      - '.github/workflows/argus/**'
+      - 'boards/argus/**'
+      - 'common/**' # because argus has some dependencies on common
   workflow_dispatch:
 name: Build Verification
 
@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup Rust Environment (Cached)
-        uses: ./.github/common/actions/setup-rust-environment/
+        uses: ./.github/actions/common/setup-rust-environment/
 
       - name: Install Formatting Dependencies
         run: |
@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup Rust Environment (Cached)
-        uses: ./.github/common/actions/setup-rust-environment/
+        uses: ./.github/actions/common/setup-rust-environment/
 
       - name: "Build with Pressure Feature"
         run: cargo build --release --features pressure
@@ -54,7 +54,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup Rust Environment (Cached)
-        uses: ./.github/common/actions/setup-rust-environment/
+        uses: ./.github/actions/common/setup-rust-environment/
 
       - name: "Build with Temperature Feature"
         run: cargo build --release --features temperature
@@ -68,7 +68,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup Rust Environment (Cached)
-        uses: ./.github/common/actions/setup-rust-environment/
+        uses: ./.github/actions/common/setup-rust-environment/
 
       - name: "Build with Strain Feature"
         run: cargo build --release --features strain
@@ -84,7 +84,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup Rust Environment (Cached)
-        uses: ./.github/common/actions/setup-rust-environment/
+        uses: ./.github/actions/common/setup-rust-environment/
 
       - uses: actions-rs/cargo@v1
         name: "Run Host Tests"
