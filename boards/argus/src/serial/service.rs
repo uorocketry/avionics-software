@@ -1,13 +1,14 @@
 use embassy_stm32::interrupt::typelevel::Binding;
 use embassy_stm32::mode;
 use embassy_stm32::usart::ConfigError;
+pub use embassy_stm32::usart::Error as UsartError;
 use embassy_stm32::usart::{Config, Instance, InterruptHandler, RxDma, RxPin, TxDma, TxPin, Uart};
 use embassy_stm32::Peripheral;
 use embedded_io_async::Write;
 use heapless::String;
 
 pub struct SerialService {
-	uart: AsyncUart,
+	uart: Uart<'static, mode::Async>,
 }
 
 impl SerialService {
@@ -23,7 +24,7 @@ impl SerialService {
 		let mut config = Config::default();
 		config.baudrate = baudrate;
 
-		let uart = AsyncUart::new(peri, rx, tx, interrupt_requests, tx_dma, rx_dma, config)?;
+		let uart = Uart::<'static, mode::Async>::new(peri, rx, tx, interrupt_requests, tx_dma, rx_dma, config)?;
 
 		Ok(Self { uart })
 	}
@@ -32,7 +33,7 @@ impl SerialService {
 	pub async fn write_all(
 		&mut self,
 		data: &[u8],
-	) -> Result<(), AsyncUartError> {
+	) -> Result<(), UsartError> {
 		self.uart.write_all(data).await
 	}
 
@@ -40,7 +41,7 @@ impl SerialService {
 	pub async fn write_str(
 		&mut self,
 		s: &str,
-	) -> Result<(), AsyncUartError> {
+	) -> Result<(), UsartError> {
 		self.write_all(s.as_bytes()).await
 	}
 
@@ -49,7 +50,7 @@ impl SerialService {
 	pub async fn read_line<const N: usize>(
 		&mut self,
 		out: &mut String<N>,
-	) -> Result<usize, AsyncUartError> {
+	) -> Result<usize, UsartError> {
 		let mut count: usize = 0;
 		let mut byte = [0u8; 1];
 		loop {
@@ -79,6 +80,3 @@ impl SerialService {
 		Ok(count)
 	}
 }
-
-pub type AsyncUart = Uart<'static, mode::Async>;
-pub type AsyncUartError = <AsyncUart as embedded_io_async::ErrorType>::Error;

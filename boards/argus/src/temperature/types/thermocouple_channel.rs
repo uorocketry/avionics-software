@@ -1,6 +1,5 @@
-// Configurations that concern the temperature measurement system
 use defmt::Format;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::adc::driver::types::AnalogChannel;
 
@@ -9,9 +8,7 @@ use crate::adc::driver::types::AnalogChannel;
 // Each thermocouple channel uses a pair of analog input channels (differential measurement)
 pub const CHANNEL_COUNT: usize = 4;
 
-pub const QUEUE_SIZE: usize = 20;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize)]
 pub enum ThermocoupleChannel {
 	Channel1 = 0,
 	Channel2 = 1,

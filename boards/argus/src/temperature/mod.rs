@@ -1,4 +1,4 @@
-pub mod config;
+pub mod calibration;
 pub mod service;
-pub mod task;
+pub mod tasks;
 pub mod types;

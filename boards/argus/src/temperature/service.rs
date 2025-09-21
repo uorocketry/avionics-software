@@ -1,14 +1,23 @@
+use core::str::FromStr;
+
 use embassy_time::Instant;
-use heapless::String;
+use heapless::LinearMap;
 
 use crate::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
-use crate::adc::service::{AdcError, AdcService};
+use crate::adc::service::AdcService;
 use crate::config::{AdcDevice, ADC_COUNT};
+use crate::sd::csv::types::SerializeCSV;
 use crate::sd::service::SDCardService;
-use crate::serial::service::{AsyncUartError, SerialService};
-use crate::temperature::config::{ThermocoupleChannel, CHANNEL_COUNT};
-use crate::temperature::types::{LinearTransformation, ThermocoupleReading};
+use crate::sd::types::{FileName, OperationScope};
+use crate::serial::service::SerialService;
+use crate::temperature::types::{
+	LinearTransformation, TemperatureServiceError, ThermocoupleChannel, ThermocoupleReading, ThermocoupleReadingQueue, CHANNEL_COUNT,
+	LINEAR_TRANSFORMATIONS_FILE_NAME,
+};
 use crate::utils::types::AsyncMutex;
+
+// A channel for buffering the temperature readings and decoupling the logging to sd task from the measurement task
+pub static THERMOCOUPLE_READING_QUEUE: ThermocoupleReadingQueue = ThermocoupleReadingQueue::new();
 
 pub struct TemperatureService {
 	// Other services are passed by a mutex to ensure safe concurrent access
@@ -16,9 +25,8 @@ pub struct TemperatureService {
 	pub sd_service: &'static AsyncMutex<SDCardService>,
 	pub serial_service: &'static AsyncMutex<SerialService>,
 
-	// Transformations that gets degrees in celsius from voltage readings for each channel of each ADC
-	// transformations[adc_index][channel_index]
-	pub transformations: [[LinearTransformation; CHANNEL_COUNT]; ADC_COUNT],
+	// Linear transformations that are applied on top of the raw readings for each ADC and channel
+	pub transformations: LinearMap<AdcDevice, LinearMap<ThermocoupleChannel, LinearTransformation, CHANNEL_COUNT>, ADC_COUNT>,
 }
 
 impl TemperatureService {
@@ -31,11 +39,11 @@ impl TemperatureService {
 			adc_service,
 			sd_service,
 			serial_service,
-			transformations: [[LinearTransformation::default(); CHANNEL_COUNT]; ADC_COUNT],
+			transformations: LinearMap::new(),
 		}
 	}
 
-	pub async fn configure_adcs(&mut self) -> Result<(), AdcError> {
+	pub async fn setup(&mut self) -> Result<(), TemperatureServiceError> {
 		for driver in self.adc_service.lock().await.drivers.iter_mut() {
 			driver.reference_range = ReferenceRange::Avdd;
 			driver.data_rate = DataRate::Sps100;
@@ -44,6 +52,8 @@ impl TemperatureService {
 			driver.gain = Gain::G32;
 			driver.apply_configurations().await?;
 		}
+
+		self.load_transformations().await?;
 		Ok(())
 	}
 
@@ -51,7 +61,7 @@ impl TemperatureService {
 		&mut self,
 		adc: AdcDevice,
 		channel: ThermocoupleChannel,
-	) -> Result<ThermocoupleReading, AdcError> {
+	) -> Result<ThermocoupleReading, TemperatureServiceError> {
 		let mut adc_service = self.adc_service.lock().await;
 
 		// Get the respective "adc channel" pair for the "thermocouple channel"
@@ -72,33 +82,30 @@ impl TemperatureService {
 		Ok(thermocouple_reading)
 	}
 
-	pub async fn calibrate(&mut self) -> Result<(), AsyncUartError> {
-		let mut serial_service = self.serial_service.lock().await;
-		let mut input = String::<256>::new();
-
-		// Prompt for ADC index
-		serial_service
-			.write_str(
-				"Starting temperature calibration. \
-				Enter ADC index (Starts from 0):\"\n",
-			)
-			.await?;
-		input.clear();
-		serial_service.read_line(&mut input).await?;
-		let adc_index: usize = input.trim().parse().unwrap_or(0);
-		if adc_index >= ADC_COUNT {
-			serial_service.write_str("Invalid ADC index.\n").await?;
-			return Ok(());
-		}
-
-		// Prompt for channel
-		serial_service.write_str("Enter channel index (Starts from 0):\n").await?;
-		input.clear();
-		serial_service.read_line(&mut input).await?;
-		let channel_index: usize = input.trim().parse().unwrap_or(0);
-		let channel = ThermocoupleChannel::from(channel_index);
-
-		// SHOULD DO: finish this
+	pub async fn load_transformations(&mut self) -> Result<(), TemperatureServiceError> {
+		self.sd_service.lock().await.read(
+			OperationScope::Root,
+			FileName::from_str(LINEAR_TRANSFORMATIONS_FILE_NAME).unwrap(),
+			|line| {
+				if *line == LinearTransformation::get_csv_header() {
+					return true; // Skip header line
+				}
+				let transformation = LinearTransformation::from_csv_line(line);
+				self.load_transformation(transformation);
+				return true; // Continue reading
+			},
+		)?;
 		Ok(())
+	}
+
+	pub fn load_transformation(
+		&mut self,
+		transformation: LinearTransformation,
+	) {
+		if !self.transformations.contains_key(&transformation.adc) {
+			let _ = self.transformations.insert(transformation.adc, LinearMap::new());
+		}
+		let map = self.transformations.get_mut(&transformation.adc).unwrap();
+		let _ = map.insert(transformation.channel, transformation);
 	}
 }

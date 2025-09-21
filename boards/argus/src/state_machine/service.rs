@@ -34,7 +34,7 @@ impl StateMachineOrchestrator {
 				CURRENT_STATE.sender().send(state.clone());
 				debug!("State changed from {:?} to {:?} due to event {:?}", previous_state, state, event);
 			}
-			Err(e) => {
+			Err(_) => {
 				error!("Invalid event dispatched in state {:?}: {:?}", previous_state, event);
 			}
 		}

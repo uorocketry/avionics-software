@@ -5,7 +5,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::Delay;
 use embedded_hal_bus::spi::RefCellDevice;
-use embedded_sdmmc::{Directory, SdCard, VolumeManager};
+use embedded_sdmmc::{Directory, Error, SdCard, SdCardError as _SdCardError, VolumeManager};
 use heapless::String;
 
 use crate::sd::config::{MAX_LINE_LENGTH, QUEUE_SIZE};
@@ -36,6 +36,8 @@ pub type SDCardDirectory<'a, const MAX_DIRS: usize, const MAX_FILES: usize> = Di
 	1,
 >;
 
+pub type SdCardError = Error<_SdCardError>;
+
 pub type FileName = String<12>; // FAT 8.3 format only allows 8 chars for name, 3 for extension and 1 for the dot
 pub type DirectoryName = String<8>; // Max directory name length in FAT 8.3 is 8 characters
 pub type Line = String<MAX_LINE_LENGTH>; // A line to be written to the SD card
@@ -47,4 +49,4 @@ pub enum OperationScope {
 	CurrentSession, // Reads/Writes the file in the current session directory
 }
 
-pub type SdOperationQueue = Channel<CriticalSectionRawMutex, (OperationScope, FileName, Line), QUEUE_SIZE>;
+pub type SdCardWriteQueue = Channel<CriticalSectionRawMutex, (OperationScope, FileName, Line), QUEUE_SIZE>;

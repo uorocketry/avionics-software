@@ -1,10 +1,10 @@
 // SHOULD DO: use embedded_hal traits instead of embassy_stm32 types directly
 
-use defmt::{debug, error, info, Debug2Format};
+use defmt::{debug, error, Debug2Format};
 use embassy_stm32::spi::{MisoPin, MosiPin, SckPin};
 use embassy_stm32::{gpio, spi, time, Peripheral};
 use embassy_time::Delay;
-use embedded_sdmmc::{Error, Mode, SdCardError, VolumeIdx};
+use embedded_sdmmc::{Error, Mode, VolumeIdx};
 use heapless::{String, Vec};
 use static_cell::StaticCell;
 
@@ -12,7 +12,7 @@ use crate::sd::config::{MAX_DIRS, MAX_FILES};
 use crate::sd::time_source::FakeTimeSource;
 use crate::sd::types::{
 	FileName, Line, OperationScope, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice, SDCardSpiRefCell,
-	SDCardVolumeManager, SdOperationQueue,
+	SDCardVolumeManager, SdCardError, SdCardWriteQueue,
 };
 use crate::utils::types::AsyncMutex;
 
@@ -22,7 +22,7 @@ use crate::utils::types::AsyncMutex;
 static SD_CARD_SPI_REFCELL: StaticCell<SDCardSpiRefCell> = StaticCell::new();
 
 // Channel for queueing write operations
-static SD_OPERATION_QUEUE: SdOperationQueue = SdOperationQueue::new();
+static SD_OPERATION_QUEUE: SdCardWriteQueue = SdCardWriteQueue::new();
 
 pub struct SDCardService {
 	volume_manager: SDCardVolumeManager<MAX_DIRS, MAX_FILES>,
@@ -65,8 +65,8 @@ impl SDCardService {
 	// Closure that handles accessing root directory
 	pub fn with_root<T, E>(
 		&mut self,
-		f: impl for<'b> FnOnce(SDCardDirectory<'b, MAX_DIRS, MAX_FILES>) -> Result<T, Error<SdCardError>>,
-	) -> Result<T, Error<SdCardError>> {
+		f: impl for<'b> FnOnce(SDCardDirectory<'b, MAX_DIRS, MAX_FILES>) -> Result<T, SdCardError>,
+	) -> Result<T, SdCardError> {
 		debug!("Opening root directory");
 		let volume = self.volume_manager.open_volume(VolumeIdx(0))?;
 		let root_dir = volume.open_root_dir()?;
@@ -103,7 +103,7 @@ impl SDCardService {
 		&mut self,
 		scope: OperationScope,
 		path: FileName,
-	) -> Result<(), Error<SdCardError>> {
+	) -> Result<(), SdCardError> {
 		debug!("Deleting from SD card: {:?}, {:?}", scope, path.as_str());
 
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure
@@ -112,7 +112,7 @@ impl SDCardService {
 			_ => None,
 		};
 
-		self.with_root::<(), Error<SdCardError>>(|root_dir| {
+		self.with_root::<(), SdCardError>(|root_dir| {
 			let directory = match scope {
 				OperationScope::Root => root_dir,
 				OperationScope::CurrentSession => root_dir.open_dir(session.unwrap().as_str())?,
@@ -134,7 +134,7 @@ impl SDCardService {
 		scope: OperationScope,
 		path: FileName,
 		mut line: Line,
-	) -> Result<(), Error<SdCardError>> {
+	) -> Result<(), SdCardError> {
 		debug!("Writing to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
 
 		// Ensure line ends with newline
@@ -151,7 +151,7 @@ impl SDCardService {
 			_ => None,
 		};
 
-		self.with_root::<(), Error<SdCardError>>(|root_dir| {
+		self.with_root::<(), SdCardError>(|root_dir| {
 			let directory = match scope {
 				OperationScope::Root => root_dir,
 				OperationScope::CurrentSession => root_dir.open_dir(session.unwrap().as_str())?,
@@ -168,7 +168,7 @@ impl SDCardService {
 		&mut self,
 		scope: OperationScope,
 		path: FileName,
-	) -> Result<Vec<Line, LINES_COUNT>, Error<SdCardError>> {
+	) -> Result<Vec<Line, LINES_COUNT>, SdCardError> {
 		let mut lines: Vec<Line, LINES_COUNT> = Vec::new();
 		self.read(scope, path, |line| {
 			if lines.len() < LINES_COUNT {
@@ -181,12 +181,36 @@ impl SDCardService {
 		Ok(lines)
 	}
 
+	pub fn file_exists(
+		&mut self,
+		scope: OperationScope,
+		path: FileName,
+	) -> Result<bool, SdCardError> {
+		let session = match scope {
+			OperationScope::CurrentSession => Some(self.current_session.as_ref().unwrap().clone()),
+			_ => None,
+		};
+
+		self.with_root::<bool, SdCardError>(|root_dir| {
+			let directory = match scope {
+				OperationScope::Root => root_dir,
+				OperationScope::CurrentSession => root_dir.open_dir(session.unwrap().as_str())?,
+			};
+			let result = directory.open_file_in_dir(path.as_str(), Mode::ReadOnly);
+			match result {
+				Ok(_) => Ok(true),                 // File exists
+				Err(Error::NotFound) => Ok(false), // Does not exist
+				Err(e) => Err(e),                  // Propagate other errors
+			}
+		})
+	}
+
 	pub fn read<F: (FnMut(&Line) -> bool)>(
 		&mut self,
 		scope: OperationScope,
 		path: FileName,
 		mut handle_line: F,
-	) -> Result<(), Error<SdCardError>> {
+	) -> Result<(), SdCardError> {
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure
 
 		debug!("Reading from SD card: {:?}, {:?}", scope, path.as_str());
@@ -196,7 +220,7 @@ impl SDCardService {
 			_ => None,
 		};
 
-		self.with_root::<(), Error<SdCardError>>(|root_dir| {
+		self.with_root::<(), SdCardError>(|root_dir| {
 			let directory = match scope {
 				OperationScope::Root => root_dir,
 				OperationScope::CurrentSession => root_dir.open_dir(session.unwrap().as_str())?,
@@ -253,7 +277,7 @@ impl SDCardService {
 		})
 	}
 
-	pub fn ensure_session_created(&mut self) -> Result<(), Error<SdCardError>> {
+	pub fn ensure_session_created(&mut self) -> Result<(), SdCardError> {
 		debug!("Ensuring session directory is created");
 
 		if self.current_session.is_some() {
@@ -270,19 +294,19 @@ impl SDCardService {
 		self.current_session = Some(String::new());
 		self.current_session.as_mut().unwrap().push_str(current_session_str).ok(); // Ignore capacity error
 
-		self.with_root::<(), Error<SdCardError>>(|root_dir| {
+		self.with_root::<(), SdCardError>(|root_dir| {
 			debug!("Creating session directory: {}", current_session_str);
 			return root_dir.make_dir_in_dir(current_session_str);
 		})
 	}
 
 	/// Infer the last session based on the largest directory in the SD Card
-	fn get_last_session_number(&mut self) -> Result<u8, Error<SdCardError>> {
+	fn get_last_session_number(&mut self) -> Result<u8, SdCardError> {
 		debug!("Getting last session number");
 		// Sessions are directories generated on root directory: numbers starting from 0 autoincrementing
 		let mut last_session: u8 = 0;
 
-		return self.with_root::<u8, Error<SdCardError>>(|root_dir| {
+		return self.with_root::<u8, SdCardError>(|root_dir| {
 			root_dir.iterate_dir(|entry| {
 				if !entry.attributes.is_directory() {
 					return;

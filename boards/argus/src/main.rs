@@ -95,18 +95,13 @@ async fn main(spawner: Spawner) {
 	// Spawn tasks needed for temperature board
 	#[cfg(feature = "temperature")]
 	{
+		// Imported inside the block to avoid unused leaking the import when the feature is not enabled
 		use argus::temperature::service::TemperatureService;
-		use argus::temperature::task;
+		use argus::temperature::tasks;
 
 		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(adc_service, sd_service, serial_service)));
-		spawner.must_spawn(task::measure_and_enqueue_temperature_readings(
-			StateMachineWorker::new(state_machine_orchestrator),
-			temperature_service,
-		));
-		spawner.must_spawn(task::log_thermocouple_reading_to_sd_card(
-			StateMachineWorker::new(state_machine_orchestrator),
-			sd_service,
-		));
+		spawner.must_spawn(tasks::measure(StateMachineWorker::new(state_machine_orchestrator), temperature_service));
+		spawner.must_spawn(tasks::logger(StateMachineWorker::new(state_machine_orchestrator), sd_service));
 	}
 
 	// Immediately request to start recording
