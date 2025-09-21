@@ -8,12 +8,12 @@ This monorepo is houses three main types of packages.
 ### Boards
 Embedded software developed for each of our boards can be found at `boards/*`. 
 
-See [boards/README.md](./boards/README.md) for more details.
+See [boards/](./boards/) for more details.
 
 ### Common Logic
 Common logic shared between boards and possibly ground station can be found at `common/*`. 
 
-See [common/README.md](./common/README.md).
+See [common/](./common/).
 
 ### Ground Station
 Coming soon...
