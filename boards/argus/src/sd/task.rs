@@ -8,8 +8,8 @@ use crate::sd::types::OperationScope;
 use crate::utils::types::AsyncMutex;
 
 #[embassy_executor::task]
-pub async fn sd_card_task(sd_service: &'static AsyncMutex<SDCardService>) {
-	SDCardService::ensure_task(sd_service).await;
+pub async fn sd_card_task(sd_card_service: &'static AsyncMutex<SDCardService>) {
+	SDCardService::ensure_task(sd_card_service).await;
 }
 
 // SHOULD DO: move this to unit tests

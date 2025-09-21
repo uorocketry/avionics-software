@@ -22,7 +22,7 @@ pub static THERMOCOUPLE_READING_QUEUE: ThermocoupleReadingQueue = ThermocoupleRe
 pub struct TemperatureService {
 	// Other services are passed by a mutex to ensure safe concurrent access
 	pub adc_service: &'static AsyncMutex<AdcService>,
-	pub sd_service: &'static AsyncMutex<SDCardService>,
+	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub serial_service: &'static AsyncMutex<SerialService>,
 
 	// Linear transformations that are applied on top of the raw readings for each ADC and channel
@@ -32,12 +32,12 @@ pub struct TemperatureService {
 impl TemperatureService {
 	pub fn new(
 		adc_service: &'static AsyncMutex<AdcService>,
-		sd_service: &'static AsyncMutex<SDCardService>,
+		sd_card_service: &'static AsyncMutex<SDCardService>,
 		serial_service: &'static AsyncMutex<SerialService>,
 	) -> Self {
 		Self {
 			adc_service,
-			sd_service,
+			sd_card_service,
 			serial_service,
 			transformations: LinearMap::new(),
 		}
@@ -83,7 +83,7 @@ impl TemperatureService {
 	}
 
 	pub async fn load_transformations(&mut self) -> Result<(), TemperatureServiceError> {
-		self.sd_service.lock().await.read(
+		self.sd_card_service.lock().await.read(
 			OperationScope::Root,
 			FileName::from_str(LINEAR_TRANSFORMATIONS_FILE_NAME).unwrap(),
 			|line| {

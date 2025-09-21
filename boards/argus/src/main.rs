@@ -44,7 +44,7 @@ static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::T
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	let peripherals = configure_hal();
-	let sd_service = SD_CARD_SERVICE.init(AsyncMutex::new(SDCardService::new(
+	let sd_card_service = SD_CARD_SERVICE.init(AsyncMutex::new(SDCardService::new(
 		peripherals.SPI1,
 		peripherals.PA5,
 		peripherals.PA7,
@@ -89,7 +89,7 @@ async fn main(spawner: Spawner) {
 	let state_machine_orchestrator = STATE_MACHINE_ORCHESTRATOR.init(AsyncMutex::new(StateMachineOrchestrator::new()));
 
 	// General tasks that must run regardless of board type
-	spawner.must_spawn(sd_card_task(sd_service));
+	spawner.must_spawn(sd_card_task(sd_card_service));
 	spawner.must_spawn(test_sd_card());
 
 	// Spawn tasks needed for temperature board
@@ -99,9 +99,12 @@ async fn main(spawner: Spawner) {
 		use argus::temperature::service::TemperatureService;
 		use argus::temperature::tasks;
 
-		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(adc_service, sd_service, serial_service)));
+		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(adc_service, sd_card_service, serial_service)));
 		spawner.must_spawn(tasks::measure(StateMachineWorker::new(state_machine_orchestrator), temperature_service));
-		spawner.must_spawn(tasks::logger(StateMachineWorker::new(state_machine_orchestrator), sd_service));
+		spawner.must_spawn(tasks::log_measurements(
+			StateMachineWorker::new(state_machine_orchestrator),
+			sd_card_service,
+		));
 	}
 
 	// Immediately request to start recording

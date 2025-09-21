@@ -19,24 +19,24 @@ mod tests {
 	#[init]
 	fn init() -> SDCardService {
 		let peripherals = configure_hal();
-		let sd_service = SDCardService::new(peripherals.SPI1, peripherals.PA5, peripherals.PA7, peripherals.PA6, peripherals.PC4);
-		sd_service
+		let sd_card_service = SDCardService::new(peripherals.SPI1, peripherals.PA5, peripherals.PA7, peripherals.PA6, peripherals.PC4);
+		sd_card_service
 	}
 
 	#[test]
-	fn writing_directly_to_sd_card(mut sd_service: SDCardService) {
+	fn writing_directly_to_sd_card(mut sd_card_service: SDCardService) {
 		let path: String<12> = FileName::from("test.txt");
 		let text = Line::from("Hello, world!");
-		sd_service.delete(OperationScope::Root, path.clone()).unwrap();
-		sd_service.write(OperationScope::Root, path.clone(), text.clone()).unwrap();
-		sd_service
+		sd_card_service.delete(OperationScope::Root, path.clone()).unwrap();
+		sd_card_service.write(OperationScope::Root, path.clone(), text.clone()).unwrap();
+		sd_card_service
 			.read(OperationScope::Root, path.clone(), |line| {
 				assert_eq!(line.as_str(), text.as_str());
 				return false;
 			})
 			.unwrap();
 
-		let lines = sd_service.read_fixed_number_of_lines::<2>(OperationScope::Root, path).unwrap();
+		let lines = sd_card_service.read_fixed_number_of_lines::<2>(OperationScope::Root, path).unwrap();
 		assert_eq!(lines.len(), 1); // Even through read 2 lines, only 1 line exists
 		assert_eq!(lines[0].as_str(), text.as_str());
 	}

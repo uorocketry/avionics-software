@@ -119,13 +119,13 @@ impl TemperatureService {
 		&mut self,
 		transformation: LinearTransformation,
 	) -> Result<(), TemperatureServiceError> {
-		let mut sd_service = self.sd_service.lock().await;
+		let mut sd_card_service = self.sd_card_service.lock().await;
 		let path = FileName::from_str(LINEAR_TRANSFORMATIONS_FILE_NAME).unwrap();
-		if !(sd_service.file_exists(OperationScope::Root, path.clone())?) {
-			sd_service.write(OperationScope::Root, path.clone(), LinearTransformation::get_csv_header())?;
+		if !(sd_card_service.file_exists(OperationScope::Root, path.clone())?) {
+			sd_card_service.write(OperationScope::Root, path.clone(), LinearTransformation::get_csv_header())?;
 		}
 
-		sd_service.write(OperationScope::Root, path.clone(), transformation.to_csv_line())?;
+		sd_card_service.write(OperationScope::Root, path.clone(), transformation.to_csv_line())?;
 
 		Ok(())
 	}

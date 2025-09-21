@@ -13,11 +13,11 @@ use crate::utils::types::AsyncMutex;
 
 // Task for picking up the readings from the channel and logging them to the SD card
 #[task]
-pub async fn logger(
+pub async fn log_measurements(
 	mut worker: StateMachineWorker,
-	sd_service_mutex: &'static AsyncMutex<SDCardService>,
+	sd_card_service_mutex: &'static AsyncMutex<SDCardService>,
 ) {
-	initialize_csv_files(sd_service_mutex).await;
+	initialize_csv_files(sd_card_service_mutex).await;
 
 	worker
 		.run_while(States::Recording, async |_| -> Result<(), ()> {
@@ -32,17 +32,17 @@ pub async fn logger(
 }
 
 // Create the files and write the CSV headers before starting the logging loop
-async fn initialize_csv_files(sd_service_mutex: &'static AsyncMutex<SDCardService>) {
-	let mut sd_service = sd_service_mutex.lock().await;
+async fn initialize_csv_files(sd_card_service_mutex: &'static AsyncMutex<SDCardService>) {
+	let mut sd_card_service = sd_card_service_mutex.lock().await;
 
 	// Ignore because if the SD card isn't mounted we don't want to panic
-	let _ = sd_service.ensure_session_created();
+	let _ = sd_card_service.ensure_session_created();
 	for adc_index in 0..ADC_COUNT {
 		for channel in 0..CHANNEL_COUNT {
 			let path = get_path_from_adc_and_channel(adc_index, channel);
 
 			// Ignore because if the SD card isn't mounted we don't want to panic
-			let _ = sd_service.write(OperationScope::CurrentSession, path, ThermocoupleReading::get_csv_header());
+			let _ = sd_card_service.write(OperationScope::CurrentSession, path, ThermocoupleReading::get_csv_header());
 		}
 	}
 }

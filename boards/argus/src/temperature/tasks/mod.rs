@@ -1,5 +1,5 @@
-mod logger;
+mod log_measurements;
 mod measure;
 
-pub use logger::*;
+pub use log_measurements::*;
 pub use measure::*;
