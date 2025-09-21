@@ -3,10 +3,6 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    paths:
-      - '.github/workflows/argus/**/*'
-      - 'boards/argus/**/*'
-      - 'common/**/*' # because argus has some dependencies on common
   workflow_dispatch:
 name: Build Verification
 
