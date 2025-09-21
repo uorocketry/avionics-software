@@ -5,7 +5,6 @@ on:
   pull_request:
     paths:
       - '.github/workflows/argus/**'
-      - 'README.md'
       - 'boards/argus/**'
       - 'common/**' # because argus has some dependencies on common
   workflow_dispatch:
