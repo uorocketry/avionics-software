@@ -7,7 +7,7 @@ use crate::config::{AdcDevice, ADC_COUNT};
 use crate::sd::service::SDCardService;
 use crate::serial::service::{AsyncUartError, SerialService};
 use crate::temperature::config::{ThermocoupleChannel, CHANNEL_COUNT};
-use crate::temperature::types::{ThermocoupleReading, ValueTransformation};
+use crate::temperature::types::{LinearTransformation, ThermocoupleReading};
 use crate::utils::types::AsyncMutex;
 
 pub struct TemperatureService {
@@ -18,7 +18,7 @@ pub struct TemperatureService {
 
 	// Transformations that gets degrees in celsius from voltage readings for each channel of each ADC
 	// transformations[adc_index][channel_index]
-	pub transformations: [[ValueTransformation; CHANNEL_COUNT]; ADC_COUNT],
+	pub transformations: [[LinearTransformation; CHANNEL_COUNT]; ADC_COUNT],
 }
 
 impl TemperatureService {
@@ -31,7 +31,7 @@ impl TemperatureService {
 			adc_service,
 			sd_service,
 			serial_service,
-			transformations: [[ValueTransformation::default(); CHANNEL_COUNT]; ADC_COUNT],
+			transformations: [[LinearTransformation::default(); CHANNEL_COUNT]; ADC_COUNT],
 		}
 	}
 
