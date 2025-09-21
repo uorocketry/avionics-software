@@ -1,7 +1,7 @@
 # SHOULD DO: dedupe these and clean them up
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
     paths:
       - '.github/workflows/argus/**'
