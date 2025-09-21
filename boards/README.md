@@ -42,3 +42,12 @@ Cargo runner is already configured to use probe-rs with the correct chip. You ca
 Shows you the memory size breakdown of a compiled Rust binary: `rustup component add llvm-tools-preview`
 
 To run against your build `cargo size --bin {board}`
+
+## Common Issues
+
+1) **Rust-analyzer is complaining about my target triple being my host PC's target instead of embedded when looking at embedded code**.
+```
+embassy_executor::main: proc macro server error: Cannot create expander for ./target/debug/deps/libembassy_executor_macros-dfe0a64b5f1613f4.dylib:
+mismatched ABI expected: `rustc 1.89.0 (29483883e 2025-08-04)`, got `rustc 1.91.0-nightly (7aef4bec4 2025-09-01)
+```
+This is common because rust-analyzer picks up what target to use based on the vscode's working directory's `.cargo/Config.toml` build target. If you install the "Rust Target" extension you can dynamically jump around targets. Or alternatively open the folder for the board as your vscode's working directory instead of the entire monorepo and rust-analyzer will pick up the `.cargo/Config.toml` of the board's folder. We're using the `thumbv7em-none-eabihf` target triple.

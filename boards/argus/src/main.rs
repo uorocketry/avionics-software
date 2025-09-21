@@ -112,7 +112,7 @@ async fn main(spawner: Spawner) {
 	// Immediately request to start recording
 	state_machine_orchestrator.lock().await.dispatch_event(Events::StartRecordingRequested);
 
-	Timer::after_secs(20).await;
+	Timer::after_secs(30).await;
 
 	state_machine_orchestrator.lock().await.dispatch_event(Events::StopRecordingRequested);
 }
