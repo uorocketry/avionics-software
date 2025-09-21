@@ -6,17 +6,17 @@
         {
             "label": "build-argus-strain",
             "type": "shell",
-            "command": "cargo build --bin argus -F strain"
+            "command": "cd boards/argus && cargo build --bin argus -F strain"
         },
         {
             "label": "build-argus-pressure",
             "type": "shell",
-            "command": "cargo build --bin argus -F pressure"
+            "command": "cd boards/argus && cargo build --bin argus -F pressure"
         },
         {
             "label": "build-argus-temperature",
             "type": "shell",
-            "command": "cargo build --bin argus -F temperature"
+            "command": "cd boards/argus && cargo build --bin argus -F temperature"
         }
     ]
 }
