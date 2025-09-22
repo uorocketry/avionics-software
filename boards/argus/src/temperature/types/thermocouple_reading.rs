@@ -1,25 +1,13 @@
 use core::str::FromStr;
 
 use defmt::Format;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
-use heapless::String;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use crate::config::AdcDevice;
 use crate::sd::csv::types::SerializeCSV;
 use crate::sd::types::Line;
-use crate::temperature::config::{ThermocoupleChannel, QUEUE_SIZE};
-
-// Represents a linear transformation applied to raw thermocouple voltage readings to get degrees Celsius
-// temperature_in_celsius = raw_voltage * gain + offset
-#[derive(Debug, Clone, Copy, Format, Serialize, Default)]
-pub struct ValueTransformation {
-	pub gain: f32,
-	pub offset: f32,
-}
 
 // Represents a single temperature reading from a thermocouple channel
-#[derive(Debug, Clone, Copy, Format, Serialize)]
+#[derive(Debug, Clone, Copy, Format, Serialize, Deserialize)]
 pub struct ThermocoupleReading {
 	// Timestamp of the reading in milliseconds since epoch
 	pub timestamp_in_milliseconds: u64,
@@ -38,8 +26,8 @@ pub struct ThermocoupleReading {
 }
 
 impl SerializeCSV for ThermocoupleReading {
-	fn get_header() -> Line {
-		String::from_str(
+	fn get_csv_header() -> Line {
+		Line::from_str(
 			"Timestamp (ms),\
 			Voltage (mV),\
 			Compensated Temperature (C),\
@@ -49,5 +37,3 @@ impl SerializeCSV for ThermocoupleReading {
 		.unwrap()
 	}
 }
-
-pub type ThermocoupleReadingChannel = Channel<CriticalSectionRawMutex, (AdcDevice, ThermocoupleChannel, ThermocoupleReading), QUEUE_SIZE>;

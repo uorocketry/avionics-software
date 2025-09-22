@@ -1,23 +1,10 @@
-use core::cell::RefCell;
-
-use embassy_stm32::{gpio, mode, spi};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
-use embassy_time::Delay;
-use embedded_hal_bus::spi::RefCellDevice;
-use embedded_sdmmc::{Directory, SdCard, VolumeManager};
+use defmt::Format;
+use embedded_sdmmc::{Directory, VolumeManager};
 use heapless::String;
 
-use crate::sd::config::{MAX_LINE_LENGTH, QUEUE_SIZE};
-use crate::sd::time_source::FakeTimeSource;
-
-// Some typings to make the code more readable
-pub type SDCardSpiBus = spi::Spi<'static, mode::Blocking>; // Has to be blocking for embedded-sdmmc to work
-pub type SDCardSpiRefCell = RefCell<SDCardSpiBus>;
-pub type SDCardChipSelect = gpio::Output<'static>;
-pub type SDCardSpiDevice = RefCellDevice<'static, SDCardSpiBus, SDCardChipSelect, Delay>;
-
-pub type SDCardInstance = SdCard<SDCardSpiDevice, Delay>;
+use crate::sd::config::MAX_LINE_LENGTH;
+use crate::sd::types::spi::SDCardInstance;
+use crate::sd::types::time_source::FakeTimeSource;
 
 pub type SDCardVolumeManager<const MAX_DIRS: usize, const MAX_FILES: usize> = VolumeManager<
 	SDCardInstance,
@@ -41,10 +28,8 @@ pub type DirectoryName = String<8>; // Max directory name length in FAT 8.3 is 8
 pub type Line = String<MAX_LINE_LENGTH>; // A line to be written to the SD card
 
 // Represents the scope of a read/write operation
-#[derive(defmt::Format)]
+#[derive(Format)]
 pub enum OperationScope {
 	Root,           // Reads/Writes the file in the absolute path specified
 	CurrentSession, // Reads/Writes the file in the current session directory
 }
-
-pub type SdOperationQueue = Channel<CriticalSectionRawMutex, (OperationScope, FileName, Line), QUEUE_SIZE>;

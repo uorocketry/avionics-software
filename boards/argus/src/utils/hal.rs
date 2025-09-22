@@ -11,8 +11,12 @@ const HEAP_SIZE: usize = 40000;
 pub static HEAP: Heap = Heap::empty();
 
 pub fn configure_hal() -> Peripherals {
-	static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
-	unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
+	static mut HEAP_MEMORY: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
+
+	#[allow(static_mut_refs)]
+	unsafe {
+		HEAP.init(HEAP_MEMORY.as_ptr() as usize, HEAP_SIZE)
+	}
 
 	let mut config = Config::default();
 

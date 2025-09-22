@@ -9,7 +9,7 @@
 
 use argus::adc::service::{AdcConfig, AdcService};
 use argus::sd::service::SDCardService;
-use argus::sd::task::{sd_card_task, test_sd_card};
+use argus::sd::task::sd_card_task;
 use argus::serial::service::SerialService;
 use argus::state_machine::service::{StateMachineOrchestrator, StateMachineWorker};
 use argus::state_machine::types::Events;
@@ -44,7 +44,7 @@ static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::T
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	let peripherals = configure_hal();
-	let sd_service = SD_CARD_SERVICE.init(AsyncMutex::new(SDCardService::new(
+	let sd_card_service = SD_CARD_SERVICE.init(AsyncMutex::new(SDCardService::new(
 		peripherals.SPI1,
 		peripherals.PA5,
 		peripherals.PA7,
@@ -89,23 +89,20 @@ async fn main(spawner: Spawner) {
 	let state_machine_orchestrator = STATE_MACHINE_ORCHESTRATOR.init(AsyncMutex::new(StateMachineOrchestrator::new()));
 
 	// General tasks that must run regardless of board type
-	spawner.must_spawn(sd_card_task(sd_service));
-	spawner.must_spawn(test_sd_card());
+	spawner.must_spawn(sd_card_task(sd_card_service));
 
 	// Spawn tasks needed for temperature board
 	#[cfg(feature = "temperature")]
 	{
+		// Imported inside the block to avoid unused leaking the import when the feature is not enabled
 		use argus::temperature::service::TemperatureService;
-		use argus::temperature::task;
+		use argus::temperature::tasks;
 
-		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(adc_service, sd_service, serial_service)));
-		spawner.must_spawn(task::measure_and_enqueue_temperature_readings(
+		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(adc_service, sd_card_service, serial_service)));
+		spawner.must_spawn(tasks::measure(StateMachineWorker::new(state_machine_orchestrator), temperature_service));
+		spawner.must_spawn(tasks::log_measurements(
 			StateMachineWorker::new(state_machine_orchestrator),
-			temperature_service,
-		));
-		spawner.must_spawn(task::log_thermocouple_reading_to_sd_card(
-			StateMachineWorker::new(state_machine_orchestrator),
-			sd_service,
+			sd_card_service,
 		));
 	}
 

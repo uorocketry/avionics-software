@@ -1,9 +1,14 @@
+#![allow(dead_code)] // This driver is still being developed. Some functionalities were not urgently needed and are not yet used.
+
+pub mod config;
 pub mod types;
 
 use embassy_time::Timer;
 use embedded_hal::digital::{InputPin, OutputPin};
 use embedded_hal_async::spi::SpiDevice;
-use types::{AnalogChannel, Command, DataRate, Filter, Gain, ReferenceRange, Register, MAX_SIGNED_CODE_SIZE};
+use types::{AnalogChannel, Command, DataRate, Filter, Gain, ReferenceRange, Register};
+
+use crate::adc::driver::config::MAX_SIGNED_CODE_SIZE;
 
 pub struct Ads1262<SPI, DataReady, Reset, Start> {
 	spi_device: SPI,
@@ -13,6 +18,9 @@ pub struct Ads1262<SPI, DataReady, Reset, Start> {
 
 	// Cache the last set channel pair to avoid redundant SPI writes
 	last_set_channel_pair: (AnalogChannel, AnalogChannel),
+
+	// Time to wait after setting channels before reading data. This is needed for the ADC to settle.
+	pub delay_after_setting_channel: u64,
 
 	// Configurable parameters for the ADC. After changing call apply_configurations() to apply them to the ADC
 	pub enable_internal_reference: bool,
@@ -40,6 +48,7 @@ where
 			data_ready,
 			reset,
 			start,
+			delay_after_setting_channel: 0,
 			last_set_channel_pair: (AnalogChannel::AINCOM, AnalogChannel::AINCOM),
 
 			// Some default values. These will get configured later
@@ -105,7 +114,9 @@ where
 
 		self.write_register(Register::INPMUX, ((positive as u8) << 4) | (negative as u8)).await?;
 		self.last_set_channel_pair = (positive, negative);
-
+		if self.delay_after_setting_channel > 0 {
+			Timer::after_millis(self.delay_after_setting_channel).await;
+		}
 		Ok(())
 	}
 
