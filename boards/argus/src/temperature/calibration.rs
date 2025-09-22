@@ -4,17 +4,14 @@ use core::str::FromStr;
 use defmt::Format;
 use heapless::{format, String, Vec};
 
-use crate::config::{AdcDevice, ADC_COUNT};
+use crate::adc::config::ADC_COUNT;
+use crate::adc::types::AdcDevice;
 use crate::sd::csv::types::SerializeCSV;
 use crate::sd::types::{FileName, OperationScope};
 use crate::serial::service::UsartError;
+use crate::temperature::config::{CHANNEL_COUNT, LINEAR_TRANSFORMATIONS_FILE_NAME, MAX_CALIBRATION_DATA_POINTS};
 use crate::temperature::service::TemperatureService;
-use crate::temperature::types::{
-	LinearTransformation, TemperatureServiceError, ThermocoupleChannel, CHANNEL_COUNT, LINEAR_TRANSFORMATIONS_FILE_NAME,
-};
-
-// Maximum number of calibration data points allowed
-pub const MAX_CALIBRATION_DATA_POINTS: usize = 10;
+use crate::temperature::types::{LinearTransformation, TemperatureServiceError, ThermocoupleChannel};
 
 // Calibration logic has been separated into its own file for clarity
 impl TemperatureService {

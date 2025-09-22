@@ -1,6 +1,6 @@
 use core::future::Future;
 
-use defmt::{debug, error};
+use defmt::{error, info};
 use embassy_futures::select::{select, Either};
 
 use crate::{
@@ -32,7 +32,7 @@ impl StateMachineOrchestrator {
 		match result {
 			Ok(state) => {
 				CURRENT_STATE.sender().send(state.clone());
-				debug!("State changed from {:?} to {:?} due to event {:?}", previous_state, state, event);
+				info!("State changed from {:?} to {:?} due to event {:?}", previous_state, state, event);
 			}
 			Err(_) => {
 				error!("Invalid event dispatched in state {:?}: {:?}", previous_state, event);

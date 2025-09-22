@@ -1,19 +1,19 @@
 use core::str::FromStr;
 
+use defmt::info;
 use embassy_time::Instant;
 use heapless::LinearMap;
 
+use crate::adc::config::ADC_COUNT;
 use crate::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
 use crate::adc::service::AdcService;
-use crate::config::{AdcDevice, ADC_COUNT};
+use crate::adc::types::AdcDevice;
 use crate::sd::csv::types::SerializeCSV;
 use crate::sd::service::SDCardService;
-use crate::sd::types::{FileName, OperationScope};
+use crate::sd::types::{FileName, OperationScope, SdCardError};
 use crate::serial::service::SerialService;
-use crate::temperature::types::{
-	LinearTransformation, TemperatureServiceError, ThermocoupleChannel, ThermocoupleReading, ThermocoupleReadingQueue, CHANNEL_COUNT,
-	LINEAR_TRANSFORMATIONS_FILE_NAME,
-};
+use crate::temperature::config::{CHANNEL_COUNT, LINEAR_TRANSFORMATIONS_FILE_NAME};
+use crate::temperature::types::{LinearTransformation, TemperatureServiceError, ThermocoupleChannel, ThermocoupleReading, ThermocoupleReadingQueue};
 use crate::utils::types::AsyncMutex;
 
 // A channel for buffering the temperature readings and decoupling the logging to sd task from the measurement task
@@ -50,6 +50,7 @@ impl TemperatureService {
 			driver.filter = Filter::Sinc3;
 			driver.enable_internal_reference = true;
 			driver.gain = Gain::G32;
+			driver.delay_after_setting_channel = 100; // 100 ms delay to allow the ADC to stabilize after switching channels
 			driver.apply_configurations().await?;
 		}
 
@@ -83,7 +84,7 @@ impl TemperatureService {
 	}
 
 	pub async fn load_transformations(&mut self) -> Result<(), TemperatureServiceError> {
-		self.sd_card_service.lock().await.read(
+		let result = self.sd_card_service.lock().await.read(
 			OperationScope::Root,
 			FileName::from_str(LINEAR_TRANSFORMATIONS_FILE_NAME).unwrap(),
 			|line| {
@@ -94,7 +95,16 @@ impl TemperatureService {
 				self.load_transformation(transformation);
 				return true; // Continue reading
 			},
-		)?;
+		);
+
+		match result {
+			Ok(_) => (),
+			Err(SdCardError::NotFound) => {
+				// If transformations not found, keep using the defaults and ignore this error.
+				info!("Linear transformations file not found, using defaults. Gain = 1, Offset = 0");
+			}
+			Err(e) => return Err(TemperatureServiceError::SdCardError(e)),
+		}
 		Ok(())
 	}
 

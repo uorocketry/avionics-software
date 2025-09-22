@@ -9,7 +9,7 @@
 
 use argus::adc::service::{AdcConfig, AdcService};
 use argus::sd::service::SDCardService;
-use argus::sd::task::{sd_card_task, test_sd_card};
+use argus::sd::task::sd_card_task;
 use argus::serial::service::SerialService;
 use argus::state_machine::service::{StateMachineOrchestrator, StateMachineWorker};
 use argus::state_machine::types::Events;
@@ -90,7 +90,6 @@ async fn main(spawner: Spawner) {
 
 	// General tasks that must run regardless of board type
 	spawner.must_spawn(sd_card_task(sd_card_service));
-	spawner.must_spawn(test_sd_card());
 
 	// Spawn tasks needed for temperature board
 	#[cfg(feature = "temperature")]

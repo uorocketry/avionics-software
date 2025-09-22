@@ -4,11 +4,9 @@ use defmt::Format;
 use serde::{Deserialize, Serialize};
 
 use super::thermocouple_channel::ThermocoupleChannel;
-use crate::config::AdcDevice;
+use crate::adc::types::AdcDevice;
 use crate::sd::csv::types::SerializeCSV;
 use crate::sd::types::Line;
-
-pub const LINEAR_TRANSFORMATIONS_FILE_NAME: &str = "t.csv"; // Cannot be longer than 12 characters
 
 // Represents a linear transformation applied to the thermocouple readings
 // corrected_value = value_with_error * gain + offset

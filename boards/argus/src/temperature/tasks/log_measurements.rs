@@ -1,14 +1,15 @@
 use embassy_executor::task;
 use heapless::format;
 
-use crate::config::ADC_COUNT;
+use crate::adc::config::ADC_COUNT;
 use crate::sd::csv::types::SerializeCSV;
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope};
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
+use crate::temperature::config::CHANNEL_COUNT;
 use crate::temperature::service::THERMOCOUPLE_READING_QUEUE;
-use crate::temperature::types::{ThermocoupleReading, CHANNEL_COUNT};
+use crate::temperature::types::ThermocoupleReading;
 use crate::utils::types::AsyncMutex;
 
 // Task for picking up the readings from the channel and logging them to the SD card

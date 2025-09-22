@@ -1,6 +1,6 @@
 // SHOULD DO: use embedded_hal traits instead of embassy_stm32 types directly
 
-use defmt::{debug, error, Debug2Format};
+use defmt::debug;
 use embassy_stm32::spi::{MisoPin, MosiPin, SckPin};
 use embassy_stm32::{gpio, spi, time, Peripheral};
 use embassy_time::Delay;
@@ -9,12 +9,10 @@ use heapless::{String, Vec};
 use static_cell::StaticCell;
 
 use crate::sd::config::{MAX_DIRS, MAX_FILES};
-use crate::sd::time_source::FakeTimeSource;
 use crate::sd::types::{
-	FileName, Line, OperationScope, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice, SDCardSpiRefCell,
-	SDCardVolumeManager, SdCardError, SdCardWriteQueue,
+	FakeTimeSource, FileName, Line, OperationScope, SDCardChipSelect, SDCardDirectory, SDCardInstance, SDCardSpiBus, SDCardSpiDevice,
+	SDCardSpiRefCell, SDCardVolumeManager, SdCardError, SdCardWriteQueue,
 };
-use crate::utils::types::AsyncMutex;
 
 // Hack: During SDCardService initialization, SpiMutex needs to be passed by reference to SpiDevice and they both need to be encapsulated within SDCardService
 // Which is not possible because rust does not allow self-referencing structs so it's being made static cell instead of maintained inside SDCardService which is a singleton anyways
@@ -22,7 +20,7 @@ use crate::utils::types::AsyncMutex;
 static SD_CARD_SPI_REFCELL: StaticCell<SDCardSpiRefCell> = StaticCell::new();
 
 // Channel for queueing write operations
-static SD_OPERATION_QUEUE: SdCardWriteQueue = SdCardWriteQueue::new();
+pub static SD_CARD_WRITE_QUEUE: SdCardWriteQueue = SdCardWriteQueue::new();
 
 pub struct SDCardService {
 	volume_manager: SDCardVolumeManager<MAX_DIRS, MAX_FILES>,
@@ -73,22 +71,6 @@ impl SDCardService {
 		return f(root_dir);
 	}
 
-	/// Embassy task can call this to setup the sd card deferred write task
-	pub async fn ensure_task(service_mutex: &'static AsyncMutex<Self>) {
-		if let Err(error) = service_mutex.lock().await.ensure_session_created() {
-			error!("Could not create session directory: {:?}", Debug2Format(&error));
-		}
-
-		debug!("Starting SD card write loop.");
-		loop {
-			let (scope, path, line) = SD_OPERATION_QUEUE.receiver().receive().await;
-			if let Err(error) = service_mutex.lock().await.write(scope, path, line) {
-				error!("Could not write to SD card: {}", Debug2Format(&error));
-				continue;
-			}
-		}
-	}
-
 	// Non-blocking write that queues the message to be written by the async task
 	pub async fn enqueue_write(
 		scope: OperationScope,
@@ -96,7 +78,7 @@ impl SDCardService {
 		line: Line,
 	) {
 		debug!("Enqueuing write to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
-		SD_OPERATION_QUEUE.send((scope, path, line)).await;
+		SD_CARD_WRITE_QUEUE.send((scope, path, line)).await;
 	}
 
 	pub fn delete(

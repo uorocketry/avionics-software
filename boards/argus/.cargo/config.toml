@@ -3,7 +3,7 @@ runner = "probe-rs run --chip STM32H733VGTx --protocol swd"
 rustflags = ["-C", "link-arg=-Tlink.x", "-C", "link-arg=-Tdefmt.x"]
 
 [env]
-DEFMT_LOG = "debug"
+DEFMT_LOG = "debug,embedded_sdmmc=info"
 
 [build]
 target = "thumbv7em-none-eabihf"

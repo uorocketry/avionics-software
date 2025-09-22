@@ -3,7 +3,6 @@
 #![no_main]
 
 pub mod adc;
-pub mod config;
 pub mod sd;
 pub mod serial;
 pub mod state_machine;

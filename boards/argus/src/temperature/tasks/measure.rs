@@ -1,11 +1,13 @@
 use defmt::debug;
 use embassy_executor::task;
 
-use crate::config::{AdcDevice, ADC_COUNT};
+use crate::adc::config::ADC_COUNT;
+use crate::adc::types::AdcDevice;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
+use crate::temperature::config::CHANNEL_COUNT;
 use crate::temperature::service::{TemperatureService, THERMOCOUPLE_READING_QUEUE};
-use crate::temperature::types::{ThermocoupleChannel, CHANNEL_COUNT};
+use crate::temperature::types::ThermocoupleChannel;
 use crate::utils::types::AsyncMutex;
 
 // Task that iterates through the ADCs and channels, measures the temperature, and enqueues the readings to a channel

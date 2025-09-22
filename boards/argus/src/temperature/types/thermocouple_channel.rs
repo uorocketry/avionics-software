@@ -3,11 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::adc::driver::types::AnalogChannel;
 
-// Number of thermocouple channels per ADC
-// Note: Not to get confused with the number of analog input channels on each ADC
-// Each thermocouple channel uses a pair of analog input channels (differential measurement)
-pub const CHANNEL_COUNT: usize = 4;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize)]
 pub enum ThermocoupleChannel {
 	Channel1 = 0,
