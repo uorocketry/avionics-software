@@ -3,10 +3,10 @@ use core::str::FromStr;
 use defmt::Format;
 use serde::{Deserialize, Serialize};
 
-use super::thermocouple_channel::ThermocoupleChannel;
 use crate::adc::types::AdcDevice;
 use crate::sd::csv::types::SerializeCSV;
 use crate::sd::types::Line;
+use crate::temperature::types::thermocouple_channel::ThermocoupleChannel;
 
 // Represents a linear transformation applied to the thermocouple readings
 // corrected_value = value_with_error * gain + offset
