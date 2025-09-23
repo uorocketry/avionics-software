@@ -13,7 +13,8 @@ use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope, SdCardError};
 use crate::serial::service::SerialService;
 use crate::temperature::config::{CHANNEL_COUNT, LINEAR_TRANSFORMATIONS_FILE_NAME, RTD_RESISTANCE_AT_0C};
-use crate::temperature::rtd::device::ResistanceTemperatureDetector;
+use crate::temperature::rtd;
+use crate::temperature::thermocouple::type_k;
 use crate::temperature::types::{LinearTransformation, TemperatureServiceError, ThermocoupleChannel, ThermocoupleReading, ThermocoupleReadingQueue};
 use crate::utils::types::AsyncMutex;
 
@@ -25,8 +26,6 @@ pub struct TemperatureService {
 	pub adc_service: &'static AsyncMutex<AdcService>,
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub serial_service: &'static AsyncMutex<SerialService>,
-
-	pub rtd_device: ResistanceTemperatureDetector,
 
 	// Store the last RTD reading in Celsius to use for cold junction compensation
 	// This is cached here to avoid reading the RTD multiple times when reading multiple thermocouples
@@ -47,9 +46,6 @@ impl TemperatureService {
 			adc_service,
 			sd_card_service,
 			serial_service,
-			rtd_device: ResistanceTemperatureDetector {
-				resistance_at_0c: RTD_RESISTANCE_AT_0C,
-			},
 			last_rtd_reading: [None; ADC_COUNT],
 			transformations: LinearMap::new(),
 		}
@@ -80,17 +76,24 @@ impl TemperatureService {
 		// Get the respective "adc channel" pair for the "thermocouple channel"
 		let (positive_channel, negative_channel) = channel.to_analog_input_channel_pair();
 
+		// Read the voltage from the ADC in millivolts
 		let voltage = adc_service.drivers[adc as usize]
 			.read_differential(positive_channel, negative_channel)
 			.await? * 1000.0; // Convert to millivolts
+
+		// Get the cold junction temperature from the last RTD reading for this ADC
 		let cold_junction_temperature = self.last_rtd_reading[adc as usize];
 
 		let thermocouple_reading = ThermocoupleReading {
 			timestamp: Instant::now().as_millis(),
 			voltage,
-			uncompensated_temperature: None,
-			compensated_temperature: None,
-			cold_junction_temperature,
+			// SHOULD DO: remove the uncompensated temperature field once everything is confirmed working after testing
+			uncompensated_temperature: type_k::convert_voltage_to_temperature(voltage as f64)?,
+			compensated_temperature: type_k::convert_voltage_to_temperature_with_cold_junction_compensation(
+				voltage as f64,
+				cold_junction_temperature.unwrap_or(0.0) as f64,
+			)?,
+			cold_junction_temperature: cold_junction_temperature.unwrap_or(0.0),
 		};
 
 		Ok(thermocouple_reading)
@@ -106,12 +109,13 @@ impl TemperatureService {
 		// The AIN8-9 sequence is flipped accidentally so AIN9 is before the RTD and AIN8 is after the RTD
 		let voltage_before_rtd = adc_service.drivers[adc as usize].read_single_ended(AnalogChannel::AIN9).await?;
 		let voltage_after_rtd = adc_service.drivers[adc as usize].read_single_ended(AnalogChannel::AIN8).await?;
-		const R6: f32 = 1000.0;
+
 		// I = voltage_after_rtd / R6
 		// measured_resistance = V_RTD / I = R6 * (voltage_before_rtd - voltage_after_rtd) / voltage_after_rtd
+		const R6: f32 = 1000.0;
 		let measured_resistance = R6 * (voltage_before_rtd - voltage_after_rtd) / voltage_after_rtd;
-
-		Ok(measured_resistance)
+		let estimated_temperature = rtd::convert_resistance_to_temperature(RTD_RESISTANCE_AT_0C, measured_resistance);
+		Ok(estimated_temperature)
 	}
 
 	pub async fn load_transformations(&mut self) -> Result<(), TemperatureServiceError> {
@@ -124,7 +128,7 @@ impl TemperatureService {
 				}
 				let transformation = LinearTransformation::from_csv_line(line);
 				self.load_transformation(transformation);
-				true// Continue reading
+				true // Continue reading
 			},
 		);
 
