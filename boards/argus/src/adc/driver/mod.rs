@@ -153,7 +153,7 @@ where
 	) -> Result<(), E> {
 		// Mask to 5 bits just in case, to remove the leading bits
 		let mut address = register as u8;
-		address = address & 0x1F;
+		address &= 0x1F;
 
 		// Add the write register opcode prefix 010rrrrr (40h+000rrrrr)
 		let op1 = 0x40 | address;
@@ -172,7 +172,7 @@ where
 	) -> Result<u8, E> {
 		let mut address = register as u8;
 		// Mask to 5 bits just in case, to remove the leading bits
-		address = address & 0x1F;
+		address &= 0x1F;
 
 		// Add the read register opcode prefix 001rrrrr (20h+000rrrrr)
 		let op1 = 0x20 | address;

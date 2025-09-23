@@ -83,7 +83,7 @@ impl TemperatureService {
 		let voltage = adc_service.drivers[adc as usize]
 			.read_differential(positive_channel, negative_channel)
 			.await? * 1000.0; // Convert to millivolts
-		let cold_junction_temperature = self.last_rtd_reading[adc as usize].clone();
+		let cold_junction_temperature = self.last_rtd_reading[adc as usize];
 
 		let thermocouple_reading = ThermocoupleReading {
 			timestamp: Instant::now().as_millis(),
@@ -124,7 +124,7 @@ impl TemperatureService {
 				}
 				let transformation = LinearTransformation::from_csv_line(line);
 				self.load_transformation(transformation);
-				return true; // Continue reading
+				true// Continue reading
 			},
 		);
 
