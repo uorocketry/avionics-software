@@ -6,7 +6,7 @@ pub mod types;
 use embassy_time::Timer;
 use embedded_hal::digital::{InputPin, OutputPin};
 use embedded_hal_async::spi::SpiDevice;
-use types::{AnalogChannel, Command, DataRate, Filter, Gain, ReferenceRange, Register};
+use types::{AnalogChannel, Command, DataRate, Filter, Gain, ReferenceRange, Register, Voltage};
 
 use crate::adc::driver::config::MAX_SIGNED_CODE_SIZE;
 
@@ -63,7 +63,7 @@ where
 	pub async fn read_single_ended(
 		&mut self,
 		channel: AnalogChannel,
-	) -> Result<f32, E> {
+	) -> Result<Voltage, E> {
 		self.set_channels(channel, AnalogChannel::AINCOM).await?;
 		self.wait_for_next_data().await;
 		let code = self.read_data_code().await?;
@@ -74,7 +74,7 @@ where
 		&mut self,
 		positive: AnalogChannel,
 		negative: AnalogChannel,
-	) -> Result<f32, E> {
+	) -> Result<Voltage, E> {
 		self.set_channels(positive, negative).await?;
 		self.wait_for_next_data().await;
 		let code = self.read_data_code().await?;

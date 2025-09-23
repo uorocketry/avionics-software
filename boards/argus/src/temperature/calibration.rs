@@ -51,7 +51,7 @@ impl TemperatureService {
 		for data_point_index in 0..data_points_count {
 			let message: String<64> = format!("Data Point #{}. Enter expected value in degrees celsius:\n", data_point_index + 1).unwrap();
 			let expected_temperature: f32 = self.prompt(message.as_str()).await?;
-			let measured_temperature: f32 = self.read_thermocouple(adc, channel).await?.compensated_temperature_in_celsius.unwrap();
+			let measured_temperature: f32 = self.read_thermocouple(adc, channel).await?.compensated_temperature.unwrap();
 			let data_point = CalibrationDataPoint {
 				expected_temperature,
 				measured_temperature,
