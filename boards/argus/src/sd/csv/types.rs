@@ -18,7 +18,7 @@ pub trait SerializeCSV: Serialize + for<'d> Deserialize<'d> {
 		let mut line = [0u8; 255];
 		writer.serialize(&self, &mut line).unwrap();
 		let line_str = core::str::from_utf8(&line).unwrap();
-		
+
 		String::from_str(line_str).unwrap()
 	}
 }

@@ -8,9 +8,9 @@ pub struct FakeTimeSource {
 }
 
 impl Default for FakeTimeSource {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl FakeTimeSource {
