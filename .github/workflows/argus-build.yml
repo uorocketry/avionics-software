@@ -25,6 +25,7 @@ jobs:
         run: |
           cargo install cargo-sort
           rustup component add rustfmt
+        working-directory: boards/argus
 
       - name: Check Formatting
         run: cargo fmt -- --check
