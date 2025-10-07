@@ -1,11 +1,10 @@
 use defmt::{debug, error};
 use embassy_executor::task;
+use strum::EnumCount;
 
-use crate::adc::config::ADC_COUNT;
 use crate::adc::types::AdcDevice;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
-use crate::temperature::config::THERMOCOUPLE_CHANNEL_COUNT;
 use crate::temperature::service::{TemperatureService, THERMOCOUPLE_READING_QUEUE};
 use crate::temperature::types::ThermocoupleChannel;
 use crate::utils::types::AsyncMutex;
@@ -14,14 +13,14 @@ use crate::utils::types::AsyncMutex;
 #[task]
 pub async fn measure_thermocouples(
 	mut worker: StateMachineWorker,
-	temperature_service_mutex: &'static AsyncMutex<TemperatureService>,
+	temperature_service_mutex: &'static AsyncMutex<TemperatureService<{ AdcDevice::COUNT }>>,
 ) {
 	worker
 		.run_while(States::Recording, async |_| -> Result<(), ()> {
 			let mut temperature_service = temperature_service_mutex.lock().await;
 
-			for adc_index in 0..ADC_COUNT {
-				for channel_index in 0..THERMOCOUPLE_CHANNEL_COUNT {
+			for adc_index in 0..AdcDevice::COUNT {
+				for channel_index in 0..ThermocoupleChannel::COUNT {
 					let adc = AdcDevice::from(adc_index);
 					let channel = ThermocoupleChannel::from(channel_index);
 					let data = temperature_service.read_thermocouple(adc, channel).await;

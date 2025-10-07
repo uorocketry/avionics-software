@@ -3,23 +3,23 @@ use core::str::FromStr;
 
 use defmt::Format;
 use heapless::{format, String, Vec};
+use strum::EnumCount;
 
-use crate::adc::config::ADC_COUNT;
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::types::LinearTransformation;
 use crate::serial::service::UsartError;
-use crate::temperature::config::{MAX_CALIBRATION_DATA_POINTS, THERMOCOUPLE_CHANNEL_COUNT};
+use crate::temperature::config::MAX_CALIBRATION_DATA_POINTS;
 use crate::temperature::service::TemperatureService;
 use crate::temperature::types::{TemperatureServiceError, ThermocoupleChannel};
 
 // Calibration logic has been separated into its own file for clarity
-impl TemperatureService {
+impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 	pub async fn calibrate(&mut self) -> Result<(), TemperatureServiceError> {
 		// Prompt for ADC index
 		let adc_index: usize = self
 			.prompt("Starting temperature calibration. Enter ADC index (Starts from 0):\"\n")
 			.await?;
-		if adc_index >= ADC_COUNT {
+		if adc_index >= AdcDevice::COUNT {
 			self.send_message("Invalid ADC index.\n").await?;
 			return Ok(());
 		}
@@ -27,7 +27,7 @@ impl TemperatureService {
 
 		// Prompt for channel
 		let channel_index: usize = self.prompt("Enter thermocouple channel index (Starts from 0):\"\n").await?;
-		if channel_index >= THERMOCOUPLE_CHANNEL_COUNT {
+		if channel_index >= ThermocoupleChannel::COUNT {
 			self.send_message("Invalid channel index.\n").await?;
 			return Ok(());
 		}

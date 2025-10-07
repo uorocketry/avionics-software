@@ -1,8 +1,3 @@
-// Number of pressure sensor channels per ADC
-// Note: Not to get confused with the number of analog input channels on each ADC
-// Each pressure sensor channel uses a pair of analog input channels (differential measurement)
-pub const PRESSURE_CHANNEL_COUNT: usize = 4;
-
 // Size of the queue used to send pressure readings from the pressure service to the SD card service
 pub const PRESSURE_READING_QUEUE_SIZE: usize = 16;
 

@@ -1,10 +1,11 @@
 use embassy_time::Instant;
+use strum::EnumCount;
 
 use crate::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
 use crate::adc::service::AdcService;
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::service::LinearTransformationService;
-use crate::pressure::config::{LINEAR_TRANSFORMATIONS_FILE_NAME, PRESSURE_CHANNEL_COUNT};
+use crate::pressure::config::LINEAR_TRANSFORMATIONS_FILE_NAME;
 use crate::pressure::types::{PressureChannel, PressureReading, PressureReadingQueue, PressureServiceError};
 use crate::sd::service::SDCardService;
 use crate::serial::service::SerialService;
@@ -13,19 +14,19 @@ use crate::utils::types::AsyncMutex;
 // A channel for buffering the pressure readings and decoupling the logging to sd task from the measurement task
 pub static PRESSURE_READING_QUEUE: PressureReadingQueue = PressureReadingQueue::new();
 
-pub struct PressureService {
+pub struct PressureService<const ADC_COUNT: usize> {
 	// Other services are passed by a mutex to ensure safe concurrent access
-	pub adc_service: &'static AsyncMutex<AdcService>,
+	pub adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub serial_service: &'static AsyncMutex<SerialService>,
 
 	// Linear transformation service to apply error corrections obtained from calibration to raw readings
-	pub linear_transformation_service: LinearTransformationService<PressureChannel, f64, PRESSURE_CHANNEL_COUNT>,
+	pub linear_transformation_service: LinearTransformationService<PressureChannel, f64, ADC_COUNT, { PressureChannel::COUNT }>,
 }
 
-impl PressureService {
+impl<const ADC_COUNT: usize> PressureService<ADC_COUNT> {
 	pub fn new(
-		adc_service: &'static AsyncMutex<AdcService>,
+		adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 		sd_card_service: &'static AsyncMutex<SDCardService>,
 		serial_service: &'static AsyncMutex<SerialService>,
 	) -> Self {

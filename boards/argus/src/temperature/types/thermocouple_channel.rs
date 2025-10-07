@@ -1,9 +1,10 @@
 use defmt::Format;
 use serde::{Deserialize, Serialize};
+use strum::EnumCount;
 
 use crate::adc::driver::types::AnalogChannel;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize, EnumCount)]
 pub enum ThermocoupleChannel {
 	Channel1 = 0,
 	Channel2 = 1,

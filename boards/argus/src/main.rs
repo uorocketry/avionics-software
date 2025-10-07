@@ -8,6 +8,7 @@
 // );
 
 use argus::adc::service::{AdcConfig, AdcService};
+use argus::adc::types::AdcDevice;
 use argus::sd::service::SDCardService;
 use argus::sd::task::sd_card_task;
 use argus::serial::service::SerialService;
@@ -23,6 +24,7 @@ use embassy_stm32::{bind_interrupts, peripherals, usart};
 use embassy_time::Timer;
 use panic_probe as _;
 use static_cell::StaticCell;
+use strum::EnumCount;
 
 // Mapping of NVIC interrupts to Embassy interrupt handlers
 bind_interrupts!(struct InterruptRequests {
@@ -32,16 +34,16 @@ bind_interrupts!(struct InterruptRequests {
 // All services are singletons held in a static cell to initialize after peripherals are available
 // And wrapped around a mutex so they can be accessed safely from multiple async tasks
 static SD_CARD_SERVICE: StaticCell<AsyncMutex<SDCardService>> = StaticCell::new();
-static ADC_SERVICE: StaticCell<AsyncMutex<AdcService>> = StaticCell::new();
+static ADC_SERVICE: StaticCell<AsyncMutex<AdcService<{ AdcDevice::COUNT }>>> = StaticCell::new();
 static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new();
 
 static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrator>> = StaticCell::new();
 
 #[cfg(feature = "temperature")]
-static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::TemperatureService>> = StaticCell::new();
+static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::TemperatureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
 
 #[cfg(feature = "pressure")]
-static PRESSURE_SERVICE: StaticCell<AsyncMutex<argus::pressure::service::PressureService>> = StaticCell::new();
+static PRESSURE_SERVICE: StaticCell<AsyncMutex<argus::pressure::service::PressureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {

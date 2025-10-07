@@ -6,8 +6,8 @@ use defmt::{info, Format};
 use heapless::LinearMap;
 use num_traits::Float;
 use serde::{Deserialize, Serialize};
+use strum::EnumCount;
 
-use crate::adc::config::ADC_COUNT;
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::types::LinearTransformation;
 use crate::sd::csv::types::SerializeCSV;
@@ -15,18 +15,22 @@ use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope, SdCardError};
 use crate::utils::types::AsyncMutex;
 
-pub struct LinearTransformationService<C, V, const CHANNEL_COUNT: usize> {
+pub struct LinearTransformationService<Channel, ChannelValue, const ADC_COUNT: usize, const CHANNEL_COUNT: usize>
+where
+	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
+	ChannelValue: Float + Serialize + for<'de> Deserialize<'de>, {
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub file_name: &'static str,
 
 	// Linear transformations that are applied on top of the raw readings for each ADC and channel
-	pub transformations: LinearMap<AdcDevice, LinearMap<C, LinearTransformation<C, V>, CHANNEL_COUNT>, ADC_COUNT>,
+	pub transformations: LinearMap<AdcDevice, LinearMap<Channel, LinearTransformation<Channel, ChannelValue>, CHANNEL_COUNT>, ADC_COUNT>,
 }
 
-impl<C, V, const CHANNEL_COUNT: usize> LinearTransformationService<C, V, CHANNEL_COUNT>
+impl<Channel, ChannelValue, const ADC_COUNT: usize, const CHANNEL_COUNT: usize>
+	LinearTransformationService<Channel, ChannelValue, ADC_COUNT, CHANNEL_COUNT>
 where
-	C: Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
-	V: Float + Serialize + for<'de> Deserialize<'de>,
+	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
+	ChannelValue: Float + Serialize + for<'de> Deserialize<'de>,
 {
 	pub fn new(
 		sd_card_service: &'static AsyncMutex<SDCardService>,
@@ -45,10 +49,10 @@ where
 			.lock()
 			.await
 			.read(OperationScope::Root, FileName::from_str(self.file_name).unwrap(), |line| {
-				if *line == LinearTransformation::<C, V>::get_csv_header() {
+				if *line == LinearTransformation::<Channel, ChannelValue>::get_csv_header() {
 					return true; // Skip header line
 				}
-				let transformation = LinearTransformation::<C, V>::from_csv_line(line);
+				let transformation = LinearTransformation::<Channel, ChannelValue>::from_csv_line(line);
 				self.register_transformation(transformation);
 				true // Continue reading
 			});
@@ -66,7 +70,7 @@ where
 
 	pub fn register_transformation(
 		&mut self,
-		transformation: LinearTransformation<C, V>,
+		transformation: LinearTransformation<Channel, ChannelValue>,
 	) {
 		if !self.transformations.contains_key(&transformation.adc) {
 			let _ = self.transformations.insert(transformation.adc, LinearMap::new());
@@ -78,9 +82,9 @@ where
 	pub fn ensure_transformation_applied(
 		&self,
 		adc: AdcDevice,
-		channel: C,
-		raw_value: V,
-	) -> V {
+		channel: Channel,
+		raw_value: ChannelValue,
+	) -> ChannelValue {
 		if let Some(channel_map) = self.transformations.get(&adc) {
 			if let Some(transformation) = channel_map.get(&channel) {
 				return transformation.apply(raw_value);
@@ -91,12 +95,16 @@ where
 
 	pub async fn save_transformation(
 		&mut self,
-		transformation: LinearTransformation<C, V>,
+		transformation: LinearTransformation<Channel, ChannelValue>,
 	) -> Result<(), SdCardError> {
 		let mut sd_card_service = self.sd_card_service.lock().await;
 		let path = FileName::from_str(self.file_name).unwrap();
 		if !(sd_card_service.file_exists(OperationScope::Root, path.clone())?) {
-			sd_card_service.write(OperationScope::Root, path.clone(), LinearTransformation::<C, V>::get_csv_header())?;
+			sd_card_service.write(
+				OperationScope::Root,
+				path.clone(),
+				LinearTransformation::<Channel, ChannelValue>::get_csv_header(),
+			)?;
 		}
 
 		sd_card_service.write(OperationScope::Root, path.clone(), transformation.to_csv_line())?;

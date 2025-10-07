@@ -1,8 +1,3 @@
-// Number of thermocouple channels per ADC
-// Note: Not to get confused with the number of analog input channels on each ADC
-// Each thermocouple channel uses a pair of analog input channels (differential measurement)
-pub const THERMOCOUPLE_CHANNEL_COUNT: usize = 4;
-
 // Size of the queue used to send temperature readings from the temperature service to the SD card service
 pub const TEMPERATURE_READING_QUEUE_SIZE: usize = 16;
 

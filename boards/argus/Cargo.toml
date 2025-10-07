@@ -15,6 +15,7 @@ strain = []
 num-traits = { version = "0.2.19", default-features = false, features = [
 	"libm",
 ] }
+strum = { version = "0.27.2", default-features = false, features = ["derive"] }
 chrono = { workspace = true }
 cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }

@@ -1,8 +1,8 @@
 use defmt::{debug, error};
 use embassy_executor::task;
 use embassy_time::Timer;
+use strum::EnumCount;
 
-use crate::adc::config::ADC_COUNT;
 use crate::adc::types::AdcDevice;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
@@ -15,12 +15,12 @@ use crate::utils::types::AsyncMutex;
 #[task]
 pub async fn measure_rtds(
 	mut worker: StateMachineWorker,
-	temperature_service_mutex: &'static AsyncMutex<TemperatureService>,
+	temperature_service_mutex: &'static AsyncMutex<TemperatureService<{ AdcDevice::COUNT }>>,
 ) {
 	worker
 		.run_while(States::Recording, async |_| -> Result<(), ()> {
 			let mut temperature_service = temperature_service_mutex.lock().await;
-			for adc_index in 0..ADC_COUNT {
+			for adc_index in 0..AdcDevice::COUNT {
 				let adc = AdcDevice::from(adc_index);
 				let result = temperature_service.read_rtd(adc).await;
 				match result {

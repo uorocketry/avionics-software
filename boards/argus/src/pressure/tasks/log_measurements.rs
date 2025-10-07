@@ -1,10 +1,11 @@
 use embassy_executor::task;
 use heapless::format;
+use strum::EnumCount;
 
-use crate::adc::config::ADC_COUNT;
-use crate::pressure::config::PRESSURE_CHANNEL_COUNT;
+use crate::adc::types::AdcDevice;
 use crate::pressure::service::PRESSURE_READING_QUEUE;
 use crate::pressure::types::pressure_reading::PressureReading;
+use crate::pressure::types::PressureChannel;
 use crate::sd::csv::types::SerializeCSV;
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope};
@@ -38,8 +39,8 @@ async fn initialize_csv_files(sd_card_service_mutex: &'static AsyncMutex<SDCardS
 
 	// Ignore because if the SD card isn't mounted we don't want to panic
 	let _ = sd_card_service.ensure_session_created();
-	for adc_index in 0..ADC_COUNT {
-		for channel in 0..PRESSURE_CHANNEL_COUNT {
+	for adc_index in 0..AdcDevice::COUNT {
+		for channel in 0..PressureChannel::COUNT {
 			let path = get_path_from_adc_and_channel(adc_index, channel);
 
 			// Ignore because if the SD card isn't mounted we don't want to panic

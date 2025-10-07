@@ -1,13 +1,13 @@
 use embassy_time::Instant;
+use strum::EnumCount;
 
-use crate::adc::config::ADC_COUNT;
 use crate::adc::driver::types::{AnalogChannel, DataRate, Filter, Gain, ReferenceRange};
 use crate::adc::service::AdcService;
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::service::LinearTransformationService;
 use crate::sd::service::SDCardService;
 use crate::serial::service::SerialService;
-use crate::temperature::config::{LINEAR_TRANSFORMATIONS_FILE_NAME, RTD_RESISTANCE_AT_0C, THERMOCOUPLE_CHANNEL_COUNT};
+use crate::temperature::config::{LINEAR_TRANSFORMATIONS_FILE_NAME, RTD_RESISTANCE_AT_0C};
 use crate::temperature::rtd;
 use crate::temperature::thermocouple::type_k;
 use crate::temperature::types::{TemperatureServiceError, ThermocoupleChannel, ThermocoupleReading, ThermocoupleReadingQueue};
@@ -16,9 +16,9 @@ use crate::utils::types::AsyncMutex;
 // A channel for buffering the temperature readings and decoupling the logging to sd task from the measurement task
 pub static THERMOCOUPLE_READING_QUEUE: ThermocoupleReadingQueue = ThermocoupleReadingQueue::new();
 
-pub struct TemperatureService {
+pub struct TemperatureService<const ADC_COUNT: usize> {
 	// Other services are passed by a mutex to ensure safe concurrent access
-	pub adc_service: &'static AsyncMutex<AdcService>,
+	pub adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub serial_service: &'static AsyncMutex<SerialService>,
 
@@ -28,12 +28,12 @@ pub struct TemperatureService {
 	pub last_rtd_reading: [Option<f32>; ADC_COUNT],
 
 	// Linear transformations that are applied on top of the raw readings for each ADC and channel
-	pub linear_transformation_service: LinearTransformationService<ThermocoupleChannel, f64, THERMOCOUPLE_CHANNEL_COUNT>,
+	pub linear_transformation_service: LinearTransformationService<ThermocoupleChannel, f64, ADC_COUNT, { ThermocoupleChannel::COUNT }>,
 }
 
-impl TemperatureService {
+impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 	pub fn new(
-		adc_service: &'static AsyncMutex<AdcService>,
+		adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 		sd_card_service: &'static AsyncMutex<SDCardService>,
 		serial_service: &'static AsyncMutex<SerialService>,
 	) -> Self {
