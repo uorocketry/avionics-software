@@ -11,6 +11,12 @@ pub enum ThermocoupleChannel {
 	Channel4 = 3,
 }
 
+impl Default for ThermocoupleChannel {
+	fn default() -> Self {
+		ThermocoupleChannel::Channel1
+	}
+}
+
 // Support for implicit conversion from usize to ThermocoupleChannel
 impl From<usize> for ThermocoupleChannel {
 	fn from(value: usize) -> Self {

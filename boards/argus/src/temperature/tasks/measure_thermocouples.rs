@@ -5,7 +5,7 @@ use crate::adc::config::ADC_COUNT;
 use crate::adc::types::AdcDevice;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
-use crate::temperature::config::CHANNEL_COUNT;
+use crate::temperature::config::THERMOCOUPLE_CHANNEL_COUNT;
 use crate::temperature::service::{TemperatureService, THERMOCOUPLE_READING_QUEUE};
 use crate::temperature::types::ThermocoupleChannel;
 use crate::utils::types::AsyncMutex;
@@ -21,7 +21,7 @@ pub async fn measure_thermocouples(
 			let mut temperature_service = temperature_service_mutex.lock().await;
 
 			for adc_index in 0..ADC_COUNT {
-				for channel_index in 0..CHANNEL_COUNT {
+				for channel_index in 0..THERMOCOUPLE_CHANNEL_COUNT {
 					let adc = AdcDevice::from(adc_index);
 					let channel = ThermocoupleChannel::from(channel_index);
 					let data = temperature_service.read_thermocouple(adc, channel).await;

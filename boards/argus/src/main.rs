@@ -40,6 +40,9 @@ static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrato
 #[cfg(feature = "temperature")]
 static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::TemperatureService>> = StaticCell::new();
 
+#[cfg(feature = "pressure")]
+static PRESSURE_SERVICE: StaticCell<AsyncMutex<argus::pressure::service::PressureService>> = StaticCell::new();
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
@@ -110,6 +113,28 @@ async fn main(spawner: Spawner) {
 		spawner.must_spawn(tasks::measure_thermocouples(
 			StateMachineWorker::new(state_machine_orchestrator),
 			temperature_service,
+		));
+		spawner.must_spawn(tasks::log_measurements(
+			StateMachineWorker::new(state_machine_orchestrator),
+			sd_card_service,
+		));
+	}
+
+	// Spawn tasks needed for pressure board
+	#[cfg(feature = "pressure")]
+	{
+		// Imported inside the block to avoid unused leaking the import when the feature is not enabled
+		use argus::pressure::service::PressureService;
+		use argus::pressure::tasks;
+
+		let pressure_service = PRESSURE_SERVICE.init(AsyncMutex::new(PressureService::new(adc_service, sd_card_service, serial_service)));
+
+		// Setup the pressure service before starting the tasks
+		pressure_service.lock().await.setup().await.unwrap();
+
+		spawner.must_spawn(tasks::measure_pressure(
+			StateMachineWorker::new(state_machine_orchestrator),
+			pressure_service,
 		));
 		spawner.must_spawn(tasks::log_measurements(
 			StateMachineWorker::new(state_machine_orchestrator),

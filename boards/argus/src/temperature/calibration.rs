@@ -6,12 +6,11 @@ use heapless::{format, String, Vec};
 
 use crate::adc::config::ADC_COUNT;
 use crate::adc::types::AdcDevice;
-use crate::sd::csv::types::SerializeCSV;
-use crate::sd::types::{FileName, OperationScope};
+use crate::linear_transformation::types::LinearTransformation;
 use crate::serial::service::UsartError;
-use crate::temperature::config::{CHANNEL_COUNT, LINEAR_TRANSFORMATIONS_FILE_NAME, MAX_CALIBRATION_DATA_POINTS};
+use crate::temperature::config::{MAX_CALIBRATION_DATA_POINTS, THERMOCOUPLE_CHANNEL_COUNT};
 use crate::temperature::service::TemperatureService;
-use crate::temperature::types::{LinearTransformation, TemperatureServiceError, ThermocoupleChannel};
+use crate::temperature::types::{TemperatureServiceError, ThermocoupleChannel};
 
 // Calibration logic has been separated into its own file for clarity
 impl TemperatureService {
@@ -28,7 +27,7 @@ impl TemperatureService {
 
 		// Prompt for channel
 		let channel_index: usize = self.prompt("Enter thermocouple channel index (Starts from 0):\"\n").await?;
-		if channel_index >= CHANNEL_COUNT {
+		if channel_index >= THERMOCOUPLE_CHANNEL_COUNT {
 			self.send_message("Invalid channel index.\n").await?;
 			return Ok(());
 		}
@@ -76,7 +75,7 @@ impl TemperatureService {
 		self.send_message(result_message.as_str()).await?;
 
 		// Update calibration for the channel
-		self.save_transformation(transformation).await?;
+		self.linear_transformation_service.save_transformation(transformation).await?;
 		Ok(())
 	}
 
@@ -85,7 +84,7 @@ impl TemperatureService {
 		adc: AdcDevice,
 		channel: ThermocoupleChannel,
 		data_points: Vec<CalibrationDataPoint, MAX_CALIBRATION_DATA_POINTS>,
-	) -> LinearTransformation {
+	) -> LinearTransformation<ThermocoupleChannel, f64> {
 		// Keeping all types as f64
 		let data_points_count: f64 = data_points.len() as f64;
 
@@ -110,21 +109,6 @@ impl TemperatureService {
 		let offset = (sum_y - gain * sum_x) / data_points_count;
 
 		LinearTransformation { adc, channel, gain, offset }
-	}
-
-	async fn save_transformation(
-		&mut self,
-		transformation: LinearTransformation,
-	) -> Result<(), TemperatureServiceError> {
-		let mut sd_card_service = self.sd_card_service.lock().await;
-		let path = FileName::from_str(LINEAR_TRANSFORMATIONS_FILE_NAME).unwrap();
-		if !(sd_card_service.file_exists(OperationScope::Root, path.clone())?) {
-			sd_card_service.write(OperationScope::Root, path.clone(), LinearTransformation::get_csv_header())?;
-		}
-
-		sd_card_service.write(OperationScope::Root, path.clone(), transformation.to_csv_line())?;
-
-		Ok(())
 	}
 
 	async fn prompt<T>(
