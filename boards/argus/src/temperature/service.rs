@@ -88,7 +88,7 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 				voltage as f64,
 				cold_junction_temperature as f64,
 			)?,
-			cold_junction_temperature: cold_junction_temperature,
+			cold_junction_temperature,
 		};
 
 		Ok(thermocouple_reading)

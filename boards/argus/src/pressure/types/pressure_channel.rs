@@ -4,18 +4,13 @@ use strum::EnumCount;
 
 use crate::adc::driver::types::AnalogChannel;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize, EnumCount)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize, EnumCount, Default)]
 pub enum PressureChannel {
+	#[default]
 	Channel1 = 0,
 	Channel2 = 1,
 	Channel3 = 2,
 	Channel4 = 3,
-}
-
-impl Default for PressureChannel {
-	fn default() -> Self {
-		PressureChannel::Channel1
-	}
 }
 
 // Support for implicit conversion from usize to PressureChannel

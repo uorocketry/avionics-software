@@ -61,7 +61,7 @@ const K_E_MAX_MV: f64 = 54.886;
 
 /// Returns t90(E) in °C for Type K, or an error if E is out of range.
 pub fn convert_voltage_to_temperature(voltage: f64) -> Result<f64, ThermocoupleError> {
-	if voltage < K_E_MIN_MV || voltage > K_E_MAX_MV {
+	if !(K_E_MIN_MV..=K_E_MAX_MV).contains(&voltage) {
 		return Err(ThermocoupleError::MillivoltsOutOfRange);
 	}
 

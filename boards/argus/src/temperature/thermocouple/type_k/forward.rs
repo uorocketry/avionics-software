@@ -44,7 +44,7 @@ const K_E_OF_T_POS_A2: f64 = 0.126_968_600_000e+03;
 
 /// Returns E(t) in voltage for a Type K thermocouple, or None if t is out of range.
 pub fn convert_temperature_to_voltage(temperature: f64) -> Option<f64> {
-	if temperature < -270.0 || temperature > 1372.0 {
+	if !(-270.0..=1372.0).contains(&temperature) {
 		return None;
 	}
 

@@ -21,8 +21,8 @@ mod tests {
 	#[init]
 	fn init() -> SDCardService {
 		let peripherals = configure_hal();
-		let sd_card_service = SDCardService::new(peripherals.SPI1, peripherals.PA5, peripherals.PA7, peripherals.PA6, peripherals.PC4);
-		sd_card_service
+
+		SDCardService::new(peripherals.SPI1, peripherals.PA5, peripherals.PA7, peripherals.PA6, peripherals.PC4)
 	}
 
 	#[test]
@@ -34,7 +34,7 @@ mod tests {
 		sd_card_service
 			.read(OperationScope::Root, path.clone(), |line| {
 				assert_eq!(line.as_str(), text.as_str());
-				return false;
+				false
 			})
 			.unwrap();
 
