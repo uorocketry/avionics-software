@@ -24,7 +24,7 @@ jobs:
       - name: Install Formatting Dependencies
         run: |
           cargo install cargo-sort
-          rustup component add rustfmt
+          rustup component add rustfmt clippy
         working-directory: boards/argus
 
       - name: Check Formatting
