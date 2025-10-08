@@ -2,13 +2,14 @@ use core::fmt::Debug;
 use core::hash::Hash;
 use core::str::FromStr;
 
+use csv::SerializeCSV;
 use defmt::Format;
 use num_traits::Float;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
-use crate::sd::csv::types::SerializeCSV;
+use crate::sd::config::MAX_LINE_LENGTH;
 use crate::sd::types::Line;
 
 // Represents a linear transformation applied to a sensor reading
@@ -49,7 +50,7 @@ where
 	}
 }
 
-impl<Channel, ChannelValue> SerializeCSV for LinearTransformation<Channel, ChannelValue>
+impl<Channel, ChannelValue> SerializeCSV<MAX_LINE_LENGTH> for LinearTransformation<Channel, ChannelValue>
 where
 	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
 	ChannelValue: Float + Serialize + for<'de> Deserialize<'de>,

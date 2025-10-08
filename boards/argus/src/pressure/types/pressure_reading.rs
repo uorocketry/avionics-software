@@ -1,9 +1,10 @@
 use core::str::FromStr;
 
+use csv::SerializeCSV;
 use defmt::Format;
 use serde::{Deserialize, Serialize};
 
-use crate::sd::csv::types::SerializeCSV;
+use crate::sd::config::MAX_LINE_LENGTH;
 use crate::sd::types::Line;
 
 // Represents a single pressure reading from a pressure channel
@@ -22,7 +23,7 @@ pub struct PressureReading {
 	pub temperature: f32,
 }
 
-impl SerializeCSV for PressureReading {
+impl SerializeCSV<MAX_LINE_LENGTH> for PressureReading {
 	fn get_csv_header() -> Line {
 		Line::from_str(
 			"Timestamp (ms),\

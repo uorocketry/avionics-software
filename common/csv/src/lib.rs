@@ -1,19 +1,20 @@
+#![no_std]
+#![no_main]
+
 use core::str::FromStr;
 
 use heapless::String;
 use serde::{Deserialize, Serialize};
 use serde_csv_core::{Reader, Writer};
 
-use crate::sd::types::Line;
-
-pub trait SerializeCSV: Serialize + for<'d> Deserialize<'d> {
-	fn get_csv_header() -> Line;
-	fn from_csv_line(line: &Line) -> Self {
+pub trait SerializeCSV<const MAX_LINE_SIZE: usize>: Serialize + for<'d> Deserialize<'d> {
+	fn get_csv_header() -> String<MAX_LINE_SIZE>;
+	fn from_csv_line(line: &String<MAX_LINE_SIZE>) -> Self {
 		let mut reader = Reader::<255>::new();
 		let (record, _n) = reader.deserialize::<Self>(line.as_bytes()).unwrap();
 		record
 	}
-	fn to_csv_line(&self) -> Line {
+	fn to_csv_line(&self) -> String<MAX_LINE_SIZE> {
 		let mut writer = Writer::new();
 		let mut line = [0u8; 255];
 		writer.serialize(&self, &mut line).unwrap();

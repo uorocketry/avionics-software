@@ -1,3 +1,4 @@
+use csv::SerializeCSV;
 use embassy_executor::task;
 use heapless::format;
 use strum::EnumCount;
@@ -6,7 +7,6 @@ use crate::adc::types::AdcDevice;
 use crate::pressure::service::PRESSURE_READING_QUEUE;
 use crate::pressure::types::pressure_reading::PressureReading;
 use crate::pressure::types::PressureChannel;
-use crate::sd::csv::types::SerializeCSV;
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope};
 use crate::state_machine::service::StateMachineWorker;

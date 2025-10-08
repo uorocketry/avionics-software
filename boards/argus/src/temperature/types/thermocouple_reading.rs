@@ -1,9 +1,10 @@
 use core::str::FromStr;
 
+use csv::SerializeCSV;
 use defmt::Format;
 use serde::{Deserialize, Serialize};
 
-use crate::sd::csv::types::SerializeCSV;
+use crate::sd::config::MAX_LINE_LENGTH;
 use crate::sd::types::Line;
 
 // Represents a single temperature reading from a thermocouple channel
@@ -25,7 +26,7 @@ pub struct ThermocoupleReading {
 	pub cold_junction_temperature: f32,
 }
 
-impl SerializeCSV for ThermocoupleReading {
+impl SerializeCSV<MAX_LINE_LENGTH> for ThermocoupleReading {
 	fn get_csv_header() -> Line {
 		Line::from_str(
 			"Timestamp (ms),\

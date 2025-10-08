@@ -2,6 +2,7 @@ use core::fmt::Debug;
 use core::hash::Hash;
 use core::str::FromStr;
 
+use csv::SerializeCSV;
 use defmt::{info, Format};
 use heapless::LinearMap;
 use num_traits::Float;
@@ -10,7 +11,6 @@ use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::types::LinearTransformation;
-use crate::sd::csv::types::SerializeCSV;
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope, SdCardError};
 use crate::utils::types::AsyncMutex;

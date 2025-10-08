@@ -7,6 +7,10 @@ members = ["boards/*", "common/*"]
 # compile errors if built directly.
 default-members = ["boards/*"]
 
+[workspace.dependencies.serde-csv-core]
+version = "0.3.2"
+features = ["defmt"]
+
 [workspace.dependencies.chrono]
 git = "https://github.com/uorocketry/chrono"
 default-features = false
