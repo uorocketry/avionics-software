@@ -1,3 +1,4 @@
+use defmt::info;
 use embassy_time::Instant;
 use strum::EnumCount;
 
@@ -99,17 +100,31 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		adc: AdcDevice,
 	) -> Result<f32, TemperatureServiceError> {
 		let mut adc_service = self.adc_service.lock().await;
+		let driver = &mut adc_service.drivers[adc as usize];
+		let previous_gain = driver.gain.clone();
+
+		// Set the gain to 1 for RTD measurement to avoid saturating the ADC
+		driver.gain = Gain::G1;
+		driver.apply_gain_and_data_rate_configuration().await?;
+		driver.wait_for_next_data().await;
+
+		// Perform the measurement at the gain of 1
 
 		// Note: This is based on Argus V2 design as of September 22, 2025
 		// The AIN8-9 sequence is flipped accidentally so AIN9 is before the RTD and AIN8 is after the RTD
-		let voltage_before_rtd = adc_service.drivers[adc as usize].read_single_ended(AnalogChannel::AIN9).await?;
-		let voltage_after_rtd = adc_service.drivers[adc as usize].read_single_ended(AnalogChannel::AIN8).await?;
+		let voltage_before_rtd = driver.read_single_ended(AnalogChannel::AIN9).await?;
+		let voltage_after_rtd = driver.read_single_ended(AnalogChannel::AIN8).await?;
+
+		// Restore the previous gain
+		driver.gain = previous_gain;
+		driver.apply_gain_and_data_rate_configuration().await?;
 
 		// I = voltage_after_rtd / R6
 		// measured_resistance = V_RTD / I = R6 * (voltage_before_rtd - voltage_after_rtd) / voltage_after_rtd
 		const R6: f32 = 1000.0;
 		let measured_resistance = R6 * (voltage_before_rtd - voltage_after_rtd) / voltage_after_rtd;
 		let estimated_temperature = rtd::convert_resistance_to_temperature(RTD_RESISTANCE_AT_0C, measured_resistance);
+
 		Ok(estimated_temperature)
 	}
 }

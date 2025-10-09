@@ -1,5 +1,7 @@
 use defmt::{debug, error};
 use embassy_executor::task;
+use embassy_futures::yield_now;
+use embassy_time::Timer;
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
@@ -17,13 +19,11 @@ pub async fn measure_thermocouples(
 ) {
 	worker
 		.run_while(States::Recording, async |_| -> Result<(), ()> {
-			let mut temperature_service = temperature_service_mutex.lock().await;
-
 			for adc_index in 0..AdcDevice::COUNT {
 				for channel_index in 0..ThermocoupleChannel::COUNT {
 					let adc = AdcDevice::from(adc_index);
 					let channel = ThermocoupleChannel::from(channel_index);
-					let data = temperature_service.read_thermocouple(adc, channel).await;
+					let data = temperature_service_mutex.lock().await.read_thermocouple(adc, channel).await;
 					match data {
 						Ok(data) => {
 							debug!("ADC {} Channel {}: {}", adc, channel, data);
@@ -36,6 +36,9 @@ pub async fn measure_thermocouples(
 					}
 				}
 			}
+
+			// Yield to allow other tasks to run, especially the RTD measurement task
+			yield_now().await;
 			Ok(())
 		})
 		.await

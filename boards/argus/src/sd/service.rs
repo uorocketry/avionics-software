@@ -1,6 +1,6 @@
 // SHOULD DO: use embedded_hal traits instead of embassy_stm32 types directly
 
-use defmt::debug;
+use defmt::trace;
 use embassy_stm32::spi::{MisoPin, MosiPin, SckPin};
 use embassy_stm32::{gpio, spi, time, Peripheral};
 use embassy_time::Delay;
@@ -65,7 +65,7 @@ impl SDCardService {
 		&mut self,
 		f: impl for<'b> FnOnce(SDCardDirectory<'b, MAX_DIRS, MAX_FILES>) -> Result<T, SdCardError>,
 	) -> Result<T, SdCardError> {
-		debug!("Opening root directory");
+		trace!("Opening root directory");
 		let volume = self.volume_manager.open_volume(VolumeIdx(0))?;
 		let root_dir = volume.open_root_dir()?;
 		f(root_dir)
@@ -77,7 +77,7 @@ impl SDCardService {
 		path: FileName,
 		line: Line,
 	) {
-		debug!("Enqueuing write to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
+		trace!("Enqueuing write to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
 		SD_CARD_WRITE_QUEUE.send((scope, path, line)).await;
 	}
 
@@ -86,7 +86,7 @@ impl SDCardService {
 		scope: OperationScope,
 		path: FileName,
 	) -> Result<(), SdCardError> {
-		debug!("Deleting from SD card: {:?}, {:?}", scope, path.as_str());
+		trace!("Deleting from SD card: {:?}, {:?}", scope, path.as_str());
 
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure
 		let session = match scope {
@@ -117,7 +117,7 @@ impl SDCardService {
 		path: FileName,
 		mut line: Line,
 	) -> Result<(), SdCardError> {
-		debug!("Writing to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
+		trace!("Writing to SD card: {:?}, {:?}, {:?}", scope, path.as_str(), line.as_str());
 
 		// Ensure line ends with newline
 		if !line.as_str().ends_with("\n") {
@@ -195,7 +195,7 @@ impl SDCardService {
 	) -> Result<(), SdCardError> {
 		// Setup all variables needed from self since we cannot access self inside the self.with_root closure
 
-		debug!("Reading from SD card: {:?}, {:?}", scope, path.as_str());
+		trace!("Reading from SD card: {:?}, {:?}", scope, path.as_str());
 
 		let session = match scope {
 			OperationScope::CurrentSession => Some(self.current_session.as_ref().unwrap().clone()),
@@ -260,7 +260,7 @@ impl SDCardService {
 	}
 
 	pub fn ensure_session_created(&mut self) -> Result<(), SdCardError> {
-		debug!("Ensuring session directory is created");
+		trace!("Ensuring session directory is created");
 
 		if self.current_session.is_some() {
 			// Session directory already created
@@ -277,14 +277,14 @@ impl SDCardService {
 		self.current_session.as_mut().unwrap().push_str(current_session_str).ok(); // Ignore capacity error
 
 		self.with_root::<(), SdCardError>(|root_dir| {
-			debug!("Creating session directory: {}", current_session_str);
+			trace!("Creating session directory: {}", current_session_str);
 			root_dir.make_dir_in_dir(current_session_str)
 		})
 	}
 
 	/// Infer the last session based on the largest directory in the SD Card
 	fn get_last_session_number(&mut self) -> Result<u8, SdCardError> {
-		debug!("Getting last session number");
+		trace!("Getting last session number");
 		// Sessions are directories generated on root directory: numbers starting from 0 autoincrementing
 		let mut last_session: u8 = 0;
 
@@ -301,7 +301,7 @@ impl SDCardService {
 				}
 			})?;
 
-			debug!("Last session number: {}", last_session);
+			trace!("Last session number: {}", last_session);
 			Ok(last_session)
 		})
 	}

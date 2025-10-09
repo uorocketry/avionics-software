@@ -1,4 +1,4 @@
-use defmt::{debug, error};
+use defmt::{debug, error, info};
 use embassy_executor::task;
 use embassy_time::Timer;
 use strum::EnumCount;
@@ -19,20 +19,21 @@ pub async fn measure_rtds(
 ) {
 	worker
 		.run_while(States::Recording, async |_| -> Result<(), ()> {
-			let mut temperature_service = temperature_service_mutex.lock().await;
 			for adc_index in 0..AdcDevice::COUNT {
+				let mut temperature_service = temperature_service_mutex.lock().await;
 				let adc = AdcDevice::from(adc_index);
 				let result = temperature_service.read_rtd(adc).await;
 				match result {
 					Ok(data) => {
-						debug!("ADC {} RTD: {}", adc, data);
+						debug!("RTD Temperature {}: {}C", adc, data);
 						temperature_service.last_rtd_reading[adc_index] = Some(data);
 					}
 					Err(err) => {
-						error!("Error reading RTD for ADC {}: {:?}", adc, err);
+						error!("Error reading RTD for {}: {:?}", adc, err);
 					}
 				}
 			}
+
 			// Delay the RTD measurement because it's not as critical as the thermocouples. We just need to read every once in a while
 			Timer::after_millis(RTD_MEASUREMENT_INTERVAL).await;
 
