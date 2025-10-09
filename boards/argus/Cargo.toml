@@ -16,6 +16,7 @@ chrono = { workspace = true }
 cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
 critical-section = "1.1"
+csv = { path = "../../common/csv" }
 defmt = { workspace = true }
 defmt-rtt = { workspace = true }
 derive_more = { version = "2.0.1", default-features = false, features = [
@@ -84,7 +85,6 @@ static_cell = "2"
 stm32-fmc = "0.3.0"
 straingauge-converter = { path = "../../common/straingauge-converter" }
 strum = { version = "0.27.2", default-features = false, features = ["derive"] }
-csv = { path = "../../common/csv" }
 
 [[test]]
 name = "sd"
