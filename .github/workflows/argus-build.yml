@@ -1,18 +1,18 @@
 # SHOULD DO: dedupe these and clean them up
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
     paths:
-      - '.github/workflows/argus/**'
-      - 'boards/argus/**'
-      - 'common/**' # because argus has some dependencies on common
+      - ".github/workflows/argus/**"
+      - "boards/argus/**"
+      - "common/**" # because argus has some dependencies on common
   workflow_dispatch:
 name: Build Verification
 
 jobs:
-  formatting:
-    name: Check for Formatting Issues
+  lint:
+    name: Check for Formatting/Linting/Semantic Issues
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,13 +24,20 @@ jobs:
       - name: Install Formatting Dependencies
         run: |
           cargo install cargo-sort
-          rustup component add rustfmt
+          rustup component add rustfmt clippy
+        working-directory: boards/argus
 
       - name: Check Formatting
         run: cargo fmt -- --check
+        working-directory: boards/argus
 
       - name: Check Cargo.toml Sorting
         run: cargo sort --check
+        working-directory: boards/argus
+
+      - name: Check for Clippy Warnings
+        run: cargo clippy -p argus --all-features --no-deps
+        working-directory: boards/argus
 
   build_pressure:
     name: Build with Pressure Feature

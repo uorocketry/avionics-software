@@ -7,7 +7,6 @@ use embassy_stm32::{gpio, mode, spi, time::mhz};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use static_cell::StaticCell;
 
-use crate::adc::config::ADC_COUNT;
 use crate::adc::driver::Ads1262;
 
 // HACK: Use a static cell to hold the SPI bus shared between multiple ADC instances since we can't have self-referencing structs
@@ -15,11 +14,11 @@ use crate::adc::driver::Ads1262;
 static ADC_SPI_BUS: StaticCell<Mutex<CriticalSectionRawMutex, spi::Spi<'static, mode::Async>>> = StaticCell::new();
 
 /// Acts as an orchestration layer for multiple ADC drivers.
-pub struct AdcService {
+pub struct AdcService<const ADC_COUNT: usize> {
 	pub drivers: [AdcDriver; ADC_COUNT],
 }
 
-impl AdcService {
+impl<const ADC_COUNT: usize> AdcService<ADC_COUNT> {
 	pub fn new<T: spi::Instance>(
 		peri: impl Peripheral<P = T> + 'static,
 		sck: impl Peripheral<P = impl spi::SckPin<T>> + 'static,

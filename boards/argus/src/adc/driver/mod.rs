@@ -6,7 +6,7 @@ pub mod types;
 use embassy_time::Timer;
 use embedded_hal::digital::{InputPin, OutputPin};
 use embedded_hal_async::spi::SpiDevice;
-use types::{AnalogChannel, Command, DataRate, Filter, Gain, ReferenceRange, Register};
+use types::{AnalogChannel, Command, DataRate, Filter, Gain, ReferenceRange, Register, Voltage};
 
 use crate::adc::driver::config::MAX_SIGNED_CODE_SIZE;
 
@@ -63,7 +63,7 @@ where
 	pub async fn read_single_ended(
 		&mut self,
 		channel: AnalogChannel,
-	) -> Result<f32, E> {
+	) -> Result<Voltage, E> {
 		self.set_channels(channel, AnalogChannel::AINCOM).await?;
 		self.wait_for_next_data().await;
 		let code = self.read_data_code().await?;
@@ -74,7 +74,7 @@ where
 		&mut self,
 		positive: AnalogChannel,
 		negative: AnalogChannel,
-	) -> Result<f32, E> {
+	) -> Result<Voltage, E> {
 		self.set_channels(positive, negative).await?;
 		self.wait_for_next_data().await;
 		let code = self.read_data_code().await?;
@@ -90,7 +90,7 @@ where
 		Ok(())
 	}
 
-	async fn send_command(
+	pub async fn send_command(
 		&mut self,
 		command: Command,
 	) -> Result<(), E> {
@@ -98,7 +98,7 @@ where
 		Ok(())
 	}
 
-	async fn set_channels(
+	pub async fn set_channels(
 		&mut self,
 		positive: AnalogChannel,
 		negative: AnalogChannel,
@@ -120,7 +120,7 @@ where
 		Ok(())
 	}
 
-	async fn read_data_code(&mut self) -> Result<i32, E> {
+	pub async fn read_data_code(&mut self) -> Result<i32, E> {
 		// Send the RDATA1 command followed by 4 dummy bytes to read the 32-bit result 4 * 8 = 32 bits
 		let tx = [Command::RDATA1 as u8, 0, 0, 0, 0];
 
@@ -142,18 +142,18 @@ where
 		code: i32,
 	) -> f32 {
 		// Convert a 32‑bit two’s‑complement code to volts, using current VREF and PGA gain.
-		let full_scale_range: f32 = self.reference_range.to_volts() / (self.gain as u8 as f32);
+		let full_scale_range: f32 = self.reference_range.to_volts() / self.gain.to_multiplier();
 		(code as f64 / MAX_SIGNED_CODE_SIZE) as f32 * full_scale_range
 	}
 
-	async fn write_register(
+	pub async fn write_register(
 		&mut self,
 		register: Register,
 		value: u8,
 	) -> Result<(), E> {
 		// Mask to 5 bits just in case, to remove the leading bits
 		let mut address = register as u8;
-		address = address & 0x1F;
+		address &= 0x1F;
 
 		// Add the write register opcode prefix 010rrrrr (40h+000rrrrr)
 		let op1 = 0x40 | address;
@@ -166,13 +166,13 @@ where
 		Ok(())
 	}
 
-	async fn read_register(
+	pub async fn read_register(
 		&mut self,
 		register: Register,
 	) -> Result<u8, E> {
 		let mut address = register as u8;
 		// Mask to 5 bits just in case, to remove the leading bits
-		address = address & 0x1F;
+		address &= 0x1F;
 
 		// Add the read register opcode prefix 001rrrrr (20h+000rrrrr)
 		let op1 = 0x20 | address;
@@ -189,7 +189,7 @@ where
 		Ok(rx[2])
 	}
 
-	async fn wait_for_next_data(&mut self) {
+	pub async fn wait_for_next_data(&mut self) {
 		loop {
 			if self.data_ready.is_low().unwrap_or(false) {
 				break;
@@ -224,7 +224,7 @@ where
 		Ok(())
 	}
 
-	async fn apply_reference_range_configuration(&mut self) -> Result<(), E> {
+	pub async fn apply_reference_range_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x00;
 
 		match self.reference_range {
@@ -242,7 +242,7 @@ where
 		Ok(())
 	}
 
-	async fn apply_internal_reference_configuration(&mut self) -> Result<(), E> {
+	pub async fn apply_internal_reference_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x00;
 
 		if self.enable_internal_reference {
@@ -253,13 +253,13 @@ where
 		Ok(())
 	}
 
-	async fn apply_filter_configuration(&mut self) -> Result<(), E> {
+	pub async fn apply_filter_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x0;
 		register_value |= (self.filter as u8) << 5;
 		self.write_register(Register::MODE1, register_value).await
 	}
 
-	async fn apply_gain_and_data_rate_configuration(&mut self) -> Result<(), E> {
+	pub async fn apply_gain_and_data_rate_configuration(&mut self) -> Result<(), E> {
 		let mut register_value: u8 = 0x0;
 		register_value |= (self.gain as u8) << 4;
 		register_value |= self.data_rate as u8;
@@ -268,7 +268,7 @@ where
 		Ok(())
 	}
 
-	async fn apply_offset_calibration_configuration(&mut self) -> Result<(), E> {
+	pub async fn apply_offset_calibration_configuration(&mut self) -> Result<(), E> {
 		// SHOULD DO: implement
 		self.write_register(Register::OFCAL0, 0x00).await?;
 		self.write_register(Register::OFCAL1, 0x00).await?;
@@ -283,7 +283,7 @@ where
 		Ok((device_id, revision_id))
 	}
 
-	async fn apply_full_scale_calibration_configuration(&mut self) -> Result<(), E> {
+	pub async fn apply_full_scale_calibration_configuration(&mut self) -> Result<(), E> {
 		// SHOULD DO: implement
 		Ok(())
 	}

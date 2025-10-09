@@ -1,8 +1,9 @@
 use defmt::Format;
 use serde::{Deserialize, Serialize};
+use strum::EnumCount;
 
 // Called AdcDevice to not clash with embassy::adc::Adc
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize, EnumCount)]
 pub enum AdcDevice {
 	Adc1 = 0,
 	Adc2 = 1,

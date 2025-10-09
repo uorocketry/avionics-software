@@ -48,5 +48,9 @@ version = "1.0.150"
 default-features = false
 features = ["derive"]
 
+[workspace.dependencies.serde-csv-core]
+version = "0.3.2"
+features = ["defmt"]
+
 [workspace.dependencies.smlang]
 version = "0.8.0"

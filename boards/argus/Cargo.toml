@@ -16,8 +16,12 @@ chrono = { workspace = true }
 cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
 critical-section = "1.1"
+csv = { path = "../../common/csv" }
 defmt = { workspace = true }
 defmt-rtt = { workspace = true }
+derive_more = { version = "2.0.1", default-features = false, features = [
+	"full",
+] }
 embassy-embedded-hal = { version = "0.3.0" }
 embassy-executor = { version = "0.7.0", features = [
 	"nightly",
@@ -70,15 +74,17 @@ itoa = { version = "1.0.15", features = ["no-panic"] }
 libm = { version = "0.2.15", default-features = false }
 messages-prost = { workspace = true }
 micromath = "2.0.0"
+num-traits = { version = "0.2.19", default-features = false, features = [
+	"libm",
+] }
 panic-probe = { workspace = true }
 pid = "4.0.0"
 serde = { workspace = true, features = ["derive", "serde_derive"] }
-serde-csv-core = { version = "0.3.2", features = ["defmt"] }
 smlang = { workspace = true }
 static_cell = "2"
 stm32-fmc = "0.3.0"
 straingauge-converter = { path = "../../common/straingauge-converter" }
-thermocouple-converter = { path = "../../common/thermocouple-converter" }
+strum = { version = "0.27.2", default-features = false, features = ["derive"] }
 
 [[test]]
 name = "sd"

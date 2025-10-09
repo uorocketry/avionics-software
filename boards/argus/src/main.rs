@@ -8,6 +8,7 @@
 // );
 
 use argus::adc::service::{AdcConfig, AdcService};
+use argus::adc::types::AdcDevice;
 use argus::sd::service::SDCardService;
 use argus::sd::task::sd_card_task;
 use argus::serial::service::SerialService;
@@ -20,9 +21,9 @@ use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::Pin;
 use embassy_stm32::{bind_interrupts, peripherals, usart};
-use embassy_time::Timer;
 use panic_probe as _;
 use static_cell::StaticCell;
+use strum::EnumCount;
 
 // Mapping of NVIC interrupts to Embassy interrupt handlers
 bind_interrupts!(struct InterruptRequests {
@@ -32,13 +33,16 @@ bind_interrupts!(struct InterruptRequests {
 // All services are singletons held in a static cell to initialize after peripherals are available
 // And wrapped around a mutex so they can be accessed safely from multiple async tasks
 static SD_CARD_SERVICE: StaticCell<AsyncMutex<SDCardService>> = StaticCell::new();
-static ADC_SERVICE: StaticCell<AsyncMutex<AdcService>> = StaticCell::new();
+static ADC_SERVICE: StaticCell<AsyncMutex<AdcService<{ AdcDevice::COUNT }>>> = StaticCell::new();
 static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new();
 
 static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrator>> = StaticCell::new();
 
 #[cfg(feature = "temperature")]
-static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::TemperatureService>> = StaticCell::new();
+static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::TemperatureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
+
+#[cfg(feature = "pressure")]
+static PRESSURE_SERVICE: StaticCell<AsyncMutex<argus::pressure::service::PressureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -99,7 +103,40 @@ async fn main(spawner: Spawner) {
 		use argus::temperature::tasks;
 
 		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(adc_service, sd_card_service, serial_service)));
-		spawner.must_spawn(tasks::measure(StateMachineWorker::new(state_machine_orchestrator), temperature_service));
+
+		// Setup the temperature service before starting the tasks
+		temperature_service.lock().await.setup().await.unwrap();
+
+		spawner.must_spawn(tasks::measure_rtds(
+			StateMachineWorker::new(state_machine_orchestrator),
+			temperature_service,
+		));
+		spawner.must_spawn(tasks::measure_thermocouples(
+			StateMachineWorker::new(state_machine_orchestrator),
+			temperature_service,
+		));
+		spawner.must_spawn(tasks::log_measurements(
+			StateMachineWorker::new(state_machine_orchestrator),
+			sd_card_service,
+		));
+	}
+
+	// Spawn tasks needed for pressure board
+	#[cfg(feature = "pressure")]
+	{
+		// Imported inside the block to avoid unused leaking the import when the feature is not enabled
+		use argus::pressure::service::PressureService;
+		use argus::pressure::tasks;
+
+		let pressure_service = PRESSURE_SERVICE.init(AsyncMutex::new(PressureService::new(adc_service, sd_card_service, serial_service)));
+
+		// Setup the pressure service before starting the tasks
+		pressure_service.lock().await.setup().await.unwrap();
+
+		spawner.must_spawn(tasks::measure_pressure(
+			StateMachineWorker::new(state_machine_orchestrator),
+			pressure_service,
+		));
 		spawner.must_spawn(tasks::log_measurements(
 			StateMachineWorker::new(state_machine_orchestrator),
 			sd_card_service,
@@ -108,8 +145,4 @@ async fn main(spawner: Spawner) {
 
 	// Immediately request to start recording
 	state_machine_orchestrator.lock().await.dispatch_event(Events::StartRecordingRequested);
-
-	Timer::after_secs(30).await;
-
-	state_machine_orchestrator.lock().await.dispatch_event(Events::StopRecordingRequested);
 }
