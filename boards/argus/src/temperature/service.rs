@@ -1,4 +1,3 @@
-use defmt::info;
 use embassy_time::Instant;
 use strum::EnumCount;
 
@@ -100,7 +99,7 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 	) -> Result<f32, TemperatureServiceError> {
 		let mut adc_service = self.adc_service.lock().await;
 		let driver = &mut adc_service.drivers[adc as usize];
-		let previous_gain = driver.gain.clone();
+		let previous_gain = driver.gain;
 
 		// Set the gain to 1 for RTD measurement to avoid saturating the ADC
 		driver.gain = Gain::G1;

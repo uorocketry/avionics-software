@@ -1,7 +1,6 @@
 use defmt::{debug, error};
 use embassy_executor::task;
 use embassy_futures::yield_now;
-use embassy_time::Timer;
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
