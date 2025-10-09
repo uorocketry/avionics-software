@@ -11,7 +11,7 @@
 // Coefficients are from the official tables (units: E in mV, t in °C).
 // ────────────────────────────────────────────────────────────────────────────
 
-const K_E_OF_T_NEG_COEFFS: [f64; 11] = [
+const K_E_OF_T_NEG_COEFFICIENTS: [f64; 11] = [
 	0.000_000_000_000e+00,
 	0.394_501_280_250e-01,
 	0.236_223_735_980e-04,
@@ -25,7 +25,7 @@ const K_E_OF_T_NEG_COEFFS: [f64; 11] = [
 	-0.163_226_974_860e-22,
 ];
 
-const K_E_OF_T_POS_COEFFS: [f64; 10] = [
+const K_E_OF_T_POS_COEFFICIENTS: [f64; 10] = [
 	-0.176_004_136_860e-01,
 	0.389_212_049_750e-01,
 	0.185_587_700_320e-04,
@@ -59,10 +59,10 @@ pub fn convert_temperature_to_voltage(temperature: f64) -> Option<f64> {
 	};
 
 	if temperature <= 0.0 {
-		Some(polynomial(&K_E_OF_T_NEG_COEFFS))
+		Some(polynomial(&K_E_OF_T_NEG_COEFFICIENTS))
 	} else {
 		// Above 0 °C we add the exponential correction term.
-		let base = polynomial(&K_E_OF_T_POS_COEFFS);
+		let base = polynomial(&K_E_OF_T_POS_COEFFICIENTS);
 		let dt = temperature - K_E_OF_T_POS_A2;
 		let exp_term = K_E_OF_T_POS_A0 * libm::exp(K_E_OF_T_POS_A1 * (dt * dt));
 		Some(base + exp_term)

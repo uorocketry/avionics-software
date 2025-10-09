@@ -84,7 +84,6 @@ static_cell = "2"
 stm32-fmc = "0.3.0"
 straingauge-converter = { path = "../../common/straingauge-converter" }
 strum = { version = "0.27.2", default-features = false, features = ["derive"] }
-thermocouple-converter = { path = "../../common/thermocouple-converter" }
 csv = { path = "../../common/csv" }
 
 [[test]]

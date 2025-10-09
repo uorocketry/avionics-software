@@ -9,8 +9,7 @@ default_to_workspace = false
 # -----------------------
 
 [tasks.test-host]
-dependencies = ["test-thermocouple-converter"]
-
+dependencies = []
 # -----------------------
 # Embedded Testing
 # -----------------------
@@ -33,14 +32,3 @@ args = ["test", "-p", "argus", "--features", "pressure", "${@}"]
 [tasks.test-argus-strain]
 command = "cargo"
 args = ["test", "-p", "argus", "--features", "strain", "${@}"]
-
-[tasks.test-thermocouple-converter]
-command = "cargo"
-args = [
-    "test",
-    "-p",
-    "thermocouple-converter",
-    "--target",
-    "${CARGO_MAKE_RUST_TARGET_TRIPLE}",
-]
-env = { RUST_MIN_STACK = "8388608" }

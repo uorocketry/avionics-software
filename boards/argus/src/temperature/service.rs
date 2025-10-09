@@ -83,7 +83,6 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		let thermocouple_reading = ThermocoupleReading {
 			timestamp: Instant::now().as_millis(),
 			voltage,
-			// SHOULD DO: remove the uncompensated temperature field once everything is confirmed working after testing
 			uncompensated_temperature: type_k::convert_voltage_to_temperature(voltage as f64)?,
 			compensated_temperature: type_k::convert_voltage_to_temperature_with_cold_junction_compensation(
 				voltage as f64,

@@ -18,9 +18,7 @@ use crate::temperature::thermocouple::type_k::error::ThermocoupleError;
 
 const K_T_OF_E_D_NEG: [f64; 9] = [
 	0.000_000_0e+00,
-	2.517_346_2e+01 * 1.0e-3, // convert published 2.5173462E+01 mV term into per-mV scale:
-	// In the standard tables, E is in mV already and coefficients are sized accordingly.
-	// We keep them as-is (no unit scaling needed). The comment is just explanatory.
+	2.517_346_2e+01,
 	-1.166_287_8e+00,
 	-1.083_363_8e+00,
 	-8.977_354_0e-01,
@@ -33,7 +31,7 @@ const K_T_OF_E_D_NEG: [f64; 9] = [
 
 const K_T_OF_E_D_MID: [f64; 11] = [
 	0.000_000_0e+00,
-	2.508_355_0e+01 * 1.0e-3,
+	2.508_355_0e+01,
 	7.860_106_0e-02,
 	-2.503_131_0e-01,
 	8.315_270_0e-02,
@@ -47,7 +45,7 @@ const K_T_OF_E_D_MID: [f64; 11] = [
 
 const K_T_OF_E_D_HIGH: [f64; 7] = [
 	-1.318_058_0e+02,
-	4.830_222_0e+01 * 1.0e-3,
+	4.830_222_0e+01,
 	-1.646_031_0e+00,
 	5.464_731_0e-02,
 	-9.650_715_0e-04,

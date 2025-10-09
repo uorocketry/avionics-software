@@ -101,7 +101,6 @@ dependencies = [
  "stm32-fmc",
  "straingauge-converter",
  "strum",
- "thermocouple-converter",
 ]
 
 [[package]]
@@ -2017,10 +2016,6 @@ checksum = "d5d9cf598a6d7ce700a4e6a9199da127e6819a61e64b68609683cc9a01b5683a"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "thermocouple-converter"
-version = "0.1.0"
 
 [[package]]
 name = "thiserror"
