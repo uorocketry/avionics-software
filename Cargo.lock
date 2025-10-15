@@ -90,7 +90,7 @@ dependencies = [
  "heapless 0.9.1",
  "itoa",
  "libm",
- "messages-prost",
+ "messages",
  "micromath",
  "num-traits",
  "panic-probe",
@@ -243,7 +243,7 @@ dependencies = [
  "embedded-io-async",
  "embedded-nal-async",
  "heapless 0.7.17",
- "messages-prost",
+ "messages",
  "nb 1.1.0",
  "panic-probe",
 ]
@@ -1313,7 +1313,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
 
 [[package]]
-name = "messages-prost"
+name = "messages"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.9.2",

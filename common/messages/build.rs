@@ -9,16 +9,16 @@ fn main() -> Result<()> {
 	config.type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]");
 	config.btree_map(&["."]);
 
-	// Iterate through all .proto files in the src directory and its subdirectories
+	// Iterate through all .proto files in the proto directory and its subdirectories
 	let mut protos_paths: Vec<PathBuf> = Vec::new();
-	for entry in glob("src/**/*.proto").expect("Failed to read glob pattern") {
+	for entry in glob("proto/**/*.proto").expect("Failed to read glob pattern") {
 		match entry {
 			Ok(path) => protos_paths.push(path),
 			Err(error) => eprintln!("glob error: {error}"),
 		}
 	}
 
-	config.compile_protos(&protos_paths, &["src/"])?;
+	config.compile_protos(&protos_paths, &["proto/"])?;
 
 	Ok(())
 }

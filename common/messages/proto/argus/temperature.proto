@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package messages_prost.argus.temperature;
+
+import "argus/adc.proto";
+
+enum Thermocouple {
+	THERMOCOUPLE_1 = 0;
+	THERMOCOUPLE_2 = 1;
+	THERMOCOUPLE_3 = 2;
+	THERMOCOUPLE_4 = 3;
+}
+
+message ThermocoupleCalibrationRequest {
+	Thermocouple thermocouple = 1;
+	adc.AdcDevice adc_device = 2;
+}

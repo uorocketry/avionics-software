@@ -1,0 +1,12 @@
+[tasks.rust-bindings]
+description = "Build protobuf messages for Rust"
+command = "cargo"
+args = ["build"]
+
+[tasks.python-bindings]
+description = "Build protobuf messages for Python"
+script_runner = "@shell"
+script = [
+	"mkdir -p python",
+	"protoc --proto_path=proto --python_out=python $(find proto -type f -name '*.proto')",
+]

@@ -1,7 +1,8 @@
 use core::fmt::Debug;
 use core::str::FromStr;
 
-use defmt::Format;
+use defmt::{info, Format};
+use embassy_time::Timer;
 use heapless::{format, String, Vec};
 use strum::EnumCount;
 
@@ -15,6 +16,12 @@ use crate::temperature::types::{TemperatureServiceError, ThermocoupleChannel};
 // Calibration logic has been separated into its own file for clarity
 impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 	pub async fn calibrate(&mut self) -> Result<(), TemperatureServiceError> {
+		loop {
+			self.send_message("Hello from the calibration task!\n\r").await?;
+			info!("Hello from the calibration task!");
+			Timer::after_secs(2).await; // Pause before starting next calibration cycle
+		}
+
 		// Prompt for ADC index
 		let adc_index: usize = self
 			.prompt("Starting temperature calibration. Enter ADC index (Starts from 0):\"\n")

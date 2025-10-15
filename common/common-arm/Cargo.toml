@@ -10,7 +10,7 @@ defmt = { workspace = true }
 defmt-rtt = { workspace = true }
 heapless = "0.7.16"
 derive_more = "0.99.17"
-messages-prost = { workspace = true }
+messages = { workspace = true }
 nb = { workspace = true }
 panic-probe = { workspace = true }
 embassy-time = { version = "0.4.0", features = [

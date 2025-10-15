@@ -119,6 +119,10 @@ async fn main(spawner: Spawner) {
 			StateMachineWorker::new(state_machine_orchestrator),
 			sd_card_service,
 		));
+		spawner.must_spawn(tasks::calibrate_thermocouples(
+			StateMachineWorker::new(state_machine_orchestrator),
+			temperature_service,
+		));
 	}
 
 	// Spawn tasks needed for pressure board
@@ -144,5 +148,5 @@ async fn main(spawner: Spawner) {
 	}
 
 	// Immediately request to start recording
-	state_machine_orchestrator.lock().await.dispatch_event(Events::StartRecordingRequested);
+	state_machine_orchestrator.lock().await.dispatch_event(Events::CalibrationRequested);
 }
