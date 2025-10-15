@@ -48,15 +48,15 @@ impl ErrorManager {
 
 			if let Some(c) = e.get_context() {
 				match c {
-					messages_prost::common::ErrorContext::GroundStation => {}
+					messages::common::ErrorContext::GroundStation => {}
 
-					messages_prost::common::ErrorContext::NoRadioTransfer => {}
+					messages::common::ErrorContext::NoRadioTransfer => {}
 
-					messages_prost::common::ErrorContext::UnknownRadioMessage => {}
+					messages::common::ErrorContext::UnknownRadioMessage => {}
 
-					messages_prost::common::ErrorContext::UnkownCanMessage => {}
+					messages::common::ErrorContext::UnkownCanMessage => {}
 
-					messages_prost::common::ErrorContext::UnkownProstMessage => {}
+					messages::common::ErrorContext::UnkownProstMessage => {}
 				}
 			}
 

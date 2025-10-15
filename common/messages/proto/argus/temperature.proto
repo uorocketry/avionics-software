@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package messages_prost.argus.temperature;
+package messages.argus.temperature;
 
 import "argus/adc.proto";
 

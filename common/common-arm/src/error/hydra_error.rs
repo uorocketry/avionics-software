@@ -4,7 +4,7 @@ use core::convert::Infallible;
 use defmt::write;
 use derive_more::From;
 /// Open up atsamd hal errors without including the whole crate.
-use messages_prost::common::ErrorContext;
+use messages::common::ErrorContext;
 use nb::Error as NbError;
 
 use crate::drivers::ms5611;
@@ -19,8 +19,8 @@ pub enum HydraErrorType {
 	/// Error that occurred while spawning an RTIC task. Contains the name of the failed task.
 	SpawnError(&'static str),
 	/// Error from the Mavlink library.
-	MavlinkError(messages_prost::mavlink::error::MessageWriteError),
-	MavlinkReadError(messages_prost::mavlink::error::MessageReadError),
+	MavlinkError(messages::mavlink::error::MessageWriteError),
+	MavlinkReadError(messages::mavlink::error::MessageReadError),
 	NbError(NbError<Infallible>),
 }
 

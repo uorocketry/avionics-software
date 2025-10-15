@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from argus import adc_pb2 as argus_dot_adc__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x61rgus/temperature.proto\x12 messages_prost.argus.temperature\x1a\x0f\x61rgus/adc.proto\"\x9f\x01\n\x1eThermocoupleCalibrationRequest\x12\x44\n\x0cthermocouple\x18\x01 \x01(\x0e\x32..messages_prost.argus.temperature.Thermocouple\x12\x37\n\nadc_device\x18\x02 \x01(\x0e\x32#.messages_prost.argus.adc.AdcDevice*^\n\x0cThermocouple\x12\x12\n\x0eTHERMOCOUPLE_1\x10\x00\x12\x12\n\x0eTHERMOCOUPLE_2\x10\x01\x12\x12\n\x0eTHERMOCOUPLE_3\x10\x02\x12\x12\n\x0eTHERMOCOUPLE_4\x10\x03\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x61rgus/temperature.proto\x12 messages.argus.temperature\x1a\x0f\x61rgus/adc.proto\"\x9f\x01\n\x1eThermocoupleCalibrationRequest\x12\x44\n\x0cthermocouple\x18\x01 \x01(\x0e\x32..messages.argus.temperature.Thermocouple\x12\x37\n\nadc_device\x18\x02 \x01(\x0e\x32#.messages.argus.adc.AdcDevice*^\n\x0cThermocouple\x12\x12\n\x0eTHERMOCOUPLE_1\x10\x00\x12\x12\n\x0eTHERMOCOUPLE_2\x10\x01\x12\x12\n\x0eTHERMOCOUPLE_3\x10\x02\x12\x12\n\x0eTHERMOCOUPLE_4\x10\x03\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)

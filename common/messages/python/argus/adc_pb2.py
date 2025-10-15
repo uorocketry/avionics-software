@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0f\x61rgus/adc.proto\x12\x18messages_prost.argus.adc*/\n\tAdcDevice\x12\x10\n\x0c\x41\x44\x43_DEVICE_1\x10\x00\x12\x10\n\x0c\x41\x44\x43_DEVICE_2\x10\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0f\x61rgus/adc.proto\x12\x18messages.argus.adc*/\n\tAdcDevice\x12\x10\n\x0c\x41\x44\x43_DEVICE_1\x10\x00\x12\x10\n\x0c\x41\x44\x43_DEVICE_2\x10\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
