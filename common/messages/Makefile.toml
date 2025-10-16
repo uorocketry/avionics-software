@@ -1,12 +1,19 @@
-[tasks.rust-bindings]
+[tasks.rust-types]
 description = "Build protobuf messages for Rust"
 command = "cargo"
 args = ["build"]
 
-[tasks.python-bindings]
+[tasks.python-types]
 description = "Build protobuf messages for Python"
 script_runner = "@shell"
 script = [
-	"mkdir -p python",
+	"rm -rf python",
+	"mkdir python",
 	"protoc --proto_path=proto --python_out=python $(find proto -type f -name '*.proto')",
+	"find python -type d -exec touch {}/__init__.py \\;"
+	"cat assets/pyproject.toml > python/pyproject.toml",
 ]
+
+[tasks.all]
+description = "Build all protobuf messages"
+dependencies = ["rust-types", "python-types"]

@@ -1,21 +1,32 @@
 use defmt::Format;
+use embassy_stm32::pac::adc::Adc;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
+use messages::argus::adc::AdcDevice as AdcDeviceProtobuf;
 
 // Called AdcDevice to not clash with embassy::adc::Adc
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize, EnumCount)]
 pub enum AdcDevice {
-	Adc1 = 0,
-	Adc2 = 1,
+	AdcDevice1 = 0,
+	AdcDevice2 = 1,
 }
 
 // Support for implicit conversion from usize to AdcDevice
 impl From<usize> for AdcDevice {
 	fn from(value: usize) -> Self {
 		match value {
-			0 => AdcDevice::Adc1,
-			1 => AdcDevice::Adc2,
+			0 => AdcDevice::AdcDevice1,
+			1 => AdcDevice::AdcDevice2,
 			_ => panic!("Invalid ADC index: {}", value),
+		}
+	}
+}
+
+impl AdcDevice {
+	pub fn to_protobuf(&self) -> AdcDeviceProtobuf {
+		match self {
+			AdcDevice::AdcDevice1 => AdcDeviceProtobuf::AdcDevice1,
+			AdcDevice::AdcDevice2 => AdcDeviceProtobuf::AdcDevice2,
 		}
 	}
 }

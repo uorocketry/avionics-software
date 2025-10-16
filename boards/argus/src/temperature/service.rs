@@ -80,6 +80,8 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		let cold_junction_temperature = self.last_rtd_reading[adc as usize].unwrap_or(0.0);
 
 		let thermocouple_reading = ThermocoupleReading {
+			adc_device: adc,
+			thermocouple_channel: channel,
 			timestamp: Instant::now().as_millis(),
 			voltage,
 			uncompensated_temperature: type_k::convert_voltage_to_temperature(voltage as f64)?,

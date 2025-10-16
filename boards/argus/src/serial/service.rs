@@ -4,8 +4,10 @@ use embassy_stm32::usart::ConfigError;
 pub use embassy_stm32::usart::Error as UsartError;
 use embassy_stm32::usart::{Config, Instance, InterruptHandler, RxDma, RxPin, TxDma, TxPin, Uart};
 use embassy_stm32::Peripheral;
+use embassy_time::Timer;
 use embedded_io_async::Write;
 use heapless::String;
+use prost;
 
 pub struct SerialService {
 	uart: Uart<'static, mode::Async>,
@@ -35,6 +37,19 @@ impl SerialService {
 		data: &[u8],
 	) -> Result<(), UsartError> {
 		self.uart.write_all(data).await
+	}
+
+	pub async fn write_protobuf<Proto: prost::Message>(
+		&mut self,
+		message: Proto,
+	) -> Result<(), UsartError> {
+		let frame = message.encode_length_delimited_to_vec();
+
+		self.uart.write_all(&frame).await?;
+		self.uart.flush().await?;
+
+		Timer::after_millis(100).await;
+		Ok(())
 	}
 
 	/// Convenience helper to write a `&str` fully.

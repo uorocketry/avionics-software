@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package messages.argus.temperature.thermocouple_channel;
+
+enum ThermocoupleChannel {
+	CHANNEL_1 = 0;
+	CHANNEL_2 = 1;
+	CHANNEL_3 = 2;
+	CHANNEL_4 = 3;
+}
+

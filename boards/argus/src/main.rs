@@ -117,6 +117,7 @@ async fn main(spawner: Spawner) {
 		));
 		spawner.must_spawn(tasks::log_measurements(
 			StateMachineWorker::new(state_machine_orchestrator),
+			serial_service,
 			sd_card_service,
 		));
 		spawner.must_spawn(tasks::calibrate_thermocouples(
@@ -148,5 +149,5 @@ async fn main(spawner: Spawner) {
 	}
 
 	// Immediately request to start recording
-	state_machine_orchestrator.lock().await.dispatch_event(Events::CalibrationRequested);
+	state_machine_orchestrator.lock().await.dispatch_event(Events::StartRecordingRequested);
 }

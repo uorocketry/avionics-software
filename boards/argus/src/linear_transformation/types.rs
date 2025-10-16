@@ -42,7 +42,7 @@ where
 {
 	fn default() -> Self {
 		Self {
-			adc: AdcDevice::Adc1, // Default to ADC1
+			adc: AdcDevice::AdcDevice1, // Default to ADC1
 			channel: Channel::default(),
 			gain: ChannelValue::one(),    // Default to unity gain
 			offset: ChannelValue::zero(), // Default to zero offset

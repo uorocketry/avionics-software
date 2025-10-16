@@ -67,7 +67,7 @@ dependencies = [
  "csv",
  "defmt 0.3.100",
  "defmt-rtt",
- "derive_more 2.0.1",
+ "derive_more",
  "embassy-embedded-hal 0.3.2",
  "embassy-executor",
  "embassy-futures",
@@ -95,6 +95,7 @@ dependencies = [
  "num-traits",
  "panic-probe",
  "pid",
+ "prost",
  "serde",
  "smlang",
  "static_cell",
@@ -229,36 +230,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "common-arm"
-version = "0.1.0"
-dependencies = [
- "cortex-m",
- "defmt 0.3.100",
- "defmt-rtt",
- "derive_more 0.99.20",
- "embassy-embedded-hal 0.3.2",
- "embassy-time 0.4.0",
- "embedded-hal 1.0.0",
- "embedded-hal-async",
- "embedded-io-async",
- "embedded-nal-async",
- "heapless 0.7.17",
- "messages",
- "nb 1.1.0",
- "panic-probe",
-]
-
-[[package]]
 name = "const-default"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b396d1f76d455557e1218ec8066ae14bba60b4b36ecd55577ba979f5db7ecaa"
-
-[[package]]
-name = "convert_case"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "convert_case"
@@ -420,19 +395,6 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6edb4b64a43d977b8e99788fe3a04d483834fba1215a7e02caa415b626497f7f"
-dependencies = [
- "convert_case 0.4.0",
- "proc-macro2",
- "quote",
- "rustc_version 0.4.1",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "derive_more"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "093242cf7570c207c83073cf82f79706fe7b8317e98620a47d5be7c3d8497678"
@@ -446,7 +408,7 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bda628edc44c4bb645fbe0f758797143e4e07926f7ebf4e9bdfbd3d2ce621df3"
 dependencies = [
- "convert_case 0.7.1",
+ "convert_case",
  "proc-macro2",
  "quote",
  "syn 2.0.106",

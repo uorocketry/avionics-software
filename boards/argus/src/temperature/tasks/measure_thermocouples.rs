@@ -24,9 +24,9 @@ pub async fn measure_thermocouples(
 					let channel = ThermocoupleChannel::from(channel_index);
 					let data = temperature_service_mutex.lock().await.read_thermocouple(adc, channel).await;
 					match data {
-						Ok(data) => {
-							debug!("ADC {} Channel {}: {}", adc, channel, data);
-							THERMOCOUPLE_READING_QUEUE.send((adc, channel, data)).await;
+						Ok(thermocouple_reading) => {
+							debug!("{}", thermocouple_reading);
+							THERMOCOUPLE_READING_QUEUE.send(thermocouple_reading).await;
 						}
 						Err(err) => {
 							error!("Error reading ADC {} Channel {}: {:?}", adc, channel, err);

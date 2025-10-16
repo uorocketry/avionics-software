@@ -68,13 +68,13 @@ impl<const ADC_COUNT: usize> PressureService<ADC_COUNT> {
 			.read_differential(positive_channel, negative_channel)
 			.await? * 1000.0; // Convert to millivolts
 
-		let thermocouple_reading = PressureReading {
+		let pressure_reading = PressureReading {
 			timestamp: Instant::now().as_millis(),
 			voltage,
 			pressure: 0.0,    // Placeholder, actual pressure calculation can be added later
 			temperature: 0.0, // Placeholder, actual temperature calculation can be added
 		};
 
-		Ok(thermocouple_reading)
+		Ok(pressure_reading)
 	}
 }

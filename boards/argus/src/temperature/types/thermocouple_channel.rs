@@ -1,4 +1,5 @@
 use defmt::Format;
+use messages::argus::temperature::thermocouple_channel::ThermocoupleChannel as ThermocoupleChannelProtobuf;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
 
@@ -34,6 +35,15 @@ impl ThermocoupleChannel {
 			ThermocoupleChannel::Channel2 => (AnalogChannel::AIN2, AnalogChannel::AIN3),
 			ThermocoupleChannel::Channel3 => (AnalogChannel::AIN4, AnalogChannel::AIN5),
 			ThermocoupleChannel::Channel4 => (AnalogChannel::AIN6, AnalogChannel::AIN7),
+		}
+	}
+
+	pub fn to_protobuf(&self) -> ThermocoupleChannelProtobuf {
+		match self {
+			ThermocoupleChannel::Channel1 => ThermocoupleChannelProtobuf::Channel1,
+			ThermocoupleChannel::Channel2 => ThermocoupleChannelProtobuf::Channel2,
+			ThermocoupleChannel::Channel3 => ThermocoupleChannelProtobuf::Channel3,
+			ThermocoupleChannel::Channel4 => ThermocoupleChannelProtobuf::Channel4,
 		}
 	}
 }
