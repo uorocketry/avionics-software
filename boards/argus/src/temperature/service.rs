@@ -7,6 +7,7 @@ use crate::adc::types::AdcDevice;
 use crate::linear_transformation::service::LinearTransformationService;
 use crate::sd::service::SDCardService;
 use crate::serial::service::SerialService;
+use crate::session::service::SessionService;
 use crate::temperature::config::{LINEAR_TRANSFORMATIONS_FILE_NAME, RTD_RESISTANCE_AT_0C};
 use crate::temperature::rtd;
 use crate::temperature::thermocouple::type_k;
@@ -21,6 +22,7 @@ pub struct TemperatureService<const ADC_COUNT: usize> {
 	pub adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub serial_service: &'static AsyncMutex<SerialService>,
+	pub session_service: &'static AsyncMutex<SessionService>,
 
 	// Store the last RTD reading in Celsius to use for cold junction compensation
 	// This is cached here to avoid reading the RTD multiple times when reading multiple thermocouples
@@ -36,11 +38,13 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 		sd_card_service: &'static AsyncMutex<SDCardService>,
 		serial_service: &'static AsyncMutex<SerialService>,
+		session_service: &'static AsyncMutex<SessionService>,
 	) -> Self {
 		Self {
 			adc_service,
 			sd_card_service,
 			serial_service,
+			session_service,
 			last_rtd_reading: [None; ADC_COUNT],
 			linear_transformation_service: LinearTransformationService::new(sd_card_service, LINEAR_TRANSFORMATIONS_FILE_NAME),
 		}
@@ -80,6 +84,7 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		let cold_junction_temperature = self.last_rtd_reading[adc as usize].unwrap_or(0.0);
 
 		let thermocouple_reading = ThermocoupleReading {
+			local_session: self.session_service.lock().await.current_session.clone(),
 			adc_device: adc,
 			thermocouple_channel: channel,
 			timestamp: Instant::now().as_millis(),

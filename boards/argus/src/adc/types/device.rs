@@ -1,8 +1,7 @@
 use defmt::Format;
-use embassy_stm32::pac::adc::Adc;
+use messages::argus::adc::AdcDevice as AdcDeviceProtobuf;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
-use messages::argus::adc::AdcDevice as AdcDeviceProtobuf;
 
 // Called AdcDevice to not clash with embassy::adc::Adc
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize, EnumCount)]

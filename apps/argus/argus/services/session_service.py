@@ -1,5 +1,5 @@
 import logging
-from models.recording_session import RecordingSession
+from models.recording_session import HostRecordingSession
 
 
 class SessionService:
@@ -8,5 +8,5 @@ class SessionService:
         self.logger = logging.getLogger(SessionService.__name__)
 
     def start_session(self):
-        self.active_session = RecordingSession.create()
+        self.active_session = HostRecordingSession.create()
         self.logger.info(f"Started new recording session %s", repr(self.active_session))

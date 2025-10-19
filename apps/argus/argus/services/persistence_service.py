@@ -17,5 +17,5 @@ class PersistenceService:
 
     def store_protobuf(self, proto):
         model = self.transform_protobuf_to_model(proto)
-        model.session = self.session_service.active_session
+        model.host_session = self.session_service.active_session
         model.save()

@@ -6,6 +6,7 @@ pub mod adc;
 pub mod linear_transformation;
 pub mod sd;
 pub mod serial;
+pub mod session;
 pub mod state_machine;
 pub mod utils;
 

@@ -15,6 +15,7 @@ use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope, SdCardError};
 use crate::utils::types::AsyncMutex;
 
+// SHOULD DO: cleanup the trait bounds
 pub struct LinearTransformationService<Channel, ChannelValue, const ADC_COUNT: usize, const CHANNEL_COUNT: usize>
 where
 	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,

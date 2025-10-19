@@ -10,8 +10,8 @@ script = [
 	"rm -rf python",
 	"mkdir python",
 	"protoc --proto_path=proto --python_out=python $(find proto -type f -name '*.proto')",
-	"find python -type d -exec touch {}/__init__.py \\;"
-	"cat assets/pyproject.toml > python/pyproject.toml",
+	"find python -type d -exec touch {}/__init__.py \\;",
+	"cat assets/pyproject.toml > python/pyproject.toml"
 ]
 
 [tasks.all]

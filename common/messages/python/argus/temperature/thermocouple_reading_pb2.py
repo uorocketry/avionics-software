@@ -26,7 +26,7 @@ from argus import adc_pb2 as argus_dot_adc__pb2
 from argus.temperature import thermocouple_channel_pb2 as argus_dot_temperature_dot_thermocouple__channel__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n,argus/temperature/thermocouple_reading.proto\x12/messages.argus.temperature.thermocouple_reading\x1a\x0f\x61rgus/adc.proto\x1a,argus/temperature/thermocouple_channel.proto\"\xb7\x02\n\x13ThermocoupleReading\x12\x31\n\nadc_device\x18\x01 \x01(\x0e\x32\x1d.messages.argus.adc.AdcDevice\x12\x62\n\x14thermocouple_channel\x18\x02 \x01(\x0e\x32\x44.messages.argus.temperature.thermocouple_channel.ThermocoupleChannel\x12\x11\n\ttimestamp\x18\x03 \x01(\x04\x12\x0f\n\x07voltage\x18\x04 \x01(\x02\x12\x1f\n\x17\x63ompensated_temperature\x18\x05 \x01(\x01\x12!\n\x19uncompensated_temperature\x18\x06 \x01(\x01\x12!\n\x19\x63old_junction_temperature\x18\x07 \x01(\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n,argus/temperature/thermocouple_reading.proto\x12/messages.argus.temperature.thermocouple_reading\x1a\x0f\x61rgus/adc.proto\x1a,argus/temperature/thermocouple_channel.proto\"\xe5\x02\n\x13ThermocoupleReading\x12\x1a\n\rlocal_session\x18\x01 \x01(\x05H\x00\x88\x01\x01\x12\x31\n\nadc_device\x18\x02 \x01(\x0e\x32\x1d.messages.argus.adc.AdcDevice\x12\x62\n\x14thermocouple_channel\x18\x03 \x01(\x0e\x32\x44.messages.argus.temperature.thermocouple_channel.ThermocoupleChannel\x12\x11\n\ttimestamp\x18\x04 \x01(\x04\x12\x0f\n\x07voltage\x18\x05 \x01(\x02\x12\x1f\n\x17\x63ompensated_temperature\x18\x06 \x01(\x01\x12!\n\x19uncompensated_temperature\x18\x07 \x01(\x01\x12!\n\x19\x63old_junction_temperature\x18\x08 \x01(\x02\x42\x10\n\x0e_local_sessionb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,5 +34,5 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'argus.temperature.thermocou
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_THERMOCOUPLEREADING']._serialized_start=161
-  _globals['_THERMOCOUPLEREADING']._serialized_end=472
+  _globals['_THERMOCOUPLEREADING']._serialized_end=518
 # @@protoc_insertion_point(module_scope)

@@ -1,5 +1,12 @@
-from peewee import Model, CharField, TimestampField, DoubleField, ForeignKeyField
-from models.recording_session import RecordingSession
+from peewee import (
+    Model,
+    CharField,
+    TimestampField,
+    DoubleField,
+    ForeignKeyField,
+    IntegerField,
+)
+from models.recording_session import HostRecordingSession
 from utils.database import database
 
 from argus.temperature.thermocouple_reading_pb2 import (
@@ -9,7 +16,10 @@ from argus.temperature.thermocouple_reading_pb2 import (
 
 class ThermocoupleReading(Model):
     # The recording session this reading belongs to
-    session = ForeignKeyField(RecordingSession, null=True)
+    host_session = ForeignKeyField(HostRecordingSession, null=True)
+
+    # Local recording session identifier from the device that took the reading
+    local_session = IntegerField(null=True)
 
     # ADC device index from which the reading was taken
     adc_device = CharField(max_length=255, null=True)
@@ -39,6 +49,7 @@ class ThermocoupleReading(Model):
     @staticmethod
     def from_protobuf(proto: ThermocoupleReadingProto):
         return ThermocoupleReading(
+            local_session=proto.local_session,
             adc_device=proto.adc_device,
             thermocouple_channel=proto.thermocouple_channel,
             timestamp=int(proto.timestamp),

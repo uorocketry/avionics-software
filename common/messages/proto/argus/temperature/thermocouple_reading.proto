@@ -6,24 +6,27 @@ import "argus/adc.proto";
 import "argus/temperature/thermocouple_channel.proto";
 
 message ThermocoupleReading {
+	// Local session from the device that took the reading
+	optional int32 local_session = 1;
+
 	// ADC device from which the reading was taken
-	adc.AdcDevice adc_device = 1;
+	adc.AdcDevice adc_device = 2;
 
 	// Identifier for the thermocouple within the ADC device
-	thermocouple_channel.ThermocoupleChannel thermocouple_channel = 2;
+	thermocouple_channel.ThermocoupleChannel thermocouple_channel = 3;
 
 	// Timestamp of the reading in milliseconds since epoch
-	uint64 timestamp = 3;
+	uint64 timestamp = 4;
 
 	// Thermocouple voltage difference measured in millivolts
-	float voltage = 4;
+	float voltage = 5;
 
 	// Cold-junction-compensated temperature of the thermocouple in degrees Celsius
-	double compensated_temperature = 5;
+	double compensated_temperature = 6;
 
 	// Uncompensated temperature of the thermocouple in degrees Celsius
-	double uncompensated_temperature = 6;
+	double uncompensated_temperature = 7;
 
 	// Temperature of the cold junction in degrees Celsius
-	float cold_junction_temperature = 7;
+	float cold_junction_temperature = 8;
 }

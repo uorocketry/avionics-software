@@ -1,6 +1,5 @@
 use embassy_executor::task;
 use embassy_futures::yield_now;
-use embassy_time::Timer;
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
@@ -16,7 +15,7 @@ pub async fn calibrate_thermocouples(
 ) {
 	worker
 		.run_while(States::Calibrating, async |_| -> Result<(), ()> {
-			temperature_service_mutex.lock().await.calibrate().await;
+			let _ = temperature_service_mutex.lock().await.calibrate().await;
 			yield_now().await;
 			Ok(())
 		})

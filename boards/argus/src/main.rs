@@ -12,6 +12,8 @@ use argus::adc::types::AdcDevice;
 use argus::sd::service::SDCardService;
 use argus::sd::task::sd_card_task;
 use argus::serial::service::SerialService;
+use argus::session;
+use argus::session::service::SessionService;
 use argus::state_machine::service::{StateMachineOrchestrator, StateMachineWorker};
 use argus::state_machine::types::Events;
 use argus::utils::hal::configure_hal;
@@ -35,7 +37,7 @@ bind_interrupts!(struct InterruptRequests {
 static SD_CARD_SERVICE: StaticCell<AsyncMutex<SDCardService>> = StaticCell::new();
 static ADC_SERVICE: StaticCell<AsyncMutex<AdcService<{ AdcDevice::COUNT }>>> = StaticCell::new();
 static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new();
-
+static SESSION_SERVICE: StaticCell<AsyncMutex<SessionService>> = StaticCell::new();
 static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrator>> = StaticCell::new();
 
 #[cfg(feature = "temperature")]
@@ -55,6 +57,7 @@ async fn main(spawner: Spawner) {
 		peripherals.PA6,
 		peripherals.PC4,
 	)));
+	let session_service = SESSION_SERVICE.init(AsyncMutex::new(SessionService::new(sd_card_service)));
 	let adc_service = ADC_SERVICE.init(AsyncMutex::new(AdcService::new(
 		peripherals.SPI4,
 		peripherals.PE2,
@@ -102,7 +105,12 @@ async fn main(spawner: Spawner) {
 		use argus::temperature::service::TemperatureService;
 		use argus::temperature::tasks;
 
-		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(adc_service, sd_card_service, serial_service)));
+		let temperature_service = TEMPERATURE_SERVICE.init(AsyncMutex::new(TemperatureService::new(
+			adc_service,
+			sd_card_service,
+			serial_service,
+			session_service,
+		)));
 
 		// Setup the temperature service before starting the tasks
 		temperature_service.lock().await.setup().await.unwrap();
@@ -119,6 +127,7 @@ async fn main(spawner: Spawner) {
 			StateMachineWorker::new(state_machine_orchestrator),
 			serial_service,
 			sd_card_service,
+			session_service,
 		));
 		spawner.must_spawn(tasks::calibrate_thermocouples(
 			StateMachineWorker::new(state_machine_orchestrator),
@@ -145,6 +154,7 @@ async fn main(spawner: Spawner) {
 		spawner.must_spawn(tasks::log_measurements(
 			StateMachineWorker::new(state_machine_orchestrator),
 			sd_card_service,
+			session_service,
 		));
 	}
 

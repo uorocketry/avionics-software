@@ -13,6 +13,9 @@ use crate::temperature::types::ThermocoupleChannel;
 // Represents a single temperature reading from a thermocouple channel
 #[derive(Debug, Clone, Copy, Format, Serialize, Deserialize)]
 pub struct ThermocoupleReading {
+	// Local session from the device that took the reading
+	pub local_session: Option<i32>,
+
 	// ADC device index from which the reading was taken
 	pub adc_device: AdcDevice,
 
@@ -38,7 +41,8 @@ pub struct ThermocoupleReading {
 impl SerializeCSV<MAX_LINE_LENGTH> for ThermocoupleReading {
 	fn get_csv_header() -> Line {
 		Line::from_str(
-			"ADC Device,\
+			"Local Session #,\
+			ADC Device,\
 			Thermocouple Channel,\
 			Timestamp (ms),\
 			Voltage (mV),\
@@ -54,6 +58,7 @@ impl ThermocoupleReading {
 	// Convert to the protobuf representation
 	pub fn to_protobuf(&self) -> ThermocoupleReadingProtobuf {
 		ThermocoupleReadingProtobuf {
+			local_session: self.local_session,
 			adc_device: self.adc_device.to_protobuf() as i32,
 			thermocouple_channel: self.thermocouple_channel.to_protobuf() as i32,
 			timestamp: self.timestamp,
