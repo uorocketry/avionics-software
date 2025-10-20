@@ -29,7 +29,7 @@ impl SerializeCSV<MAX_LINE_LENGTH> for PressureReading {
 			"Timestamp (ms),\
 			Voltage (mV),\
 			Pressure (psi),\
-			Manifold Temperature (C)\n",
+			Manifold Temperature (C)",
 		)
 		.unwrap()
 	}

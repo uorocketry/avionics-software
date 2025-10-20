@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package messages.argus.temperature.thermocouple_calibration;
+
+import "argus/adc.proto";
+import "argus/temperature/thermocouple_channel.proto";
+
+message ThermocoupleCalibration {
+	oneof message {
+		SelectThermocoupleRequest select_thermocouple_request = 1;
+		CollectDataPointRequest collect_data_point_request = 2;
+		CollectDataPointResponse collect_data_point_response = 3;
+		PerformRegressionRequest perform_regression_request = 4;
+		CalibrationResultResponse calibration_result_response = 5;
+	}
+
+	// Request to select which thermocouple to calibrate
+	message SelectThermocoupleRequest {
+		adc.AdcDevice adc_device = 1;
+		thermocouple_channel.ThermocoupleChannel thermocouple_channel = 2;
+	}
+
+	// Request/Response for a data collection step during calibration. These datapoints are then later used to perform the linear regression.
+	message CollectDataPointRequest {
+		double expected = 1;
+	}
+	message CollectDataPointResponse {
+		double measured = 1;
+		double expected = 2;
+	}
+
+	message PerformRegressionRequest {}
+
+	// Response containing the results of the calibration after all data points have been collected
+	message CalibrationResultResponse {
+		bool success = 1;
+		optional double scale = 2;
+		optional double offset = 3;
+	}
+}
+

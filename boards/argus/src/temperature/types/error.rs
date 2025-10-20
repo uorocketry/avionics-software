@@ -12,4 +12,5 @@ pub enum TemperatureServiceError {
 	UsartError(UsartError),
 	SdCardError(SdCardError),
 	ThermocoupleError(ThermocoupleError),
+	FormatError,
 }

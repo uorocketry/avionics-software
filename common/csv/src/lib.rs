@@ -5,18 +5,19 @@ use core::str::FromStr;
 
 use heapless::String;
 use serde::{Deserialize, Serialize};
+use serde_csv_core::de::Error as CSVError;
 use serde_csv_core::{Reader, Writer};
 
 pub trait SerializeCSV<const MAX_LINE_SIZE: usize>: Serialize + for<'d> Deserialize<'d> {
 	fn get_csv_header() -> String<MAX_LINE_SIZE>;
-	fn from_csv_line(line: &String<MAX_LINE_SIZE>) -> Self {
+	fn from_csv_line(line: &String<MAX_LINE_SIZE>) -> Result<Self, CSVError> {
 		let mut reader = Reader::<255>::new();
-		let (record, _n) = reader.deserialize::<Self>(line.as_bytes()).unwrap();
-		record
+		let (record, _n) = reader.deserialize::<Self>(line.as_bytes())?;
+		Ok(record)
 	}
 	fn to_csv_line(&self) -> String<MAX_LINE_SIZE> {
 		let mut writer = Writer::new();
-		let mut line = [0u8; 255];
+		let mut line = [0u8; MAX_LINE_SIZE];
 		writer.serialize(&self, &mut line).unwrap();
 		let line_str = core::str::from_utf8(&line).unwrap();
 

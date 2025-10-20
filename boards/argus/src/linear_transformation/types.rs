@@ -25,7 +25,7 @@ pub struct LinearTransformation<Channel, ChannelValue> {
 impl<Channel, ChannelValue> LinearTransformation<Channel, ChannelValue>
 where
 	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
-	ChannelValue: Float + Serialize + for<'de> Deserialize<'de>,
+	ChannelValue: Float + Serialize + for<'de> Deserialize<'de> + Format,
 {
 	pub fn apply(
 		&self,
@@ -38,7 +38,7 @@ where
 impl<Channel, ChannelValue> Default for LinearTransformation<Channel, ChannelValue>
 where
 	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
-	ChannelValue: Float + Serialize + for<'de> Deserialize<'de>,
+	ChannelValue: Float + Serialize + for<'de> Deserialize<'de> + Format,
 {
 	fn default() -> Self {
 		Self {
@@ -53,9 +53,9 @@ where
 impl<Channel, ChannelValue> SerializeCSV<MAX_LINE_LENGTH> for LinearTransformation<Channel, ChannelValue>
 where
 	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
-	ChannelValue: Float + Serialize + for<'de> Deserialize<'de>,
+	ChannelValue: Float + Serialize + for<'de> Deserialize<'de> + Format,
 {
 	fn get_csv_header() -> Line {
-		Line::from_str("ADC Index,Channel Index,Gain,Offset\n").unwrap()
+		Line::from_str("ADC Index,Channel Index,Gain,Offset").unwrap()
 	}
 }

@@ -5,6 +5,7 @@ use strum::EnumCount;
 
 use crate::adc::driver::types::AnalogChannel;
 
+#[repr(usize)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize, EnumCount, Default)]
 pub enum ThermocoupleChannel {
 	#[default]

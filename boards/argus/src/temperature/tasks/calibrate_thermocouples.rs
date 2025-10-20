@@ -1,3 +1,4 @@
+use defmt::error;
 use embassy_executor::task;
 use embassy_futures::yield_now;
 use strum::EnumCount;
@@ -15,7 +16,10 @@ pub async fn calibrate_thermocouples(
 ) {
 	worker
 		.run_while(States::Calibrating, async |_| -> Result<(), ()> {
-			let _ = temperature_service_mutex.lock().await.calibrate().await;
+			match temperature_service_mutex.lock().await.calibrate().await {
+				Ok(_) => {}
+				Err(e) => error!("Thermocouple calibration failed: {:?}", e),
+			}
 			yield_now().await;
 			Ok(())
 		})

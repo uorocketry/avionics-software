@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use strum::EnumCount;
 
 // Called AdcDevice to not clash with embassy::adc::Adc
+#[repr(usize)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize, EnumCount)]
 pub enum AdcDevice {
 	AdcDevice1 = 0,

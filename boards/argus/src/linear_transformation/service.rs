@@ -3,7 +3,7 @@ use core::hash::Hash;
 use core::str::FromStr;
 
 use csv::SerializeCSV;
-use defmt::{info, Format};
+use defmt::{error, info, Format};
 use heapless::LinearMap;
 use num_traits::Float;
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ use crate::utils::types::AsyncMutex;
 pub struct LinearTransformationService<Channel, ChannelValue, const ADC_COUNT: usize, const CHANNEL_COUNT: usize>
 where
 	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
-	ChannelValue: Float + Serialize + for<'de> Deserialize<'de>, {
+	ChannelValue: Float + Serialize + for<'de> Deserialize<'de> + Format, {
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub file_name: &'static str,
 
@@ -31,7 +31,7 @@ impl<Channel, ChannelValue, const ADC_COUNT: usize, const CHANNEL_COUNT: usize>
 	LinearTransformationService<Channel, ChannelValue, ADC_COUNT, CHANNEL_COUNT>
 where
 	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
-	ChannelValue: Float + Serialize + for<'de> Deserialize<'de>,
+	ChannelValue: Float + Serialize + for<'de> Deserialize<'de> + Format,
 {
 	pub fn new(
 		sd_card_service: &'static AsyncMutex<SDCardService>,
@@ -53,8 +53,17 @@ where
 				if *line == LinearTransformation::<Channel, ChannelValue>::get_csv_header() {
 					return true; // Skip header line
 				}
-				let transformation = LinearTransformation::<Channel, ChannelValue>::from_csv_line(line);
-				self.register_transformation(transformation);
+
+				let result = LinearTransformation::<Channel, ChannelValue>::from_csv_line(line);
+				match result {
+					Ok(transformation) => {
+						self.register_transformation(transformation);
+						info!("Loaded linear transformation: {:?}", transformation);
+					}
+					Err(e) => {
+						error!("Error parsing linear transformation for line '{}': {:?}", line.as_str(), e);
+					}
+				}
 				true // Continue reading
 			});
 

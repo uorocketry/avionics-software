@@ -104,3 +104,34 @@ class ProtobufSerialService:
                 # - logging the error
                 # - trying to resynchronize (e.g., read until a plausible varint appears)
                 self.logger.error("Protobuf parsing error: %s", repr(e))
+
+    def write_envelope(
+        self,
+        proto,
+    ) -> None:
+        """
+        Send a protobuf message as:
+            [varint length][protobuf bytes]
+        """
+
+        # Serialize protobuf to bytes
+        payload = proto.SerializeToString()
+        varint = self.encode_varint(len(payload))
+
+        # Prefix with length varint
+        frame = bytearray()
+        frame += varint
+        frame += payload
+
+        # Ship it
+        self.device.write(frame)
+        self.device.flush()  # make sure it’s pushed to the wire
+
+    def encode_varint(self, length: int) -> bytes:
+        """Encode a non-negative integer as a protobuf varint."""
+        out = bytearray()
+        while length >= 0x80:
+            out.append((length & 0x7F) | 0x80)
+            length >>= 7
+        out.append(length)
+        return bytes(out)

@@ -1,7 +1,7 @@
 use csv::SerializeCSV;
 use embassy_executor::task;
 use heapless::format;
-use messages::argus::envelope::{envelope::Message, Envelope};
+use messages::argus::envelope::envelope::Message;
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
@@ -37,7 +37,7 @@ pub async fn log_measurements(
 			let _ = serial_service_mutex
 				.lock()
 				.await
-				.write_protobuf(get_envelope_from_reading(thermocouple_reading))
+				.write_envelope_message(Message::ThermocoupleReading(thermocouple_reading.to_protobuf()))
 				.await;
 			Ok(())
 		})
@@ -69,10 +69,4 @@ fn get_path_from_adc_and_channel(
 	channel: usize,
 ) -> FileName {
 	format!("T_{}_{}.csv", adc_index, channel).unwrap() as FileName
-}
-
-fn get_envelope_from_reading(reading: ThermocoupleReading) -> Envelope {
-	Envelope {
-		message: Some(Message::ThermocoupleReading(reading.to_protobuf())),
-	}
 }

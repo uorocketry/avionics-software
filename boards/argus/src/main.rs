@@ -12,7 +12,6 @@ use argus::adc::types::AdcDevice;
 use argus::sd::service::SDCardService;
 use argus::sd::task::sd_card_task;
 use argus::serial::service::SerialService;
-use argus::session;
 use argus::session::service::SessionService;
 use argus::state_machine::service::{StateMachineOrchestrator, StateMachineWorker};
 use argus::state_machine::types::Events;
@@ -158,6 +157,9 @@ async fn main(spawner: Spawner) {
 		));
 	}
 
-	// Immediately request to start recording
+	#[cfg(not(feature = "calibration"))]
 	state_machine_orchestrator.lock().await.dispatch_event(Events::StartRecordingRequested);
+
+	#[cfg(feature = "calibration")]
+	state_machine_orchestrator.lock().await.dispatch_event(Events::CalibrationRequested);
 }

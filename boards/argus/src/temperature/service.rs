@@ -1,3 +1,4 @@
+use defmt::{error, info};
 use embassy_time::Instant;
 use strum::EnumCount;
 
@@ -61,7 +62,10 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 			driver.apply_configurations().await?;
 		}
 
-		self.linear_transformation_service.load_transformations().await?;
+		match self.linear_transformation_service.load_transformations().await {
+			Ok(_) => info!("Loaded linear transformations successfully."),
+			Err(e) => error!("Failed to load linear transformations: {:?}", e),
+		}
 		Ok(())
 	}
 

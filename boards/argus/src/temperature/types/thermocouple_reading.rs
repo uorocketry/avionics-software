@@ -48,7 +48,7 @@ impl SerializeCSV<MAX_LINE_LENGTH> for ThermocoupleReading {
 			Voltage (mV),\
 			Compensated Temperature (C),\
 			Uncompensated Temperature (C),\
-			Cold Junction Temperature (C)\n",
+			Cold Junction Temperature (C)",
 		)
 		.unwrap()
 	}

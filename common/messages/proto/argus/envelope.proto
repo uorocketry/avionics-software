@@ -2,12 +2,12 @@ syntax = "proto3";
 
 package messages.argus.envelope;
 
-import "argus/temperature/thermocouple_calibration_request.proto";
+import "argus/temperature/thermocouple_calibration.proto";
 import "argus/temperature/thermocouple_reading.proto";
 
 message Envelope {
 	oneof message {
-		temperature.thermocouple_calibration_request.ThermocoupleCalibrationRequest thermocouple_calibration_request = 1;
+		temperature.thermocouple_calibration.ThermocoupleCalibration thermocouple_calibration = 1;
 		temperature.thermocouple_reading.ThermocoupleReading thermocouple_reading = 2;
 	}
 }
