@@ -1,4 +1,4 @@
-use defmt::{error, info};
+use defmt::error;
 use embassy_executor::task;
 use embassy_time::Timer;
 use strum::EnumCount;

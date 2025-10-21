@@ -1,7 +1,7 @@
 use core::str::FromStr;
 
 use defmt::info;
-use heapless::{format, String, Vec};
+use heapless::{format, Vec};
 
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, Line, OperationScope, SdCardError};

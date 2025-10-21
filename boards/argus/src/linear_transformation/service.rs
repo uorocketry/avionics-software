@@ -1,13 +1,8 @@
-use core::fmt::Debug;
-use core::hash::Hash;
 use core::str::FromStr;
 
 use csv::SerializeCSV;
-use defmt::{error, info, Format};
+use defmt::{error, info};
 use heapless::LinearMap;
-use num_traits::Float;
-use serde::{Deserialize, Serialize};
-use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::types::{ChannelMarker, ChannelValueMarker, LinearTransformation};

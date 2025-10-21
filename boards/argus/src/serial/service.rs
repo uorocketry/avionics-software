@@ -1,4 +1,3 @@
-use defmt::info;
 use embassy_stm32::interrupt::typelevel::Binding;
 use embassy_stm32::mode;
 use embassy_stm32::usart::ConfigError;
@@ -9,7 +8,6 @@ use embassy_time::Timer;
 use embedded_io_async::Write;
 use heapless::String;
 use messages::argus::envelope::{envelope::Message as EnvelopeMessage, Envelope};
-use num_traits::ops::bytes;
 use prost::Message;
 
 pub struct SerialService {

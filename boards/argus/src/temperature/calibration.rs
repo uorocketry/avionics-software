@@ -1,13 +1,12 @@
 use core::fmt::Debug;
 use core::str::FromStr;
 
-use defmt::{info, Format};
+use defmt::Format;
 use heapless::{format, String, Vec};
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::types::LinearTransformation;
-use crate::serial::service::UsartError;
 use crate::temperature::config::MAX_CALIBRATION_DATA_POINTS;
 use crate::temperature::service::TemperatureService;
 use crate::temperature::types::{TemperatureServiceError, ThermocoupleChannel};

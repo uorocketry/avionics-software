@@ -19,7 +19,12 @@ pub async fn calibrate_thermocouples(
 			let mut temperature_service = temperature_service_mutex.lock().await;
 			for adc_index in 0..AdcDevice::COUNT {
 				let adc = AdcDevice::from(adc_index);
-				temperature_service.refresh_rtd_reading(adc).await;
+				match temperature_service.refresh_rtd_reading(adc).await {
+					Err(e) => {
+						error!("Failed to read RTD on {:?} during calibration: {:?}", adc, e);
+					}
+					_ => {}
+				}
 			}
 
 			match temperature_service.calibrate().await {
