@@ -24,7 +24,7 @@ pub async fn log_measurements(
 	initialize_csv_files(sd_card_service_mutex, session_service).await;
 
 	worker
-		.run_while(States::Recording, async |_| -> Result<(), ()> {
+		.run_while(&[States::Recording], async |_| -> Result<(), ()> {
 			let (adc, channel, pressure_reading) = PRESSURE_READING_QUEUE.receive().await;
 			let path = get_path_from_adc_and_channel(adc as usize, channel as usize);
 			let line = pressure_reading.to_csv_line();
