@@ -18,7 +18,14 @@ fn main() -> Result<()> {
 		}
 	}
 
-	config.compile_protos(&protos_paths, &["proto/"])?;
+	let protoc_bin_path = protoc_bin_vendored::protoc_bin_path().expect("Failed to locate vendored protoc binary");
+	std::env::set_var("PROTOC", protoc_bin_path);
+
+	let include_dir = protoc_bin_vendored::include_path().expect("Failed to locate vendored protobuf includes");
+	let include_dir = include_dir.to_string_lossy().to_string();
+
+	let includes = [include_dir.as_str(), "proto/"];
+	config.compile_protos(&protos_paths, &includes)?;
 
 	Ok(())
 }
