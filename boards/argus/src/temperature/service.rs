@@ -63,8 +63,8 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		}
 
 		match self.linear_transformation_service.load_transformations().await {
-			Ok(_) => info!("Loaded linear transformations successfully."),
 			Err(e) => error!("Failed to load linear transformations: {:?}", e),
+			_ => {}
 		}
 		Ok(())
 	}
@@ -86,6 +86,14 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 
 		// Get the cold junction temperature from the last RTD reading for this ADC
 		let cold_junction_temperature = self.last_rtd_reading[adc as usize].unwrap_or(0.0);
+		let uncompensated_temperature = type_k::convert_voltage_to_temperature(voltage as f64)?;
+		let mut compensated_temperature =
+			type_k::convert_voltage_to_temperature_with_cold_junction_compensation(voltage as f64, cold_junction_temperature as f64)?;
+
+		// Apply any linear transformations configured for this ADC and channel
+		compensated_temperature = self
+			.linear_transformation_service
+			.apply_transformation(adc, channel, compensated_temperature);
 
 		let thermocouple_reading = ThermocoupleReading {
 			local_session: self.session_service.lock().await.current_session.clone(),
@@ -93,11 +101,8 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 			thermocouple_channel: channel,
 			timestamp: Instant::now().as_millis(),
 			voltage,
-			uncompensated_temperature: type_k::convert_voltage_to_temperature(voltage as f64)?,
-			compensated_temperature: type_k::convert_voltage_to_temperature_with_cold_junction_compensation(
-				voltage as f64,
-				cold_junction_temperature as f64,
-			)?,
+			uncompensated_temperature,
+			compensated_temperature,
 			cold_junction_temperature,
 		};
 
@@ -135,5 +140,15 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		let estimated_temperature = rtd::convert_resistance_to_temperature(RTD_RESISTANCE_AT_0C, measured_resistance);
 
 		Ok(estimated_temperature)
+	}
+
+	pub async fn refresh_rtd_reading(
+		&mut self,
+		adc: AdcDevice,
+	) -> Result<(), TemperatureServiceError> {
+		let rtd_temperature = self.read_rtd(adc).await?;
+		self.last_rtd_reading[adc as usize] = Some(rtd_temperature);
+		info!("RTD Temperature {}: {}C", adc, rtd_temperature);
+		Ok(())
 	}
 }

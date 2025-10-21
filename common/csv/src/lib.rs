@@ -18,8 +18,8 @@ pub trait SerializeCSV<const MAX_LINE_SIZE: usize>: Serialize + for<'d> Deserial
 	fn to_csv_line(&self) -> String<MAX_LINE_SIZE> {
 		let mut writer = Writer::new();
 		let mut line = [0u8; MAX_LINE_SIZE];
-		writer.serialize(&self, &mut line).unwrap();
-		let line_str = core::str::from_utf8(&line).unwrap();
+		let written = writer.serialize(&self, &mut line).unwrap();
+		let line_str = core::str::from_utf8(&line[..written]).unwrap();
 
 		String::from_str(line_str).unwrap()
 	}

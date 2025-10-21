@@ -1,5 +1,6 @@
 import asyncio
 import argparse
+import contextlib
 import utils.logger
 from services.persistence_service import PersistenceService
 from services.protobuf_serial_service import ProtobufSerialService
@@ -15,7 +16,8 @@ program = argparse.ArgumentParser(description="Argus Ground Station Application"
 program.add_argument("port", type=str)
 program.add_argument("--baudrate", type=int, default=115200)
 
-if __name__ == "__main__":
+
+async def main():
     args = program.parse_args()
     session_service = SessionService()
     session_service.start_session()
@@ -25,4 +27,19 @@ if __name__ == "__main__":
     )
     argus_service = ArgusService(protobuf_serial_service=protobuf_serial_service)
     grpc_service = GrpcService(services=[argus_service], port=50051)
-    asyncio.run(grpc_service.serve())
+
+    serial_task = asyncio.create_task(
+        asyncio.to_thread(protobuf_serial_service.read_loop)
+    )
+    grpc_task = asyncio.create_task(grpc_service.serve())
+    try:
+        await grpc_task
+    finally:
+        serial_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await serial_task
+        protobuf_serial_service.device.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

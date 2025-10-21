@@ -42,7 +42,7 @@ impl SessionService {
 			sd_service.delete(OperationScope::Root, self.session_file_path.clone())?;
 		}
 
-		info!("Refreshed session to {}", current_session);
+		info!("Created a new session: {}", current_session);
 
 		// Write the new session number to the session file so the next boot can read it and increment
 		sd_service.write(

@@ -52,6 +52,9 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 			return Ok(());
 		}
 
+		// Deregister any existing transformation for this channel
+		self.linear_transformation_service.deregister_transformation(adc, channel);
+
 		// Start collecting data points
 		let mut calibration_data_points: Vec<CalibrationDataPoint, MAX_CALIBRATION_DATA_POINTS> = Vec::new();
 		for data_point_index in 0..data_points_count {
@@ -73,8 +76,8 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		// Perform Ordinary Least Squares Fit
 		let transformation = self.run_ordinary_least_squares_fit(adc, channel, calibration_data_points);
 		let result_message: String<128> = format!(
-			"Ordinary Least Squares Fit complete. Gain: {:.6}, Offset: {:.2} °C\n",
-			transformation.gain, transformation.offset
+			"Ordinary Least Squares Fit complete. Scale: {:.6}, Offset: {:.2} °C\n",
+			transformation.scale, transformation.offset
 		)
 		.map_err(|_| TemperatureServiceError::FormatError)?;
 		self.send_message(result_message.as_str()).await?;
@@ -110,10 +113,10 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 
 		// Denominator for slope (variance term)
 		let denom = data_points_count * sum_xx - sum_x * sum_x;
-		let gain = (data_points_count * sum_xy - sum_x * sum_y) / denom;
-		let offset = (sum_y - gain * sum_x) / data_points_count;
+		let scale = (data_points_count * sum_xy - sum_x * sum_y) / denom;
+		let offset = (sum_y - scale * sum_x) / data_points_count;
 
-		LinearTransformation { adc, channel, gain, offset }
+		LinearTransformation { adc, channel, scale, offset }
 	}
 
 	async fn prompt<T>(

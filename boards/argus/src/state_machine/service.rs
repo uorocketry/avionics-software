@@ -49,37 +49,52 @@ impl StateMachineOrchestrator {
 
 // Encapsulates the logic needed by a worker task
 pub struct StateMachineWorker {
-	receiver: StateReceiver,
+	current_state: StateReceiver,
 	orchestrator: &'static AsyncMutex<StateMachineOrchestrator>,
 }
 impl StateMachineWorker {
 	pub fn new(orchestrator: &'static AsyncMutex<StateMachineOrchestrator>) -> Self {
 		Self {
-			receiver: CURRENT_STATE.receiver().unwrap(),
+			current_state: CURRENT_STATE.receiver().unwrap(),
 			orchestrator,
 		}
 	}
 
-	pub async fn run_while<Err, Act, Fut>(
+	pub async fn run_once<Err, Act, Fut>(
 		&mut self,
-		desired_state: States,
+		desired_states: &[States],
 		mut action: Act,
 	) -> Result<(), Err>
 	where
 		Act: FnMut(&'static AsyncMutex<StateMachineOrchestrator>) -> Fut,
 		Fut: Future<Output = Result<(), Err>>, {
+		self.current_state.changed_and(|state| desired_states.contains(state)).await;
+		action(self.orchestrator).await
+	}
+
+	pub async fn run_while<Err, Act, Fut>(
+		&mut self,
+		desired_states: &[States],
+		mut action: Act,
+	) -> Result<(), Err>
+	where
+		Act: FnMut(&'static AsyncMutex<StateMachineOrchestrator>) -> Fut,
+		Fut: Future<Output = Result<(), Err>>, {
+		if desired_states.is_empty() {
+			return Ok(());
+		}
+
 		// Runs indefinitely
 		loop {
-			// debug!("Waiting for state change...");
+			// Wait until we're in one of the desired states
+			if !desired_states.contains(&self.current_state.get().await) {
+				self.current_state.changed_and(|state| desired_states.contains(state)).await;
+			}
 
-			// Wait until we're in the desired state
-			self.receiver.changed_and(|_state| *_state == desired_state).await;
-
-			// We're now in the desired state, run the action until the state changes
+			// We're now in a desired state, run the action until the state changes
 			loop {
-				// debug!("In desired state {:?}, running action...", desired_state);
 				// Race between state change or action completion
-				let state_changed = self.receiver.changed();
+				let state_changed = self.current_state.changed();
 				let action_finished = action(self.orchestrator);
 
 				match select(state_changed, action_finished).await {
@@ -87,7 +102,8 @@ impl StateMachineWorker {
 						break;
 					}
 					Either::Second(_) => {
-						if self.receiver.get().await != desired_state {
+						let current_state = self.current_state.get().await;
+						if !desired_states.contains(&current_state) {
 							// debug!("State changed while action was running, stopping action.");
 							break;
 						}

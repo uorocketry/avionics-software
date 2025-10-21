@@ -82,6 +82,9 @@ class ProtobufSerialService:
                 if message_type:
                     try:
                         message = getattr(envelope, message_type)
+                        self.logger.debug(
+                            "Received message of type %s: %s", message_type, message
+                        )
                         self.persistence_service.store_protobuf(message)
                     except Exception as e:
                         self.logger.error(

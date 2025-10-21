@@ -15,8 +15,14 @@ pub async fn calibrate_thermocouples(
 	temperature_service_mutex: &'static AsyncMutex<TemperatureService<{ AdcDevice::COUNT }>>,
 ) {
 	worker
-		.run_while(States::Calibrating, async |_| -> Result<(), ()> {
-			match temperature_service_mutex.lock().await.calibrate().await {
+		.run_while(&[States::Calibrating], async |_| -> Result<(), ()> {
+			let mut temperature_service = temperature_service_mutex.lock().await;
+			for adc_index in 0..AdcDevice::COUNT {
+				let adc = AdcDevice::from(adc_index);
+				temperature_service.refresh_rtd_reading(adc).await;
+			}
+
+			match temperature_service.calibrate().await {
 				Ok(_) => {}
 				Err(e) => error!("Thermocouple calibration failed: {:?}", e),
 			}

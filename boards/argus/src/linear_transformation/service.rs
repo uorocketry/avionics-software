@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
-use crate::linear_transformation::types::LinearTransformation;
+use crate::linear_transformation::types::{ChannelMarker, ChannelValueMarker, LinearTransformation};
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope, SdCardError};
 use crate::utils::types::AsyncMutex;
@@ -18,8 +18,8 @@ use crate::utils::types::AsyncMutex;
 // SHOULD DO: cleanup the trait bounds
 pub struct LinearTransformationService<Channel, ChannelValue, const ADC_COUNT: usize, const CHANNEL_COUNT: usize>
 where
-	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
-	ChannelValue: Float + Serialize + for<'de> Deserialize<'de> + Format, {
+	Channel: ChannelMarker,
+	ChannelValue: ChannelValueMarker, {
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub file_name: &'static str,
 
@@ -30,8 +30,8 @@ where
 impl<Channel, ChannelValue, const ADC_COUNT: usize, const CHANNEL_COUNT: usize>
 	LinearTransformationService<Channel, ChannelValue, ADC_COUNT, CHANNEL_COUNT>
 where
-	Channel: EnumCount + Default + Debug + Clone + Copy + Eq + PartialEq + Hash + Format + Serialize + for<'de> Deserialize<'de>,
-	ChannelValue: Float + Serialize + for<'de> Deserialize<'de> + Format,
+	Channel: ChannelMarker,
+	ChannelValue: ChannelValueMarker,
 {
 	pub fn new(
 		sd_card_service: &'static AsyncMutex<SDCardService>,
@@ -89,7 +89,7 @@ where
 		let _ = map.insert(transformation.channel, transformation);
 	}
 
-	pub fn ensure_transformation_applied(
+	pub fn apply_transformation(
 		&self,
 		adc: AdcDevice,
 		channel: Channel,
@@ -103,10 +103,21 @@ where
 		raw_value // If no transformation found, return the raw value
 	}
 
+	pub fn deregister_transformation(
+		&mut self,
+		adc: AdcDevice,
+		channel: Channel,
+	) {
+		if let Some(channel_map) = self.transformations.get_mut(&adc) {
+			let _ = channel_map.remove(&channel);
+		}
+	}
+
 	pub async fn save_transformation(
 		&mut self,
 		transformation: LinearTransformation<Channel, ChannelValue>,
 	) -> Result<(), SdCardError> {
+		info!("Saving linear transformation: {:?}", transformation);
 		let mut sd_card_service = self.sd_card_service.lock().await;
 		let path = FileName::from_str(self.file_name).unwrap();
 		if !(sd_card_service.file_exists(OperationScope::Root, path.clone())?) {

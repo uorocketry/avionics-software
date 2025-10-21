@@ -1,4 +1,4 @@
-use defmt::{debug, error};
+use defmt::{error, info};
 use embassy_executor::task;
 use embassy_time::Timer;
 use strum::EnumCount;
@@ -18,19 +18,14 @@ pub async fn measure_rtds(
 	temperature_service_mutex: &'static AsyncMutex<TemperatureService<{ AdcDevice::COUNT }>>,
 ) {
 	worker
-		.run_while(States::Recording, async |_| -> Result<(), ()> {
+		.run_while(&[States::Recording, States::Calibrating], async |_| -> Result<(), ()> {
 			for adc_index in 0..AdcDevice::COUNT {
-				let mut temperature_service = temperature_service_mutex.lock().await;
 				let adc = AdcDevice::from(adc_index);
-				let result = temperature_service.read_rtd(adc).await;
-				match result {
-					Ok(data) => {
-						debug!("RTD Temperature {}: {}C", adc, data);
-						temperature_service.last_rtd_reading[adc_index] = Some(data);
+				match temperature_service_mutex.lock().await.refresh_rtd_reading(adc).await {
+					Err(e) => {
+						error!("Failed to read RTD on {:?}: {:?}", adc, e);
 					}
-					Err(err) => {
-						error!("Error reading RTD for {}: {:?}", adc, err);
-					}
+					_ => {}
 				}
 			}
 

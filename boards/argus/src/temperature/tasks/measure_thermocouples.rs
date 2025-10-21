@@ -1,4 +1,4 @@
-use defmt::{debug, error};
+use defmt::{error, info};
 use embassy_executor::task;
 use embassy_futures::yield_now;
 use strum::EnumCount;
@@ -17,7 +17,7 @@ pub async fn measure_thermocouples(
 	temperature_service_mutex: &'static AsyncMutex<TemperatureService<{ AdcDevice::COUNT }>>,
 ) {
 	worker
-		.run_while(States::Recording, async |_| -> Result<(), ()> {
+		.run_while(&[States::Recording], async |_| -> Result<(), ()> {
 			for adc_index in 0..AdcDevice::COUNT {
 				for channel_index in 0..ThermocoupleChannel::COUNT {
 					let adc = AdcDevice::from(adc_index);
@@ -25,7 +25,7 @@ pub async fn measure_thermocouples(
 					let data = temperature_service_mutex.lock().await.read_thermocouple(adc, channel).await;
 					match data {
 						Ok(thermocouple_reading) => {
-							debug!("{}", thermocouple_reading);
+							info!("{}", thermocouple_reading);
 							THERMOCOUPLE_READING_QUEUE.send(thermocouple_reading).await;
 						}
 						Err(err) => {
