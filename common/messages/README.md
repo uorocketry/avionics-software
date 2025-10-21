@@ -11,4 +11,4 @@ The Rust prost library is a fast, efficient implementation of Google Protocol Bu
 Run `cargo make rust-bindings`
 
 ## Building Protobuf Messages for Python
-Run `cargo make python-bindings`. Make sure you have protobuf installed with python: `pip install protobuf grpcio grpcio-tools`.'
+Run `cargo make python-bindings`. Make sure you have protobuf installed with python: `pip install protobuf grpcio grpcio-tools mypy-protobuf`.'

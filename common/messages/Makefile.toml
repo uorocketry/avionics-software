@@ -9,7 +9,7 @@ script_runner = "@shell"
 script = [
 	"rm -rf python",
 	"mkdir python",
-	"python3 -m grpc_tools.protoc --proto_path=proto --python_out=python --grpc_python_out=python $(find proto -type f -name '*.proto')",
+	"python3 -m grpc_tools.protoc --proto_path=proto --python_out=python --mypy_out=python --grpc_python_out=python $(find proto -type f -name '*.proto')",
 	"find python -type d -exec touch {}/__init__.py \\;",
 	"cat assets/pyproject.toml > python/pyproject.toml"
 ]
