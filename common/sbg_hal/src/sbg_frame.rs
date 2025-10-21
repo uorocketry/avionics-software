@@ -86,7 +86,7 @@ impl SbgFrameFactory {
         if (class_identifier & CLASS_IDENTIFIER_MASK) == CLASS_IDENTIFIER_MASK {
             let mut frame = SbgFrameExtended::default();
 
-            // Sets all of frame's fields
+            // Sets all of the extended frame's fields
             frame.msg = data[2].clone();
             frame.class = CLASS::from(data[CLASS_FIELD_OFFSET] & (!CLASS_IDENTIFIER_MASK));
             frame.length = (data[LENGTH_OFFSET_HIGH] as u16) | (data[LENGTH_OFFSET_LOW] as u16) << 8;
@@ -103,7 +103,7 @@ impl SbgFrameFactory {
         else {
             let mut frame = SbgFrameStandard::default();
 
-            // Sets all of frame's fields
+            // Sets all of the standard frame's fields
             frame.msg = data[2].clone();
             frame.class = CLASS::from(data[CLASS_FIELD_OFFSET] & (!CLASS_IDENTIFIER_MASK));
             frame.length = (data[LENGTH_OFFSET_LOW] as u16) | (data[LENGTH_OFFSET_HIGH] as u16) << 8;
@@ -118,7 +118,7 @@ impl SbgFrameFactory {
     }
 }
 
-// Data intermediate as I couldn't get the frames to provide a default to [u8; 4086]. Look for fix or better workaround
+// Data intermediate as I couldn't get the SbgFrameStandard and SbgFrameExtended structs to provide a default to [u8; 4086]. I need to look for fix or better workaround
 struct DATA {
     pub data: [u8; 4086]
 }
