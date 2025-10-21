@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "colorlog>=6.10.1",
     "grpcio>=1.75.1",
     "messages",
     "pandas>=2.3.3",

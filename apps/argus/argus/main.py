@@ -6,6 +6,7 @@ from services.persistence_service import PersistenceService
 from services.protobuf_serial_service import ProtobufSerialService
 from services.grpc_service import GrpcService
 from services.argus_service import ArgusService
+from services.message_ingestion_service import MessageIngestionService
 from services.session_service import SessionService
 
 # from argus.envelope_pb2 import Envelope
@@ -25,19 +26,23 @@ async def main():
     protobuf_serial_service = ProtobufSerialService(
         port=args.port, baudrate=args.baudrate, persistence_service=persistence_service
     )
+    message_ingestion_service = MessageIngestionService(
+        protobuf_serial_service=protobuf_serial_service,
+        persistence_service=persistence_service,
+    )
     argus_service = ArgusService(protobuf_serial_service=protobuf_serial_service)
     grpc_service = GrpcService(services=[argus_service], port=50051)
 
-    serial_task = asyncio.create_task(
-        asyncio.to_thread(protobuf_serial_service.read_loop)
+    ingestion_task = asyncio.create_task(
+        asyncio.to_thread(message_ingestion_service.ingest_loop)
     )
     grpc_task = asyncio.create_task(grpc_service.serve())
     try:
         await grpc_task
     finally:
-        serial_task.cancel()
+        ingestion_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
-            await serial_task
+            await ingestion_task
         protobuf_serial_service.device.close()
 
 

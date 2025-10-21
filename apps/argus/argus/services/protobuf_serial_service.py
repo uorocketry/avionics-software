@@ -71,42 +71,12 @@ class ProtobufSerialService:
             buf.extend(chunk)
         return bytes(buf)
 
-    def read_loop(self):
-        while True:
-            try:
-                length = self.read_varint()
-                payload = self.read_exact(length)
-                envelope = Envelope()
-                envelope.ParseFromString(payload)
-                message_type = envelope.WhichOneof("message")
-                if message_type:
-                    try:
-                        message = getattr(envelope, message_type)
-                        self.logger.debug(
-                            "Received message of type %s: %s", message_type, message
-                        )
-                        self.persistence_service.store_protobuf(message)
-                    except Exception as e:
-                        self.logger.error(
-                            "Could not store envelope. Error: %s; Envelope: %s",
-                            repr(e),
-                            envelope,
-                        )
-                else:
-                    # If no oneof is set, we still got a valid Envelope, just empty
-                    self.logger.warning("Envelope has no message set (unknown/empty)")
-
-            except TimeoutError:
-                # Benign: just means we didn’t receive a complete frame within timeout
-                # Loop continues to try again.
-                continue
-
-            except Exception as e:
-                # Any other error (malformed varint, parse error, etc.)
-                # In a production system, consider:
-                # - logging the error
-                # - trying to resynchronize (e.g., read until a plausible varint appears)
-                self.logger.error("Protobuf parsing error: %s", repr(e))
+    def read_envelope(self) -> Envelope:
+        length = self.read_varint()
+        payload = self.read_exact(length)
+        envelope = Envelope()
+        envelope.ParseFromString(payload)
+        return envelope
 
     def write_envelope(
         self,
