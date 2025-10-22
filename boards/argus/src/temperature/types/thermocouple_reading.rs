@@ -22,8 +22,8 @@ pub struct ThermocoupleReading {
 	// Thermocouple channel from which the reading was taken
 	pub thermocouple_channel: ThermocoupleChannel,
 
-	// Timestamp of the reading in milliseconds since epoch
-	pub timestamp: u64,
+	// Milliseconds since the board's epoch when the reading was recorded
+	pub recorded_at: u64,
 
 	// Thermocouple voltage difference measured in millivolts
 	pub voltage: f32,
@@ -61,7 +61,7 @@ impl ThermocoupleReading {
 			local_session: self.local_session,
 			adc_device: self.adc_device.to_protobuf() as i32,
 			thermocouple_channel: self.thermocouple_channel.to_protobuf() as i32,
-			timestamp: self.timestamp,
+			recorded_at: self.recorded_at,
 			voltage: self.voltage,
 			compensated_temperature: self.compensated_temperature,
 			uncompensated_temperature: self.uncompensated_temperature,

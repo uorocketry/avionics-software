@@ -1,4 +1,6 @@
+import peeweedbevolve
 from peewee import PostgresqlDatabase
+
 
 database = PostgresqlDatabase(
     "uorocketry",

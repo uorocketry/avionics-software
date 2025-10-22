@@ -12,4 +12,4 @@ class HostRecordingSession(Model):
         database = database
 
 
-database.create_tables([HostRecordingSession])
+database.evolve()

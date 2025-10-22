@@ -15,8 +15,8 @@ message ThermocoupleReading {
 	// Identifier for the thermocouple within the ADC device
 	thermocouple_channel.ThermocoupleChannel thermocouple_channel = 3;
 
-	// Timestamp of the reading in milliseconds since epoch
-	uint64 timestamp = 4;
+	// Milliseconds since the board's epoch when the reading was recorded
+	uint64 recorded_at = 4;
 
 	// Thermocouple voltage difference measured in millivolts
 	float voltage = 5;

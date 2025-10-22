@@ -99,7 +99,7 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 			local_session: self.session_service.lock().await.current_session.clone(),
 			adc_device: adc,
 			thermocouple_channel: channel,
-			timestamp: Instant::now().as_millis(),
+			recorded_at: Instant::now().as_millis(),
 			voltage,
 			uncompensated_temperature,
 			compensated_temperature,

@@ -19,7 +19,7 @@ class ThermocoupleReading(google.protobuf.message.Message):
     LOCAL_SESSION_FIELD_NUMBER: builtins.int
     ADC_DEVICE_FIELD_NUMBER: builtins.int
     THERMOCOUPLE_CHANNEL_FIELD_NUMBER: builtins.int
-    TIMESTAMP_FIELD_NUMBER: builtins.int
+    RECORDED_AT_FIELD_NUMBER: builtins.int
     VOLTAGE_FIELD_NUMBER: builtins.int
     COMPENSATED_TEMPERATURE_FIELD_NUMBER: builtins.int
     UNCOMPENSATED_TEMPERATURE_FIELD_NUMBER: builtins.int
@@ -28,10 +28,12 @@ class ThermocoupleReading(google.protobuf.message.Message):
     """Local session from the device that took the reading"""
     adc_device: argus.adc_pb2.AdcDevice.ValueType
     """ADC device from which the reading was taken"""
-    thermocouple_channel: argus.temperature.thermocouple_channel_pb2.ThermocoupleChannel.ValueType
+    thermocouple_channel: (
+        argus.temperature.thermocouple_channel_pb2.ThermocoupleChannel.ValueType
+    )
     """Identifier for the thermocouple within the ADC device"""
-    timestamp: builtins.int
-    """Timestamp of the reading in milliseconds since epoch"""
+    recorded_at: builtins.int
+    """Milliseconds since the board's epoch when the reading was recorded"""
     voltage: builtins.float
     """Thermocouple voltage difference measured in millivolts"""
     compensated_temperature: builtins.float
@@ -46,14 +48,43 @@ class ThermocoupleReading(google.protobuf.message.Message):
         local_session: builtins.int | None = ...,
         adc_device: argus.adc_pb2.AdcDevice.ValueType = ...,
         thermocouple_channel: argus.temperature.thermocouple_channel_pb2.ThermocoupleChannel.ValueType = ...,
-        timestamp: builtins.int = ...,
+        recorded_at: builtins.int = ...,
         voltage: builtins.float = ...,
         compensated_temperature: builtins.float = ...,
         uncompensated_temperature: builtins.float = ...,
         cold_junction_temperature: builtins.float = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_local_session", b"_local_session", "local_session", b"local_session"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_local_session", b"_local_session", "adc_device", b"adc_device", "cold_junction_temperature", b"cold_junction_temperature", "compensated_temperature", b"compensated_temperature", "local_session", b"local_session", "thermocouple_channel", b"thermocouple_channel", "timestamp", b"timestamp", "uncompensated_temperature", b"uncompensated_temperature", "voltage", b"voltage"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["_local_session", b"_local_session"]) -> typing.Literal["local_session"] | None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "_local_session", b"_local_session", "local_session", b"local_session"
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_local_session",
+            b"_local_session",
+            "adc_device",
+            b"adc_device",
+            "cold_junction_temperature",
+            b"cold_junction_temperature",
+            "compensated_temperature",
+            b"compensated_temperature",
+            "local_session",
+            b"local_session",
+            "recorded_at",
+            b"recorded_at",
+            "thermocouple_channel",
+            b"thermocouple_channel",
+            "uncompensated_temperature",
+            b"uncompensated_temperature",
+            "voltage",
+            b"voltage",
+        ],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_local_session", b"_local_session"]
+    ) -> typing.Literal["local_session"] | None: ...
 
 global___ThermocoupleReading = ThermocoupleReading

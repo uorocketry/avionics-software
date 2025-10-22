@@ -10,6 +10,7 @@ dependencies = [
     "messages",
     "pandas>=2.3.3",
     "peewee>=3.18.2",
+    "peewee-db-evolve>=3.7.6",
     "protobuf>=6.33.0",
     "psycopg2-binary>=2.9.11",
     "pyserial>=3.5",

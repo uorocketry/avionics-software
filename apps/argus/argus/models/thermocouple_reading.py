@@ -1,3 +1,4 @@
+from datetime import datetime
 from peewee import (
     Model,
     CharField,
@@ -27,8 +28,11 @@ class ThermocoupleReading(Model):
     # Thermocouple channel from which the reading was taken
     thermocouple_channel = CharField(max_length=255, null=True)
 
-    # Timestamp of the reading in milliseconds since epoch
-    timestamp = TimestampField(null=True)
+    # Milliseconds since the board's epoch when the reading was recorded
+    recorded_at = TimestampField(null=True)
+
+    # Full timestamp of when the reading was stored
+    stored_at = TimestampField(default=datetime.now)
 
     # Thermocouple voltage difference measured in millivolts
     voltage = DoubleField(null=True)
@@ -52,7 +56,7 @@ class ThermocoupleReading(Model):
             local_session=proto.local_session,
             adc_device=proto.adc_device,
             thermocouple_channel=proto.thermocouple_channel,
-            timestamp=int(proto.timestamp),
+            recorded_at=int(proto.recorded_at),
             voltage=proto.voltage,
             compensated_temperature=proto.compensated_temperature,
             uncompensated_temperature=proto.uncompensated_temperature,
@@ -60,4 +64,4 @@ class ThermocoupleReading(Model):
         )
 
 
-database.create_tables([ThermocoupleReading])
+database.evolve()
