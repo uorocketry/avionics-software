@@ -1,11 +1,13 @@
 // SHOULD DO: use embedded_hal traits instead of embassy_stm32 types directly
 
-use defmt::trace;
+use core::str::FromStr;
+
+use defmt::{error, trace};
 use embassy_stm32::spi::{MisoPin, MosiPin, SckPin};
 use embassy_stm32::{gpio, spi, time, Peripheral};
 use embassy_time::Delay;
 use embedded_sdmmc::{Error, Mode, VolumeIdx};
-use heapless::{String, Vec};
+use heapless::{format, String, Vec};
 use static_cell::StaticCell;
 
 use crate::sd::config::{MAX_DIRS, MAX_FILES};
@@ -24,7 +26,7 @@ pub static SD_CARD_WRITE_QUEUE: SdCardWriteQueue = SdCardWriteQueue::new();
 
 pub struct SDCardService {
 	volume_manager: SDCardVolumeManager<MAX_DIRS, MAX_FILES>,
-	current_session: Option<String<3>>, // Wrapped around option to so if None session has not been created yet
+	pub current_session: Option<String<3>>, // Wrapped around option to so if None session has not been created yet
 }
 
 impl SDCardService {
@@ -124,12 +126,14 @@ impl SDCardService {
 			let _ = line.push('\n'); // Ignore capacity error
 		}
 
-		// Ensure session directory is created if writing to current session
 		let session = match scope {
-			OperationScope::CurrentSession => {
-				self.ensure_session_created()?;
-				Some(self.current_session.as_ref().unwrap().clone())
-			}
+			OperationScope::CurrentSession => match &self.current_session {
+				Some(session) => Some(session.clone()),
+				None => {
+					error!("Current session is not set for writing to current session scope");
+					Some(String::<3>::from_str("0").unwrap())
+				}
+			},
 			_ => None,
 		};
 
@@ -259,60 +263,27 @@ impl SDCardService {
 		})
 	}
 
-	pub fn ensure_session_created(&mut self) -> Result<(), SdCardError> {
-		trace!("Ensuring session directory is created");
+	pub fn refresh_session(
+		&mut self,
+		session: i32,
+	) -> Result<(), SdCardError> {
+		trace!("Refreshing SD card service session to {}", session);
 
-		if self.current_session.is_some() {
-			// Session directory already created
-			return Ok(());
-		}
-
-		let last_session_number = self.get_last_session_number()?;
-		let current_session = last_session_number + 1;
-
-		// Cast to str
-		let mut current_session_buffer = itoa::Buffer::new();
-		let current_session_str = current_session_buffer.format(current_session);
-		self.current_session = Some(String::new());
-		self.current_session.as_mut().unwrap().push_str(current_session_str).ok(); // Ignore capacity error
-
+		// Create session directory if it doesn't exist
+		let session_dir_name: String<3> = format!("{}", session).unwrap();
 		self.with_root::<(), SdCardError>(|root_dir| {
-			trace!("Creating session directory: {}", current_session_str);
-			root_dir.make_dir_in_dir(current_session_str)
-		})
-	}
-
-	/// Infer the last session based on the largest directory in the SD Card
-	fn get_last_session_number(&mut self) -> Result<u8, SdCardError> {
-		trace!("Getting last session number");
-		// Sessions are directories generated on root directory: numbers starting from 0 autoincrementing
-		let mut last_session: u8 = 0;
-
-		self.with_root::<u8, SdCardError>(|root_dir| {
-			root_dir.iterate_dir(|entry| {
-				if !entry.attributes.is_directory() {
-					return;
+			match root_dir.open_dir(session_dir_name.as_str()) {
+				Ok(_) => Ok(()), // Directory exists
+				Err(Error::NotFound) => {
+					// Create directory
+					root_dir.make_dir_in_dir(session_dir_name.as_str())?;
+					Ok(())
 				}
+				Err(e) => Err(e), // Propagate other errors
+			}
+		})?;
 
-				let name = get_name_from_basename(entry.name.base_name());
-				let current_session = name.parse::<u8>().unwrap_or(0);
-				if current_session > last_session {
-					last_session = current_session;
-				}
-			})?;
-
-			trace!("Last session number: {}", last_session);
-			Ok(last_session)
-		})
+		self.current_session = Some(session_dir_name);
+		Ok(())
 	}
-}
-
-/// Get the name of a file or directory from its basename i.e. remove the extension
-/// Example: foo.txt -> foo
-fn get_name_from_basename(bytes: &[u8]) -> &str {
-	let mut end = bytes.len();
-	while end > 0 && bytes[end - 1] == b' ' {
-		end -= 1;
-	}
-	core::str::from_utf8(&bytes[..end]).unwrap()
 }

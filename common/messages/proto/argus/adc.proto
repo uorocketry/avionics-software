@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package messages.argus.adc;
+
+enum AdcDevice {
+	ADC_DEVICE_1 = 0;
+	ADC_DEVICE_2 = 1;
+}

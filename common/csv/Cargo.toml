@@ -11,3 +11,4 @@ harness = false
 serde = { workspace = true, features = ["derive", "serde_derive"] }
 serde-csv-core = { workspace = true }
 heapless = { workspace = true }
+defmt = { workspace = true }

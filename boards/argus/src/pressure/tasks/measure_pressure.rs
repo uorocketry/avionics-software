@@ -16,7 +16,7 @@ pub async fn measure_pressure(
 	pressure_service_mutex: &'static AsyncMutex<PressureService<{ AdcDevice::COUNT }>>,
 ) {
 	worker
-		.run_while(States::Recording, async |_| -> Result<(), ()> {
+		.run_while(&[States::Recording], async |_| -> Result<(), ()> {
 			let mut pressure_service = pressure_service_mutex.lock().await;
 
 			for adc_index in 0..AdcDevice::COUNT {

@@ -1,3 +1,4 @@
+use defmt::{error, info};
 use embassy_time::Instant;
 use strum::EnumCount;
 
@@ -7,6 +8,7 @@ use crate::adc::types::AdcDevice;
 use crate::linear_transformation::service::LinearTransformationService;
 use crate::sd::service::SDCardService;
 use crate::serial::service::SerialService;
+use crate::session::service::SessionService;
 use crate::temperature::config::{LINEAR_TRANSFORMATIONS_FILE_NAME, RTD_RESISTANCE_AT_0C};
 use crate::temperature::rtd;
 use crate::temperature::thermocouple::type_k;
@@ -21,6 +23,7 @@ pub struct TemperatureService<const ADC_COUNT: usize> {
 	pub adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub serial_service: &'static AsyncMutex<SerialService>,
+	pub session_service: &'static AsyncMutex<SessionService>,
 
 	// Store the last RTD reading in Celsius to use for cold junction compensation
 	// This is cached here to avoid reading the RTD multiple times when reading multiple thermocouples
@@ -36,11 +39,13 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 		sd_card_service: &'static AsyncMutex<SDCardService>,
 		serial_service: &'static AsyncMutex<SerialService>,
+		session_service: &'static AsyncMutex<SessionService>,
 	) -> Self {
 		Self {
 			adc_service,
 			sd_card_service,
 			serial_service,
+			session_service,
 			last_rtd_reading: [None; ADC_COUNT],
 			linear_transformation_service: LinearTransformationService::new(sd_card_service, LINEAR_TRANSFORMATIONS_FILE_NAME),
 		}
@@ -57,7 +62,10 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 			driver.apply_configurations().await?;
 		}
 
-		self.linear_transformation_service.load_transformations().await?;
+		match self.linear_transformation_service.load_transformations().await {
+			Err(e) => error!("Failed to load linear transformations: {:?}", e),
+			_ => {}
+		}
 		Ok(())
 	}
 
@@ -78,15 +86,23 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 
 		// Get the cold junction temperature from the last RTD reading for this ADC
 		let cold_junction_temperature = self.last_rtd_reading[adc as usize].unwrap_or(0.0);
+		let uncompensated_temperature = type_k::convert_voltage_to_temperature(voltage as f64)?;
+		let mut compensated_temperature =
+			type_k::convert_voltage_to_temperature_with_cold_junction_compensation(voltage as f64, cold_junction_temperature as f64)?;
+
+		// Apply any linear transformations configured for this ADC and channel
+		compensated_temperature = self
+			.linear_transformation_service
+			.apply_transformation(adc, channel, compensated_temperature);
 
 		let thermocouple_reading = ThermocoupleReading {
-			timestamp: Instant::now().as_millis(),
+			local_session: self.session_service.lock().await.current_session.clone(),
+			adc_device: adc,
+			thermocouple_channel: channel,
+			recorded_at: Instant::now().as_millis(),
 			voltage,
-			uncompensated_temperature: type_k::convert_voltage_to_temperature(voltage as f64)?,
-			compensated_temperature: type_k::convert_voltage_to_temperature_with_cold_junction_compensation(
-				voltage as f64,
-				cold_junction_temperature as f64,
-			)?,
+			uncompensated_temperature,
+			compensated_temperature,
 			cold_junction_temperature,
 		};
 
@@ -124,5 +140,15 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		let estimated_temperature = rtd::convert_resistance_to_temperature(RTD_RESISTANCE_AT_0C, measured_resistance);
 
 		Ok(estimated_temperature)
+	}
+
+	pub async fn refresh_rtd_reading(
+		&mut self,
+		adc: AdcDevice,
+	) -> Result<(), TemperatureServiceError> {
+		let rtd_temperature = self.read_rtd(adc).await?;
+		self.last_rtd_reading[adc as usize] = Some(rtd_temperature);
+		info!("RTD Temperature {}: {}C", adc, rtd_temperature);
+		Ok(())
 	}
 }

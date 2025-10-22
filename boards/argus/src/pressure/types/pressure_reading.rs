@@ -10,7 +10,7 @@ use crate::sd::types::Line;
 // Represents a single pressure reading from a pressure channel
 #[derive(Debug, Clone, Copy, Format, Serialize, Deserialize)]
 pub struct PressureReading {
-	// Timestamp of the reading in milliseconds since epoch
+	// Milliseconds since the board's epoch when the reading was recorded
 	pub timestamp: u64,
 
 	// pressure voltage difference measured in millivolts
@@ -29,7 +29,7 @@ impl SerializeCSV<MAX_LINE_LENGTH> for PressureReading {
 			"Timestamp (ms),\
 			Voltage (mV),\
 			Pressure (psi),\
-			Manifold Temperature (C)\n",
+			Manifold Temperature (C)",
 		)
 		.unwrap()
 	}

@@ -2,16 +2,28 @@ use core::str::FromStr;
 
 use csv::SerializeCSV;
 use defmt::Format;
+use messages::argus::temperature::thermocouple_reading::ThermocoupleReading as ThermocoupleReadingProtobuf;
 use serde::{Deserialize, Serialize};
 
+use crate::adc::types::AdcDevice;
 use crate::sd::config::MAX_LINE_LENGTH;
 use crate::sd::types::Line;
+use crate::temperature::types::ThermocoupleChannel;
 
 // Represents a single temperature reading from a thermocouple channel
 #[derive(Debug, Clone, Copy, Format, Serialize, Deserialize)]
 pub struct ThermocoupleReading {
-	// Timestamp of the reading in milliseconds since epoch
-	pub timestamp: u64,
+	// Local session from the device that took the reading
+	pub local_session: Option<i32>,
+
+	// ADC device index from which the reading was taken
+	pub adc_device: AdcDevice,
+
+	// Thermocouple channel from which the reading was taken
+	pub thermocouple_channel: ThermocoupleChannel,
+
+	// Milliseconds since the board's epoch when the reading was recorded
+	pub recorded_at: u64,
 
 	// Thermocouple voltage difference measured in millivolts
 	pub voltage: f32,
@@ -29,12 +41,31 @@ pub struct ThermocoupleReading {
 impl SerializeCSV<MAX_LINE_LENGTH> for ThermocoupleReading {
 	fn get_csv_header() -> Line {
 		Line::from_str(
-			"Timestamp (ms),\
+			"Local Session #,\
+			ADC Device,\
+			Thermocouple Channel,\
+			Timestamp (ms),\
 			Voltage (mV),\
 			Compensated Temperature (C),\
 			Uncompensated Temperature (C),\
-			Cold Junction Temperature (C)\n",
+			Cold Junction Temperature (C)",
 		)
 		.unwrap()
+	}
+}
+
+impl ThermocoupleReading {
+	// Convert to the protobuf representation
+	pub fn to_protobuf(&self) -> ThermocoupleReadingProtobuf {
+		ThermocoupleReadingProtobuf {
+			local_session: self.local_session,
+			adc_device: self.adc_device.to_protobuf() as i32,
+			thermocouple_channel: self.thermocouple_channel.to_protobuf() as i32,
+			recorded_at: self.recorded_at,
+			voltage: self.voltage,
+			compensated_temperature: self.compensated_temperature,
+			uncompensated_temperature: self.uncompensated_temperature,
+			cold_junction_temperature: self.cold_junction_temperature,
+		}
 	}
 }

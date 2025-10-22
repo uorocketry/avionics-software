@@ -1,0 +1,1 @@
+influxdb3 create database uorocketry

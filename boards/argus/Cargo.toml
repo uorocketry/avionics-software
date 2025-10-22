@@ -10,6 +10,7 @@ harness = false
 pressure = []
 temperature = []
 strain = []
+calibration = []
 
 [dependencies]
 chrono = { workspace = true }
@@ -72,13 +73,14 @@ grounded = "0.2.0"
 heapless = { workspace = true }
 itoa = { version = "1.0.15", features = ["no-panic"] }
 libm = { version = "0.2.15", default-features = false }
-messages-prost = { workspace = true }
+messages = { workspace = true }
 micromath = "2.0.0"
 num-traits = { version = "0.2.19", default-features = false, features = [
 	"libm",
 ] }
 panic-probe = { workspace = true }
 pid = "4.0.0"
+prost = { workspace = true }
 serde = { workspace = true, features = ["derive", "serde_derive"] }
 smlang = { workspace = true }
 static_cell = "2"

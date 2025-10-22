@@ -43,6 +43,10 @@ Shows you the memory size breakdown of a compiled Rust binary: `rustup component
 
 To run against your build `cargo size --bin {board}`
 
+### Cargo Bloat
+To see if use of a generic causing monomorphization bloat. We can use cargo bloat. `cargo install cargo-bloat cargo-binutils rustfilt`
+`cargo bloat --release -n 200 --demangle`
+
 ## Common Issues
 
 1) **Rust-analyzer is complaining about my target triple being my host PC's target instead of embedded when looking at embedded code**.

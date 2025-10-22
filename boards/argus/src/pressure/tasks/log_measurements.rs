@@ -9,6 +9,7 @@ use crate::pressure::types::pressure_reading::PressureReading;
 use crate::pressure::types::PressureChannel;
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope};
+use crate::session::service::SessionService;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
 use crate::utils::types::AsyncMutex;
@@ -18,11 +19,12 @@ use crate::utils::types::AsyncMutex;
 pub async fn log_measurements(
 	mut worker: StateMachineWorker,
 	sd_card_service_mutex: &'static AsyncMutex<SDCardService>,
+	session_service: &'static AsyncMutex<SessionService>,
 ) {
-	initialize_csv_files(sd_card_service_mutex).await;
+	initialize_csv_files(sd_card_service_mutex, session_service).await;
 
 	worker
-		.run_while(States::Recording, async |_| -> Result<(), ()> {
+		.run_while(&[States::Recording], async |_| -> Result<(), ()> {
 			let (adc, channel, pressure_reading) = PRESSURE_READING_QUEUE.receive().await;
 			let path = get_path_from_adc_and_channel(adc as usize, channel as usize);
 			let line = pressure_reading.to_csv_line();
@@ -34,11 +36,14 @@ pub async fn log_measurements(
 }
 
 // Create the files and write the CSV headers before starting the logging loop
-async fn initialize_csv_files(sd_card_service_mutex: &'static AsyncMutex<SDCardService>) {
-	let mut sd_card_service = sd_card_service_mutex.lock().await;
+async fn initialize_csv_files(
+	sd_card_service_mutex: &'static AsyncMutex<SDCardService>,
+	session_service: &'static AsyncMutex<SessionService>,
+) {
+	// Ensure session is set. Ignore if it errors like SD card not mounted, etc.
+	let _ = session_service.lock().await.ensure_session().await;
 
-	// Ignore because if the SD card isn't mounted we don't want to panic
-	let _ = sd_card_service.ensure_session_created();
+	let mut sd_card_service = sd_card_service_mutex.lock().await;
 	for adc_index in 0..AdcDevice::COUNT {
 		for channel in 0..PressureChannel::COUNT {
 			let path = get_path_from_adc_and_channel(adc_index, channel);

@@ -7,7 +7,6 @@ use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::types::LinearTransformation;
-use crate::serial::service::UsartError;
 use crate::temperature::config::MAX_CALIBRATION_DATA_POINTS;
 use crate::temperature::service::TemperatureService;
 use crate::temperature::types::{TemperatureServiceError, ThermocoupleChannel};
@@ -33,6 +32,12 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		}
 		let channel = ThermocoupleChannel::from(channel_index);
 
+		{
+			let message: String<64> =
+				format!("Calibrating ADC {}, Channel {}\n", adc_index, channel_index).map_err(|_| TemperatureServiceError::FormatError)?;
+			self.send_message(message.as_str()).await?;
+		}
+
 		// Prompt for number of data points
 		let data_points_count: u8 = self.prompt("Enter number of data points to use for the linear fit:\n").await?;
 		if data_points_count < 2 {
@@ -40,15 +45,20 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 			return Ok(());
 		}
 		if data_points_count > MAX_CALIBRATION_DATA_POINTS as u8 {
-			let error_message: String<64> = format!("Too many data points. Maximum is {}.\n", MAX_CALIBRATION_DATA_POINTS).unwrap();
+			let error_message: String<64> =
+				format!("Too many data points. Maximum is {}.\n", MAX_CALIBRATION_DATA_POINTS).map_err(|_| TemperatureServiceError::FormatError)?;
 			self.send_message(error_message.as_str()).await?;
 			return Ok(());
 		}
 
+		// Deregister any existing transformation for this channel
+		self.linear_transformation_service.deregister_transformation(adc, channel);
+
 		// Start collecting data points
 		let mut calibration_data_points: Vec<CalibrationDataPoint, MAX_CALIBRATION_DATA_POINTS> = Vec::new();
 		for data_point_index in 0..data_points_count {
-			let message: String<64> = format!("Data Point #{}. Enter expected value in degrees celsius:\n", data_point_index + 1).unwrap();
+			let message: String<64> = format!("Data Point #{}. Enter expected value in degrees celsius:\n", data_point_index + 1)
+				.map_err(|_| TemperatureServiceError::FormatError)?;
 			let expected_temperature: f64 = self.prompt(message.as_str()).await?;
 			let measured_temperature: f64 = self.read_thermocouple(adc, channel).await?.compensated_temperature;
 			let data_point = CalibrationDataPoint {
@@ -57,21 +67,18 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 			};
 			calibration_data_points.push(data_point).unwrap(); // Safe due to prior checks
 
-			let confirmation_message: String<64> = format!(
-				"Recorded data point: Expected = {:.2} °C, Measured = {:.2} °C\n",
-				expected_temperature, measured_temperature
-			)
-			.unwrap();
+			let confirmation_message: String<64> = format!("Expected = {:.2} °C, Measured = {:.2}C\n", expected_temperature, measured_temperature)
+				.map_err(|_| TemperatureServiceError::FormatError)?;
 			self.send_message(confirmation_message.as_str()).await?;
 		}
 
 		// Perform Ordinary Least Squares Fit
 		let transformation = self.run_ordinary_least_squares_fit(adc, channel, calibration_data_points);
 		let result_message: String<128> = format!(
-			"Ordinary Least Squares Fit complete. Gain: {:.6}, Offset: {:.2} °C\n",
-			transformation.gain, transformation.offset
+			"Ordinary Least Squares Fit complete. Scale: {:.6}, Offset: {:.2} °C\n",
+			transformation.scale, transformation.offset
 		)
-		.unwrap();
+		.map_err(|_| TemperatureServiceError::FormatError)?;
 		self.send_message(result_message.as_str()).await?;
 
 		// Update calibration for the channel
@@ -105,16 +112,16 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 
 		// Denominator for slope (variance term)
 		let denom = data_points_count * sum_xx - sum_x * sum_x;
-		let gain = (data_points_count * sum_xy - sum_x * sum_y) / denom;
-		let offset = (sum_y - gain * sum_x) / data_points_count;
+		let scale = (data_points_count * sum_xy - sum_x * sum_y) / denom;
+		let offset = (sum_y - scale * sum_x) / data_points_count;
 
-		LinearTransformation { adc, channel, gain, offset }
+		LinearTransformation { adc, channel, scale, offset }
 	}
 
 	async fn prompt<T>(
 		&mut self,
 		prompt: &str,
-	) -> Result<T, UsartError>
+	) -> Result<T, TemperatureServiceError>
 	where
 		T: FromStr,
 		<T as FromStr>::Err: core::fmt::Debug, {
@@ -122,15 +129,16 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		let mut input = String::<256>::new();
 		serial_service.write_str(prompt).await?;
 		serial_service.read_line(&mut input).await?;
-		Ok(input.trim().parse().unwrap()) // In a real implementation, handle parse errors gracefully
+		Ok(input.trim().parse().map_err(|_| TemperatureServiceError::FormatError)?)
 	}
 
 	async fn send_message(
 		&mut self,
 		message: &str,
-	) -> Result<(), UsartError> {
+	) -> Result<(), TemperatureServiceError> {
 		let mut serial_service = self.serial_service.lock().await;
-		serial_service.write_str(message).await
+		serial_service.write_str(message).await?;
+		Ok(())
 	}
 }
 

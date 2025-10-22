@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package messages.argus.service;
+
+import "google/protobuf/empty.proto";
+import "argus/envelope.proto";
+
+service Argus {
+	rpc SendEnvelope(envelope.Envelope) returns (google.protobuf.Empty) {};
+}

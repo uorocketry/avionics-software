@@ -1,5 +1,5 @@
 // Size of the queue used to send temperature readings from the temperature service to the SD card service
-pub const TEMPERATURE_READING_QUEUE_SIZE: usize = 16;
+pub const THERMOCOUPLE_READING_QUEUE_SIZE: usize = 16;
 
 // Maximum number of calibration data points allowed to be collected during a calibration session per thermocouple channel
 pub const MAX_CALIBRATION_DATA_POINTS: usize = 10;
