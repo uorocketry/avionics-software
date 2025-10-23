@@ -23,7 +23,7 @@ _sym_db = _symbol_database.Default()
 
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-from argus import envelope_pb2 as argus_dot_envelope__pb2
+from messages.argus import envelope_pb2 as argus_dot_envelope__pb2
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13\x61rgus/service.proto\x12\x16messages.argus.service\x1a\x1bgoogle/protobuf/empty.proto\x1a\x14\x61rgus/envelope.proto2T\n\x05\x41rgus\x12K\n\x0cSendEnvelope\x12!.messages.argus.envelope.Envelope\x1a\x16.google.protobuf.Empty\"\x00\x62\x06proto3')

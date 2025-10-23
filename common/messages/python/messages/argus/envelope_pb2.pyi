@@ -3,8 +3,8 @@
 isort:skip_file
 """
 
-import argus.temperature.thermocouple_calibration_pb2
-import argus.temperature.thermocouple_reading_pb2
+import messages.argus.temperature.thermocouple_calibration_pb2
+import messages.argus.temperature.thermocouple_reading_pb2
 import builtins
 import google.protobuf.descriptor
 import google.protobuf.message

@@ -12,4 +12,4 @@ class HostRecordingSession(Model):
         database = database
 
 
-database.evolve()
+# database.evolve()

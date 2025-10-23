@@ -10,7 +10,7 @@ from peewee import (
 from models.recording_session import HostRecordingSession
 from utils.database import database
 
-from argus.temperature.thermocouple_reading_pb2 import (
+from messages.argus.temperature.thermocouple_reading_pb2 import (
     ThermocoupleReading as ThermocoupleReadingProto,
 )
 
@@ -64,4 +64,4 @@ class ThermocoupleReading(Model):
         )
 
 
-database.evolve()
+# database.evolve()

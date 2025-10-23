@@ -1,20 +1,28 @@
 {
+    // Formatting
     "editor.detectIndentation": true,
-    // Default cargo target is for embedded. Use Rust Target extension to dynamically change it based on project.
-    "rust-analyzer.cargo.target": "thumbv7em-none-eabihf",
+    "editor.formatOnSave": true,
+    // Rust Settings
+    "rust-analyzer.cargo.target": "thumbv7em-none-eabihf", // Default cargo target is for embedded. Use Rust Target extension to dynamically change it based on project.
     "rust-analyzer.cargo.features": [
         "pressure",
         "strain",
         "temperature"
     ],
-    "editor.formatOnSave": true,
     "[rust]": {
-        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
     },
+    // Python Settings
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
-    "python-envs.pythonProjects": [],
+    "protoc": {
+        "options": [
+            "--proto_path=${workspaceRoot}/common/messages/proto",
+            "--python_out=${workspaceRoot}/common/messages/python",
+        ]
+    },
+    // Spelling
     "cSpell.words": [
         "uorocketry"
     ]

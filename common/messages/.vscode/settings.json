@@ -1,0 +1,8 @@
+{
+	"protoc": {
+		"options": [
+			"--proto_path=${workspaceRoot}/common/messages/proto",
+			"--python_out=${workspaceRoot}/common/messages/python",
+		]
+	},
+}
