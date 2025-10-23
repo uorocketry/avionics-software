@@ -16,6 +16,9 @@
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
+    "python.analysis.extraPaths": [
+        "common/messages/python"
+    ],
     "protoc": {
         "options": [
             "--proto_path=${workspaceRoot}/common/messages/proto",
