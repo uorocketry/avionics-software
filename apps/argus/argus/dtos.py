@@ -1,5 +1,5 @@
 from models.thermocouple_reading import ThermocoupleReading
-from argus.temperature.thermocouple_reading_pb2 import (
+from messages.argus.temperature.thermocouple_reading_pb2 import (
     ThermocoupleReading as ThermocoupleReadingProto,
 )
 

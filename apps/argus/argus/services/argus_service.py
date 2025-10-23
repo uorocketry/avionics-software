@@ -1,10 +1,10 @@
-import argus.service_pb2_grpc
+import messages.argus.service_pb2_grpc
 from google.protobuf import empty_pb2
-from argus.envelope_pb2 import Envelope
+from messages.argus.envelope_pb2 import Envelope
 from services.protobuf_serial_service import ProtobufSerialService
 
 
-class ArgusService(argus.service_pb2_grpc.ArgusServicer):
+class ArgusService(messages.argus.service_pb2_grpc.ArgusServicer):
     def __init__(self, protobuf_serial_service: ProtobufSerialService = None):
         self.protobuf_serial_service = protobuf_serial_service
 
@@ -13,4 +13,4 @@ class ArgusService(argus.service_pb2_grpc.ArgusServicer):
         return empty_pb2.Empty()
 
     def register(self, server):
-        argus.service_pb2_grpc.add_ArgusServicer_to_server(self, server)
+        messages.argus.service_pb2_grpc.add_ArgusServicer_to_server(self, server)

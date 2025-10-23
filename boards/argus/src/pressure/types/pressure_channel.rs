@@ -1,9 +1,11 @@
 use defmt::Format;
+use messages::argus::pressure::pressure_channel::PressureChannel as PressureChannelProtobuf;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
 
 use crate::adc::driver::types::AnalogChannel;
 
+#[repr(usize)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Format, Serialize, Deserialize, EnumCount, Default)]
 pub enum PressureChannel {
 	#[default]
@@ -34,6 +36,15 @@ impl PressureChannel {
 			PressureChannel::Channel2 => (AnalogChannel::AIN2, AnalogChannel::AIN3),
 			PressureChannel::Channel3 => (AnalogChannel::AIN4, AnalogChannel::AIN5),
 			PressureChannel::Channel4 => (AnalogChannel::AIN6, AnalogChannel::AIN7),
+		}
+	}
+
+	pub fn to_protobuf(&self) -> PressureChannelProtobuf {
+		match self {
+			PressureChannel::Channel1 => PressureChannelProtobuf::Channel1,
+			PressureChannel::Channel2 => PressureChannelProtobuf::Channel2,
+			PressureChannel::Channel3 => PressureChannelProtobuf::Channel3,
+			PressureChannel::Channel4 => PressureChannelProtobuf::Channel4,
 		}
 	}
 }

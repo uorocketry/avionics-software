@@ -1,14 +1,16 @@
 use csv::SerializeCSV;
+use defmt::info;
 use embassy_executor::task;
 use heapless::format;
+use messages::argus::envelope::envelope::Message;
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
 use crate::pressure::service::PRESSURE_READING_QUEUE;
-use crate::pressure::types::pressure_reading::PressureReading;
-use crate::pressure::types::PressureChannel;
+use crate::pressure::types::{PressureChannel, PressureReading};
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope};
+use crate::serial::service::SerialService;
 use crate::session::service::SessionService;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
@@ -18,17 +20,29 @@ use crate::utils::types::AsyncMutex;
 #[task]
 pub async fn log_measurements(
 	mut worker: StateMachineWorker,
+	serial_service_mutex: &'static AsyncMutex<SerialService>,
 	sd_card_service_mutex: &'static AsyncMutex<SDCardService>,
 	session_service: &'static AsyncMutex<SessionService>,
 ) {
-	initialize_csv_files(sd_card_service_mutex, session_service).await;
+	worker
+		.run_once(&[States::Recording], async |_| -> Result<(), ()> {
+			initialize_csv_files(sd_card_service_mutex, session_service).await;
+			Ok(())
+		})
+		.await
+		.unwrap();
 
 	worker
 		.run_while(&[States::Recording], async |_| -> Result<(), ()> {
-			let (adc, channel, pressure_reading) = PRESSURE_READING_QUEUE.receive().await;
-			let path = get_path_from_adc_and_channel(adc as usize, channel as usize);
+			let pressure_reading = PRESSURE_READING_QUEUE.receive().await;
+			let path = get_path_from_adc_and_channel(pressure_reading.adc_device as usize, pressure_reading.pressure_channel as usize);
 			let line = pressure_reading.to_csv_line();
 			SDCardService::enqueue_write(OperationScope::CurrentSession, path, line).await;
+			let _ = serial_service_mutex
+				.lock()
+				.await
+				.write_envelope_message(Message::PressureReading(pressure_reading.to_protobuf()))
+				.await;
 			Ok(())
 		})
 		.await
@@ -43,6 +57,7 @@ async fn initialize_csv_files(
 	// Ensure session is set. Ignore if it errors like SD card not mounted, etc.
 	let _ = session_service.lock().await.ensure_session().await;
 
+	info!("Initializing CSV files for measurement logging.");
 	let mut sd_card_service = sd_card_service_mutex.lock().await;
 	for adc_index in 0..AdcDevice::COUNT {
 		for channel in 0..PressureChannel::COUNT {
@@ -58,5 +73,5 @@ fn get_path_from_adc_and_channel(
 	adc_index: usize,
 	channel: usize,
 ) -> FileName {
-	format!("P_{}_{}.csv", adc_index, channel).unwrap() as FileName
+	format!("T_{}_{}.csv", adc_index, channel).unwrap() as FileName
 }

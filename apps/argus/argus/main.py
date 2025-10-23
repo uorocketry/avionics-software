@@ -2,6 +2,7 @@ import asyncio
 import argparse
 import contextlib
 import utils.logger
+import messages.argus
 from services.persistence_service import PersistenceService
 from services.protobuf_serial_service import ProtobufSerialService
 from services.grpc_service import GrpcService

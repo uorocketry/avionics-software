@@ -7,11 +7,16 @@ args = ["build"]
 description = "Build protobuf messages for Python"
 script_runner = "@shell"
 script = [
-	"rm -rf python",
-	"mkdir python",
-	"python3 -m grpc_tools.protoc --proto_path=proto --python_out=python --mypy_out=python --grpc_python_out=python $(find proto -type f -name '*.proto')",
-	"find python -type d -exec touch {}/__init__.py \\;",
-	"cat assets/pyproject.toml > python/pyproject.toml"
+	"rm -rf python/messages",
+	"mkdir python/messages",
+	"""python3 -m grpc_tools.protoc \
+		--proto_path=proto \
+		--python_out=python/messages \
+		--mypy_out=python/messages \
+		--grpc_python_out=python/messages \
+	$(find proto -type f -name '*.proto')""",
+	"find python/messages -type d -exec touch {}/__init__.py \\;",
+	"./utils/prefix-python-imports.sh python/messages messages",
 ]
 
 [tasks.all]

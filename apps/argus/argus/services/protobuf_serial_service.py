@@ -1,5 +1,5 @@
 import serial
-from argus.envelope_pb2 import Envelope
+from messages.argus.envelope_pb2 import Envelope
 import logging
 from services.persistence_service import PersistenceService
 
