@@ -3,7 +3,7 @@
 isort:skip_file
 """
 
-import messages.argus.temperature.thermocouple_calibration_pb2
+import messages.argus.pressure.pressure_reading_pb2
 import messages.argus.temperature.thermocouple_reading_pb2
 import builtins
 import google.protobuf.descriptor
@@ -16,20 +16,20 @@ DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 class Envelope(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    THERMOCOUPLE_CALIBRATION_FIELD_NUMBER: builtins.int
     THERMOCOUPLE_READING_FIELD_NUMBER: builtins.int
-    @property
-    def thermocouple_calibration(self) -> argus.temperature.thermocouple_calibration_pb2.ThermocoupleCalibration: ...
+    PRESSURE_READING_FIELD_NUMBER: builtins.int
     @property
     def thermocouple_reading(self) -> argus.temperature.thermocouple_reading_pb2.ThermocoupleReading: ...
+    @property
+    def pressure_reading(self) -> argus.pressure.pressure_reading_pb2.PressureReading: ...
     def __init__(
         self,
         *,
-        thermocouple_calibration: argus.temperature.thermocouple_calibration_pb2.ThermocoupleCalibration | None = ...,
         thermocouple_reading: argus.temperature.thermocouple_reading_pb2.ThermocoupleReading | None = ...,
+        pressure_reading: argus.pressure.pressure_reading_pb2.PressureReading | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["message", b"message", "thermocouple_calibration", b"thermocouple_calibration", "thermocouple_reading", b"thermocouple_reading"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["message", b"message", "thermocouple_calibration", b"thermocouple_calibration", "thermocouple_reading", b"thermocouple_reading"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["message", b"message"]) -> typing.Literal["thermocouple_calibration", "thermocouple_reading"] | None: ...
+    def HasField(self, field_name: typing.Literal["message", b"message", "pressure_reading", b"pressure_reading", "thermocouple_reading", b"thermocouple_reading"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["message", b"message", "pressure_reading", b"pressure_reading", "thermocouple_reading", b"thermocouple_reading"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing.Literal["message", b"message"]) -> typing.Literal["thermocouple_reading", "pressure_reading"] | None: ...
 
 global___Envelope = Envelope

@@ -22,17 +22,17 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from messages.argus.temperature import thermocouple_calibration_pb2 as argus_dot_temperature_dot_thermocouple__calibration__pb2
+from messages.argus.pressure import pressure_reading_pb2 as argus_dot_pressure_dot_pressure__reading__pb2
 from messages.argus.temperature import thermocouple_reading_pb2 as argus_dot_temperature_dot_thermocouple__reading__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14\x61rgus/envelope.proto\x12\x17messages.argus.envelope\x1a\x30\x61rgus/temperature/thermocouple_calibration.proto\x1a,argus/temperature/thermocouple_reading.proto\"\xed\x01\n\x08\x45nvelope\x12p\n\x18thermocouple_calibration\x18\x01 \x01(\x0b\x32L.messages.argus.temperature.thermocouple_calibration.ThermocoupleCalibrationH\x00\x12\x64\n\x14thermocouple_reading\x18\x02 \x01(\x0b\x32\x44.messages.argus.temperature.thermocouple_reading.ThermocoupleReadingH\x00\x42\t\n\x07messageb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14\x61rgus/envelope.proto\x12\x17messages.argus.envelope\x1a%argus/pressure/pressure_reading.proto\x1a,argus/temperature/thermocouple_reading.proto\"\xd2\x01\n\x08\x45nvelope\x12\x64\n\x14thermocouple_reading\x18\x01 \x01(\x0b\x32\x44.messages.argus.temperature.thermocouple_reading.ThermocoupleReadingH\x00\x12U\n\x10pressure_reading\x18\x02 \x01(\x0b\x32\x39.messages.argus.pressure.pressure_reading.PressureReadingH\x00\x42\t\n\x07messageb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'argus.envelope_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_ENVELOPE']._serialized_start=146
-  _globals['_ENVELOPE']._serialized_end=383
+  _globals['_ENVELOPE']._serialized_start=135
+  _globals['_ENVELOPE']._serialized_end=345
 # @@protoc_insertion_point(module_scope)
