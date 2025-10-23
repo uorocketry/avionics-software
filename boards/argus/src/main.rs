@@ -141,19 +141,33 @@ async fn main(spawner: Spawner) {
 		use argus::pressure::service::PressureService;
 		use argus::pressure::tasks;
 
-		let pressure_service = PRESSURE_SERVICE.init(AsyncMutex::new(PressureService::new(adc_service, sd_card_service, serial_service)));
+		let pressure_service = PRESSURE_SERVICE.init(AsyncMutex::new(PressureService::new(
+			adc_service,
+			sd_card_service,
+			serial_service,
+			session_service,
+		)));
 
 		// Setup the pressure service before starting the tasks
 		pressure_service.lock().await.setup().await.unwrap();
 
-		spawner.must_spawn(tasks::measure_pressure(
+		spawner.must_spawn(tasks::measure_pressure_sensors(
+			StateMachineWorker::new(state_machine_orchestrator),
+			pressure_service,
+		));
+		spawner.must_spawn(tasks::measure_manifold_temperature(
 			StateMachineWorker::new(state_machine_orchestrator),
 			pressure_service,
 		));
 		spawner.must_spawn(tasks::log_measurements(
 			StateMachineWorker::new(state_machine_orchestrator),
+			serial_service,
 			sd_card_service,
 			session_service,
+		));
+		spawner.must_spawn(tasks::calibrate_pressure_sensors(
+			StateMachineWorker::new(state_machine_orchestrator),
+			pressure_service,
 		));
 	}
 

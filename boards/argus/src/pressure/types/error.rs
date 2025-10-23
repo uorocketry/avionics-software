@@ -10,4 +10,5 @@ pub enum PressureServiceError {
 	AdcError(AdcError),
 	UsartError(UsartError),
 	SdCardError(SdCardError),
+	FormatError,
 }

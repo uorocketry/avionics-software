@@ -2,35 +2,65 @@ use core::str::FromStr;
 
 use csv::SerializeCSV;
 use defmt::Format;
+use messages::argus::pressure::pressure_reading::PressureReading as PressureReadingProtobuf;
 use serde::{Deserialize, Serialize};
 
+use crate::adc::types::AdcDevice;
+use crate::pressure::types::PressureChannel;
 use crate::sd::config::MAX_LINE_LENGTH;
 use crate::sd::types::Line;
 
 // Represents a single pressure reading from a pressure channel
 #[derive(Debug, Clone, Copy, Format, Serialize, Deserialize)]
 pub struct PressureReading {
-	// Milliseconds since the board's epoch when the reading was recorded
-	pub timestamp: u64,
+	// Local session from the device that took the reading
+	pub local_session: Option<i32>,
 
-	// pressure voltage difference measured in millivolts
+	// ADC device from which the reading was taken
+	pub adc_device: AdcDevice,
+
+	// Identifier for the pressure within the ADC device
+	pub pressure_channel: PressureChannel,
+
+	// Milliseconds since the board's epoch when the reading was recorded
+	pub recorded_at: u64,
+
+	// Voltage difference measured at the pressure sensor wheatstone bridge in millivolts
 	pub voltage: f32,
 
-	// pressure calculated in psi
-	pub pressure: f32,
+	// Pressure reading in Pascals
+	pub pressure: f64,
 
-	// manifold temperature at which this pressure reading was taken
-	pub temperature: f32,
+	// Temperature of the manifold from the NTC resistor at the time of the recording in degrees Celsius
+	pub temperature: f64,
 }
 
 impl SerializeCSV<MAX_LINE_LENGTH> for PressureReading {
 	fn get_csv_header() -> Line {
 		Line::from_str(
-			"Timestamp (ms),\
+			"Local Session #,\
+			ADC Device,\
+			Pressure Channel,\
+			Timestamp (ms),\
 			Voltage (mV),\
-			Pressure (psi),\
+			Pressure (Pa),\
 			Manifold Temperature (C)",
 		)
 		.unwrap()
+	}
+}
+
+impl PressureReading {
+	// Convert to the protobuf representation
+	pub fn to_protobuf(&self) -> PressureReadingProtobuf {
+		PressureReadingProtobuf {
+			local_session: self.local_session,
+			adc_device: self.adc_device.to_protobuf() as i32,
+			pressure_channel: self.pressure_channel.to_protobuf() as i32,
+			recorded_at: self.recorded_at,
+			voltage: self.voltage,
+			pressure: self.pressure,
+			temperature: self.temperature,
+		}
 	}
 }

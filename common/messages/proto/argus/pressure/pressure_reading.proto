@@ -22,7 +22,7 @@ message PressureReading {
 	float voltage = 5;
 
 	// Pressure reading in Pascals
-	float pressure = 8;
+	double pressure = 8;
 
 	// Temperature of the manifold from the NTC resistor at the time of the recording in degrees Celsius
 	double temperature = 6;

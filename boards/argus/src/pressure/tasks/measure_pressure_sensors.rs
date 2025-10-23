@@ -1,5 +1,6 @@
-use defmt::{debug, error};
+use defmt::{error, info};
 use embassy_executor::task;
+use embassy_futures::yield_now;
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
@@ -11,23 +12,21 @@ use crate::utils::types::AsyncMutex;
 
 // Task that iterates through the ADCs and channels, measures the pressure, and enqueues the readings to a channel
 #[task]
-pub async fn measure_pressure(
+pub async fn measure_pressure_sensors(
 	mut worker: StateMachineWorker,
 	pressure_service_mutex: &'static AsyncMutex<PressureService<{ AdcDevice::COUNT }>>,
 ) {
 	worker
 		.run_while(&[States::Recording], async |_| -> Result<(), ()> {
-			let mut pressure_service = pressure_service_mutex.lock().await;
-
 			for adc_index in 0..AdcDevice::COUNT {
 				for channel_index in 0..PressureChannel::COUNT {
 					let adc = AdcDevice::from(adc_index);
 					let channel = PressureChannel::from(channel_index);
-					let data = pressure_service.read_pressure_sensor(adc, channel).await;
+					let data = pressure_service_mutex.lock().await.read_pressure(adc, channel).await;
 					match data {
-						Ok(data) => {
-							debug!("ADC {} Channel {}: {}", adc, channel, data);
-							PRESSURE_READING_QUEUE.send((adc, channel, data)).await;
+						Ok(pressure_reading) => {
+							info!("{}", pressure_reading);
+							PRESSURE_READING_QUEUE.send(pressure_reading).await;
 						}
 						Err(err) => {
 							error!("Error reading ADC {} Channel {}: {:?}", adc, channel, err);
@@ -36,6 +35,9 @@ pub async fn measure_pressure(
 					}
 				}
 			}
+
+			// Yield to allow other tasks to run, especially the NTC measurement task
+			yield_now().await;
 			Ok(())
 		})
 		.await
