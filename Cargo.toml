@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 
-members = ["boards/*", "common/*"]
+members = ["boards/*", "common/*", "apps/*"]
 
 # Specify which members to build by default. Some libraries, such as messages, contain dev-dependencies that will give
 # compile errors if built directly.
