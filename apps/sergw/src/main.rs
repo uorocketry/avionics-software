@@ -73,7 +73,6 @@ fn main() {
 fn list_available_ports() -> Result<Vec<String>, Box<dyn std::error::Error>> {
 	let ports = available_ports()?
 		.iter()
-		// Note: This filter can be removed to show all serial ports, not just USB ones.
 		.filter(|port| matches!(port.port_type, SerialPortType::UsbPort(_)))
 		.map(|port| port.port_name.clone())
 		.collect();
@@ -83,28 +82,16 @@ fn list_available_ports() -> Result<Vec<String>, Box<dyn std::error::Error>> {
 fn run_gateway(opts: &Listen) -> Result<(), Box<dyn std::error::Error>> {
 	let shared_state = Arc::new(Mutex::new(SharedState::new(opts.verbose)));
 	let shutdown_flag = Arc::new(AtomicBool::new(false));
-
-	// This shared port handle allows the serial writer thread to access the
-	// currently active serial port, which is managed by the main reconnect loop.
 	let shared_port_writer = Arc::new(Mutex::new(None::<Box<dyn serialport::SerialPort>>));
-
-	// The channel for sending data from TCP clients to the serial writer.
-	// This channel lives for the entire application lifetime.
 	let (serial_writer_tx, serial_writer_rx) = channel::<Arc<[u8]>>();
 
 	setup_ctrl_c_handler(&shutdown_flag)?;
 
-	// Spawn the TCP listener and serial writer threads ONCE.
-	// They will run for the lifetime of the application.
 	println!("Starting TCP listener on: {}", opts.host);
 	let tcp_handle_task = spawn_tcp_listener(&opts.host, &shared_state, &shutdown_flag, serial_writer_tx)?;
 
 	let serial_writer_task = spawn_serial_writer(serial_writer_rx, &shared_port_writer, &shutdown_flag);
 
-	// Main application loop for handling the serial connection.
-	// This loop will attempt to connect, and if successful, will spawn a
-	// reader thread. If the reader thread dies (e.g., port disconnected),
-	// the loop will clean up and try to reconnect.
 	'reconnect_loop: loop {
 		if shutdown_flag.load(Ordering::Acquire) {
 			println!("Shutdown signal received, exiting main loop.");
@@ -124,23 +111,21 @@ fn run_gateway(opts: &Listen) -> Result<(), Box<dyn std::error::Error>> {
 			}
 		};
 
-		// The port was opened successfully. Clone it for the writer thread
-		// and update the shared handle.
+		// The port was opened successfully
 		let port_writer_clone = port.try_clone()?;
 		*shared_port_writer.lock().expect("Mutex poisoned") = Some(port_writer_clone);
 
-		// Spawn a new reader thread for the current connection.
 		let serial_reader_task = spawn_serial_reader(port, &shared_state, &shutdown_flag);
 
-		// Block until the reader thread exits. This is the "active" state.
+		// Block until the reader thread exits
 		serial_reader_task.join().unwrap_or_else(|e| {
 			eprintln!("Serial reader thread panicked: {:?}", e);
 		});
 
-		// The reader has exited, so the connection is considered dead.
-		// Clear the shared writer handle and loop to reconnect.
+		// Connection is dead.
 		*shared_port_writer.lock().expect("Mutex poisoned") = None;
 
+		// Retry or exit
 		if !shutdown_flag.load(Ordering::Acquire) {
 			eprintln!("Serial connection lost. Attempting to reconnect...");
 			std::thread::sleep(RECONNECT_DELAY);
@@ -232,10 +217,7 @@ fn spawn_serial_writer(
 					if let Some(port) = port_guard.as_mut() {
 						if let Err(e) = port.write_all(&data) {
 							eprintln!("Serial write failed: {:?}. Data dropped.", e);
-							// The reader thread will detect the failure and trigger a reconnect.
 						}
-					} else {
-						// Port is not connected, so we drop the data.
 					}
 				}
 				Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
@@ -262,7 +244,6 @@ fn broadcast_data(
 			data
 		);
 	}
-	// Iterate directly without collecting to reduce allocations
 	for (addr, sender) in state.connections.iter() {
 		if sender.send(data.clone()).is_err() && state.verbose {
 			eprintln!("Failed to send to {}, client handler will clean it up.", addr);
@@ -309,7 +290,7 @@ fn spawn_tcp_listener(
 						let mut tcp_buffer = [0; BUFFER_SIZE];
 
 						loop {
-							// Read from TCP client and forward to serial
+							// Read from TCP to serial
 							match stream.read(&mut tcp_buffer) {
 								Ok(0) => break, // Connection closed by client
 								Ok(n) => {
@@ -323,7 +304,7 @@ fn spawn_tcp_listener(
 								Err(_) => break, // Connection error
 							}
 
-							// Read from serial broadcast channel and forward to TCP client
+							// Read from serial to TCP
 							match serial_receiver.try_recv() {
 								Ok(data) => {
 									if stream.write_all(&data).is_err() {
