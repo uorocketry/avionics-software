@@ -1,16 +1,21 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::TcpListener;
-use std::sync::atomic::AtomicBool;
-use std::sync::mpsc::{channel, Sender};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use clap::{Parser, Subcommand};
 use serialport::{available_ports, SerialPortType};
 
+const BUFFER_SIZE: usize = 1024;
+const TCP_LOOP_SLEEP_DURATION: Duration = Duration::from_millis(10);
+const RECONNECT_DELAY: Duration = Duration::from_secs(3);
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
-#[command(propagate_version = true)]
+#[command(propagate_version = true, arg_required_else_help = true)]
 struct Cli {
 	#[command(subcommand)]
 	command: Option<Commands>,
@@ -28,202 +33,14 @@ struct Listen {
 	serial: String,
 	#[arg(long, default_value_t = 57600)]
 	baud: u32,
-	#[arg(long, action, default_value = "127.0.0.1:5656")]
+	#[arg(long, default_value = "127.0.0.1:5656")]
 	host: String,
 	#[arg(short, long, action)]
 	verbose: bool,
 }
 
-fn list_available_ports() -> Vec<String> {
-	return available_ports()
-		.unwrap_or_default()
-		.iter()
-		.filter(|port| matches!(port.port_type, SerialPortType::UsbPort(_)))
-		.map(|port| port.port_name.clone())
-		.collect::<Vec<String>>();
-}
-
-fn main() {
-	let cli = Cli::parse();
-
-	match &cli.command {
-		Some(Commands::Ports) => {
-			// Print available ports separated by spaces
-			println!("{}", list_available_ports().join(" "));
-		}
-		Some(Commands::Listen(listen)) => {
-			println!("Listening on {} at {} baud", listen.serial, listen.baud);
-
-			// region:Open serial
-			let port = match serialport::new(&listen.serial, listen.baud)
-				.timeout(std::time::Duration::from_secs(2))
-				.open()
-			{
-				Ok(port) => port,
-				Err(e) => {
-					eprintln!("Error opening serial port: {:?}", e);
-					return;
-				}
-			};
-			// endregion
-
-			let shared_state = Arc::new(Mutex::new(SharedState::new(listen.verbose)));
-
-			// region:Read & Broadcast
-
-			let port_reader = port.try_clone().unwrap();
-
-			let mut port_reader_clone = port_reader.try_clone().unwrap();
-			let shared_state_clone = Arc::clone(&shared_state);
-			let serial_reader = std::thread::spawn(move || {
-				let mut buffer = vec![0; 1024];
-				loop {
-					match port_reader_clone.read(&mut buffer) {
-						Ok(bytes_read) => {
-							if bytes_read > 0 {
-								shared_state_clone.lock().unwrap().broadcast(buffer[..bytes_read].to_vec());
-							}
-						}
-						Err(e) if e.kind() == std::io::ErrorKind::TimedOut => (),
-						Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
-							eprintln!("Broken Pipe!!!");
-							return e;
-						}
-						Err(e) => {
-							eprintln!("Error reading from serial port: {:?}", e);
-						}
-					}
-				}
-			});
-
-			// endregion
-
-			println!("Host: {}", listen.host);
-
-			// region:TCP Listener
-			let listener = match TcpListener::bind(listen.host.clone()) {
-				Ok(listener) => listener,
-				Err(e) => {
-					eprintln!("Error binding to TCP listener: {:?}", e);
-					return;
-				}
-			};
-			// endregion
-
-			// region:Handle TCP connections
-			let port_clone = port.try_clone().unwrap();
-			let shared_state_clone = Arc::clone(&shared_state);
-			let verbose = listen.verbose;
-			let tcp_handle_task = std::thread::spawn(move || {
-				loop {
-					let (mut stream, addr) = match listener.accept() {
-						Ok(conn) => {
-							println!("Accepted connection from: {}", conn.1);
-							conn
-						}
-						Err(e) => {
-							eprintln!("Error accepting TCP connection: {:?}", e);
-							continue;
-						}
-					};
-
-					let (serial_sender, serial_receiver) = channel();
-					shared_state_clone.lock().unwrap().connections.insert(addr, serial_sender);
-
-					let mut port_clone = port_clone.try_clone().unwrap();
-					let mut stream_clone = stream.try_clone().unwrap();
-					let stop = Arc::new(AtomicBool::new(false));
-
-					std::thread::spawn(move || {
-						let stop_clone = stop.clone();
-						let verbose_clone = verbose;
-						let tcp_to_serial_task = std::thread::spawn(move || {
-							loop {
-								if stop_clone.load(std::sync::atomic::Ordering::Relaxed) {
-									return Ok(());
-								}
-								let mut buffer = [0; 1024];
-								match stream_clone.read(&mut buffer) {
-									Ok(0) => {
-										// println!("EOL");
-										return Ok(());
-									}
-									// write buffer slice to n
-									Ok(n) => match port_clone.write_all(&buffer[..n]) {
-										Ok(_) => {
-											if verbose_clone {
-												println!("Wrote {} bytes to serial port: {:?}", n, &buffer[..n]);
-											} else {
-												println!("Wrote {} bytes to serial port", n);
-											}
-										}
-										Err(e) => {
-											eprintln!("Error writing to serial port: {:?}", e);
-										}
-									},
-									Err(e) => {
-										eprintln!("Error reading from TCP connection: {:?}", e);
-										stop_clone.store(true, std::sync::atomic::Ordering::Relaxed);
-										return Err(e);
-									}
-								}
-							}
-						});
-
-						let stop_clone = stop.clone();
-						let serial_to_tcp_task = std::thread::spawn(move || loop {
-							match serial_receiver.recv() {
-								Ok(data) => match stream.write_all(&data) {
-									Ok(_) => {
-										// println!("Wrote {} bytes to TCP connection", data.len());
-									}
-									Err(e) => {
-										eprintln!("Error writing to TCP connection: {:?}", e);
-
-										stop_clone.store(true, std::sync::atomic::Ordering::Relaxed);
-										return Err(e);
-									}
-								},
-								Err(e) => {
-									eprintln!("Closing serial_to_tcp_task: {:?}", e);
-									stop_clone.store(true, std::sync::atomic::Ordering::Relaxed);
-									return Ok(());
-								}
-							}
-						});
-
-						match serial_to_tcp_task.join() {
-							Ok(_) => (),
-							Err(e) => {
-								eprintln!("Error joining serial_to_tcp_task: {:?}", e);
-							}
-						}
-						match tcp_to_serial_task.join() {
-							Ok(_) => (),
-							Err(e) => {
-								eprintln!("Error joining tcp_to_serial_task: {:?}", e);
-							}
-						}
-						println!("Closing connection from: {}", addr);
-					});
-				}
-			});
-
-			// endregion
-
-			// Join
-			serial_reader.join().unwrap();
-			shared_state.lock().unwrap().dispose();
-			tcp_handle_task.join().unwrap();
-		}
-		None => {
-			Cli::parse_from(&["", "--help"]);
-		}
-	}
-}
-
 struct SharedState {
-	connections: HashMap<std::net::SocketAddr, Sender<Vec<u8>>>,
+	connections: HashMap<std::net::SocketAddr, Sender<Arc<[u8]>>>,
 	verbose: bool,
 }
 
@@ -234,45 +51,308 @@ impl SharedState {
 			verbose,
 		}
 	}
+}
 
-	fn dispose(&mut self) {
-		for (_, sender) in self.connections.iter_mut() {
-			drop(sender.to_owned())
+fn main() {
+	let cli = Cli::parse();
+
+	match &cli.command {
+		Some(Commands::Ports) => match list_available_ports() {
+			Ok(ports) => println!("{}", ports.join(" ")),
+			Err(e) => eprintln!("Error listing serial ports: {}", e),
+		},
+		Some(Commands::Listen(listen_opts)) => {
+			if let Err(e) = run_gateway(listen_opts) {
+				eprintln!("Application error: {}", e);
+			}
 		}
-		self.connections.clear();
+		None => unreachable!("Should be covered by arg_required_else_help = true"),
+	}
+}
+
+fn list_available_ports() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+	let ports = available_ports()?
+		.iter()
+		// Note: This filter can be removed to show all serial ports, not just USB ones.
+		.filter(|port| matches!(port.port_type, SerialPortType::UsbPort(_)))
+		.map(|port| port.port_name.clone())
+		.collect();
+	Ok(ports)
+}
+
+fn run_gateway(opts: &Listen) -> Result<(), Box<dyn std::error::Error>> {
+	let shared_state = Arc::new(Mutex::new(SharedState::new(opts.verbose)));
+	let shutdown_flag = Arc::new(AtomicBool::new(false));
+
+	// This shared port handle allows the serial writer thread to access the
+	// currently active serial port, which is managed by the main reconnect loop.
+	let shared_port_writer = Arc::new(Mutex::new(None::<Box<dyn serialport::SerialPort>>));
+
+	// The channel for sending data from TCP clients to the serial writer.
+	// This channel lives for the entire application lifetime.
+	let (serial_writer_tx, serial_writer_rx) = channel::<Arc<[u8]>>();
+
+	setup_ctrl_c_handler(&shutdown_flag)?;
+
+	// Spawn the TCP listener and serial writer threads ONCE.
+	// They will run for the lifetime of the application.
+	println!("Starting TCP listener on: {}", opts.host);
+	let tcp_handle_task = spawn_tcp_listener(&opts.host, &shared_state, &shutdown_flag, serial_writer_tx)?;
+
+	let serial_writer_task = spawn_serial_writer(serial_writer_rx, &shared_port_writer, &shutdown_flag);
+
+	// Main application loop for handling the serial connection.
+	// This loop will attempt to connect, and if successful, will spawn a
+	// reader thread. If the reader thread dies (e.g., port disconnected),
+	// the loop will clean up and try to reconnect.
+	'reconnect_loop: loop {
+		if shutdown_flag.load(Ordering::Acquire) {
+			println!("Shutdown signal received, exiting main loop.");
+			break 'reconnect_loop;
+		}
+
+		println!("Attempting to connect to serial port {} at {} baud...", opts.serial, opts.baud);
+		let port = match setup_serial_port(&opts.serial, opts.baud) {
+			Ok(p) => {
+				println!("Successfully connected to serial port.");
+				p
+			}
+			Err(e) => {
+				eprintln!("Failed to open serial port: {}. Retrying in {} seconds...", e, RECONNECT_DELAY.as_secs());
+				std::thread::sleep(RECONNECT_DELAY);
+				continue 'reconnect_loop;
+			}
+		};
+
+		// The port was opened successfully. Clone it for the writer thread
+		// and update the shared handle.
+		let port_writer_clone = port.try_clone()?;
+		*shared_port_writer.lock().expect("Mutex poisoned") = Some(port_writer_clone);
+
+		// Spawn a new reader thread for the current connection.
+		let serial_reader_task = spawn_serial_reader(port, &shared_state, &shutdown_flag);
+
+		// Block until the reader thread exits. This is the "active" state.
+		serial_reader_task.join().unwrap_or_else(|e| {
+			eprintln!("Serial reader thread panicked: {:?}", e);
+		});
+
+		// The reader has exited, so the connection is considered dead.
+		// Clear the shared writer handle and loop to reconnect.
+		*shared_port_writer.lock().expect("Mutex poisoned") = None;
+
+		if !shutdown_flag.load(Ordering::Acquire) {
+			eprintln!("Serial connection lost. Attempting to reconnect...");
+			std::thread::sleep(RECONNECT_DELAY);
+		}
 	}
 
-	// Broadcast serial data to all TCP connections
-	fn broadcast(
-		&mut self,
-		data: Vec<u8>,
-	) {
-		if self.verbose {
-			println!(
-				"Broadcasting {} bytes to {} TCP connections: {:?}",
-				data.len(),
-				self.connections.len(),
-				data
-			);
-		}
-		let mut to_remove = Vec::new();
-		for (addr, serial_sender) in self.connections.iter_mut() {
-			match serial_sender.send(data.clone()) {
-				Ok(_) => {
-					if self.verbose {
-						println!("Sent {} bytes to TCP connection {}", data.len(), addr);
+	println!("Shutting down long-running tasks...");
+	if let Err(e) = tcp_handle_task.join() {
+		eprintln!("TCP listener thread panicked: {:?}", e);
+	}
+	if let Err(e) = serial_writer_task.join() {
+		eprintln!("Serial writer thread panicked: {:?}", e);
+	}
+
+	println!("Application has shut down.");
+	Ok(())
+}
+
+fn setup_serial_port(
+	serial_path: &str,
+	baud_rate: u32,
+) -> Result<Box<dyn serialport::SerialPort>, Box<dyn std::error::Error>> {
+	let port = serialport::new(serial_path, baud_rate)
+		.timeout(std::time::Duration::from_millis(100))
+		.open()?;
+	Ok(port)
+}
+
+fn setup_ctrl_c_handler(shutdown_flag: &Arc<AtomicBool>) -> Result<(), Box<dyn std::error::Error>> {
+	let shutdown_flag_clone = Arc::clone(shutdown_flag);
+	ctrlc::set_handler(move || {
+		println!("\nReceived Ctrl-C, initiating graceful shutdown...");
+		shutdown_flag_clone.store(true, Ordering::Release);
+	})?;
+	Ok(())
+}
+
+fn spawn_serial_reader(
+	mut port: Box<dyn serialport::SerialPort>,
+	shared_state: &Arc<Mutex<SharedState>>,
+	shutdown_flag: &Arc<AtomicBool>,
+) -> std::thread::JoinHandle<()> {
+	let shared_state_clone = Arc::clone(shared_state);
+	let shutdown_flag_clone = Arc::clone(shutdown_flag);
+
+	std::thread::spawn(move || {
+		let mut buffer = vec![0; BUFFER_SIZE];
+		loop {
+			if shutdown_flag_clone.load(Ordering::Acquire) {
+				println!("Serial reader shutting down...");
+				return;
+			}
+			match port.read(&mut buffer) {
+				Ok(bytes_read) => {
+					if bytes_read > 0 {
+						let data = Arc::from(&buffer[..bytes_read]);
+						broadcast_data(&shared_state_clone, data);
 					}
 				}
+				Err(e) if e.kind() == std::io::ErrorKind::TimedOut => (),
 				Err(e) => {
-					eprintln!("Error Broadcasting data to TCP connection: {:?}", e);
-					eprintln!("Removing connection from shared state");
-					to_remove.push(addr.clone());
+					eprintln!("Error reading from serial port: {:?}. Closing reader thread.", e);
+					return; // Exit on any other error to trigger reconnect.
 				}
 			}
 		}
+	})
+}
 
-		for sender in to_remove {
-			self.connections.remove(&sender);
+fn spawn_serial_writer(
+	rx: Receiver<Arc<[u8]>>,
+	port_writer_handle: &Arc<Mutex<Option<Box<dyn serialport::SerialPort>>>>,
+	shutdown_flag: &Arc<AtomicBool>,
+) -> std::thread::JoinHandle<()> {
+	let shutdown_flag_clone = Arc::clone(shutdown_flag);
+	let port_writer_handle_clone = Arc::clone(port_writer_handle);
+
+	std::thread::spawn(move || {
+		println!("Serial writer started.");
+		loop {
+			if shutdown_flag_clone.load(Ordering::Acquire) {
+				println!("Serial writer shutting down...");
+				break;
+			}
+
+			match rx.recv_timeout(Duration::from_millis(100)) {
+				Ok(data) => {
+					let mut port_guard = port_writer_handle_clone.lock().expect("Mutex poisoned");
+					if let Some(port) = port_guard.as_mut() {
+						if let Err(e) = port.write_all(&data) {
+							eprintln!("Serial write failed: {:?}. Data dropped.", e);
+							// The reader thread will detect the failure and trigger a reconnect.
+						}
+					} else {
+						// Port is not connected, so we drop the data.
+					}
+				}
+				Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+				Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+					println!("Serial writer channel disconnected. This should not happen in normal shutdown.");
+					break;
+				}
+			}
+		}
+		println!("Serial writer finished.");
+	})
+}
+
+fn broadcast_data(
+	shared_state: &Arc<Mutex<SharedState>>,
+	data: Arc<[u8]>,
+) {
+	let state = shared_state.lock().expect("Mutex was poisoned");
+	if state.verbose {
+		println!(
+			"Broadcasting {} bytes to {} TCP connections: {:?}",
+			data.len(),
+			state.connections.len(),
+			data
+		);
+	}
+	// Iterate directly without collecting to reduce allocations
+	for (addr, sender) in state.connections.iter() {
+		if sender.send(data.clone()).is_err() && state.verbose {
+			eprintln!("Failed to send to {}, client handler will clean it up.", addr);
 		}
 	}
+}
+
+fn spawn_tcp_listener(
+	host: &str,
+	shared_state: &Arc<Mutex<SharedState>>,
+	shutdown_flag: &Arc<AtomicBool>,
+	serial_writer_tx: Sender<Arc<[u8]>>,
+) -> Result<std::thread::JoinHandle<()>, Box<dyn std::error::Error>> {
+	let listener = TcpListener::bind(host)?;
+	listener.set_nonblocking(true)?;
+
+	let shared_state_clone = Arc::clone(shared_state);
+	let shutdown_flag_clone = Arc::clone(shutdown_flag);
+
+	let handle = std::thread::spawn(move || {
+		for stream_result in listener.incoming() {
+			if shutdown_flag_clone.load(Ordering::Acquire) {
+				println!("TCP listener shutting down...");
+				break;
+			}
+
+			match stream_result {
+				Ok(mut stream) => {
+					let addr = stream.peer_addr().expect("Could not get peer address");
+					println!("Accepted connection from: {}", addr);
+
+					let (serial_sender, serial_receiver) = channel::<Arc<[u8]>>();
+					shared_state_clone
+						.lock()
+						.expect("Mutex was poisoned")
+						.connections
+						.insert(addr, serial_sender);
+
+					let shared_state_for_cleanup = Arc::clone(&shared_state_clone);
+					let serial_writer_tx_clone = serial_writer_tx.clone();
+
+					std::thread::spawn(move || {
+						stream.set_nonblocking(true).expect("Failed to set stream to non-blocking");
+						let mut tcp_buffer = [0; BUFFER_SIZE];
+
+						loop {
+							// Read from TCP client and forward to serial
+							match stream.read(&mut tcp_buffer) {
+								Ok(0) => break, // Connection closed by client
+								Ok(n) => {
+									let data = Arc::from(&tcp_buffer[..n]);
+									if serial_writer_tx_clone.send(data).is_err() {
+										eprintln!("Serial writer channel closed, closing connection.");
+										break;
+									}
+								}
+								Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+								Err(_) => break, // Connection error
+							}
+
+							// Read from serial broadcast channel and forward to TCP client
+							match serial_receiver.try_recv() {
+								Ok(data) => {
+									if stream.write_all(&data).is_err() {
+										break; // Connection error
+									}
+								}
+								Err(std::sync::mpsc::TryRecvError::Empty) => {
+									std::thread::sleep(TCP_LOOP_SLEEP_DURATION);
+								}
+								Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
+							}
+						}
+
+						println!("Closing connection from: {}", addr);
+						shared_state_for_cleanup.lock().expect("Mutex was poisoned").connections.remove(&addr);
+					});
+				}
+				Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+					std::thread::sleep(TCP_LOOP_SLEEP_DURATION);
+					continue;
+				}
+				Err(e) => {
+					eprintln!("TCP accept error: {}. Shutting down listener.", e);
+					break;
+				}
+			}
+		}
+		println!("TCP listener thread finished.");
+	});
+
+	Ok(handle)
 }
