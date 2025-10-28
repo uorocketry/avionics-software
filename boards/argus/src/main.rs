@@ -43,6 +43,9 @@ static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::T
 #[cfg(feature = "pressure")]
 static PRESSURE_SERVICE: StaticCell<AsyncMutex<argus::pressure::service::PressureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
 
+#[cfg(feature = "strain")]
+static STRAIN_SERVICE: StaticCell<AsyncMutex<argus::strain::service::StrainService<{ AdcDevice::COUNT }>>> = StaticCell::new();
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
@@ -173,10 +176,10 @@ async fn main(spawner: Spawner) {
 	#[cfg(feature = "strain")]
 	{
 		// Imported inside the block to avoid unused leaking the import when the feature is not enabled
-		use argus::strain::service::PressureService;
+		use argus::strain::service::StrainService;
 		use argus::strain::tasks;
 
-		let strain_service = PRESSURE_SERVICE.init(AsyncMutex::new(PressureService::new(
+		let strain_service = STRAIN_SERVICE.init(AsyncMutex::new(StrainService::new(
 			adc_service,
 			sd_card_service,
 			serial_service,

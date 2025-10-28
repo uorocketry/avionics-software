@@ -2,14 +2,16 @@ syntax = "proto3";
 
 package messages.argus.envelope;
 
-import "argus/pressure/pressure_reading.proto";
 import "argus/temperature/thermocouple_reading.proto";
+import "argus/pressure/pressure_reading.proto";
+import "argus/strain/strain_reading.proto";
 
 message Envelope {
 	Node created_by = 1;
 	oneof message {
 		temperature.thermocouple_reading.ThermocoupleReading thermocouple_reading = 2;
 		pressure.pressure_reading.PressureReading pressure_reading = 3;
+		strain.strain_reading.StrainReading strain_reading = 4;
 	}
 }
 

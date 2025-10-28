@@ -1,4 +1,3 @@
-use defmt::error;
 use embassy_executor::task;
 use embassy_time::Timer;
 use strum::EnumCount;
@@ -15,7 +14,7 @@ use crate::utils::types::AsyncMutex;
 #[task]
 pub async fn measure_manifold_temperature(
 	mut worker: StateMachineWorker,
-	pressure_service_mutex: &'static AsyncMutex<PressureService<{ AdcDevice::COUNT }>>,
+	_pressure_service_mutex: &'static AsyncMutex<PressureService<{ AdcDevice::COUNT }>>,
 ) {
 	worker
 		.run_while(&[States::Recording, States::Calibrating], async |_| -> Result<(), ()> {

@@ -1,8 +1,8 @@
-use defmt::{error, info};
+use defmt::error;
 use embassy_time::Instant;
 use strum::EnumCount;
 
-use crate::adc::driver::types::{AnalogChannel, DataRate, Filter, Gain, ReferenceRange};
+use crate::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
 use crate::adc::service::AdcService;
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::service::LinearTransformationService;

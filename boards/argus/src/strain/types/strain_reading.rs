@@ -56,7 +56,6 @@ impl StrainReading {
 			recorded_at: self.recorded_at,
 			voltage: self.voltage,
 			strain: self.strain,
-			temperature: self.temperature,
 		}
 	}
 }
