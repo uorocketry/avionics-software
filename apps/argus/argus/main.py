@@ -9,9 +9,7 @@ from services.grpc_service import GrpcService
 from services.argus_service import ArgusService
 from services.message_ingestion_service import MessageIngestionService
 from services.session_service import SessionService
-
-# from argus.envelope_pb2 import Envelope
-# from argus.temperature.thermocouple_calibration_pb2 import ThermocoupleCalibration
+from utils.database import database
 
 program = argparse.ArgumentParser(description="Argus Ground Station Application")
 
@@ -33,6 +31,8 @@ async def main():
     )
     argus_service = ArgusService(protobuf_serial_service=protobuf_serial_service)
     grpc_service = GrpcService(services=[argus_service], port=50051)
+
+    database.evolve()
 
     ingestion_task = asyncio.create_task(
         asyncio.to_thread(message_ingestion_service.ingest_loop)

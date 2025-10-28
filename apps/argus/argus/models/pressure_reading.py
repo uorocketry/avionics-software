@@ -11,7 +11,7 @@ from models.recording_session import HostRecordingSession
 from utils.database import database
 
 
-class ThermocoupleReading(Model):
+class PressureReading(Model):
     # The recording session this reading belongs to
     host_session = ForeignKeyField(HostRecordingSession, null=True)
 
@@ -21,8 +21,8 @@ class ThermocoupleReading(Model):
     # ADC device index from which the reading was taken
     adc_device = CharField(max_length=255, null=True)
 
-    # Thermocouple channel from which the reading was taken
-    thermocouple_channel = CharField(max_length=255, null=True)
+    # Pressure channel from which the reading was taken
+    pressure_channel = CharField(max_length=255, null=True)
 
     # Milliseconds since the board's epoch when the reading was recorded
     recorded_at = TimestampField(null=True)
@@ -30,18 +30,15 @@ class ThermocoupleReading(Model):
     # Full timestamp of when the reading was stored
     stored_at = TimestampField(default=datetime.now)
 
-    # Thermocouple voltage difference measured in millivolts
+    # Wheatstone bridge voltage difference measured in millivolts
     voltage = DoubleField(null=True)
 
-    # Cold-junction-compensated temperature of the thermocouple in degrees Celsius
-    compensated_temperature = DoubleField(null=True)
+    # Pressure reading in psi
+    pressure = DoubleField(null=True)
 
-    # Uncompensated temperature of the thermocouple in degrees Celsius
-    uncompensated_temperature = DoubleField(null=True)
-
-    # Temperature of the cold junction in degrees Celsius
-    cold_junction_temperature = DoubleField(null=True)
+    # Temperature of the manifold from the NTC resistor at the time of the recording in degrees Celsius
+    temperature = DoubleField(null=True)
 
     class Meta:
         database = database
-        table_name = "thermocouple_readings"
+        table_name = "pressure_readings"

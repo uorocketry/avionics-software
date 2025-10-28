@@ -7,17 +7,48 @@ import messages.argus.pressure.pressure_reading_pb2
 import messages.argus.temperature.thermocouple_reading_pb2
 import builtins
 import google.protobuf.descriptor
+import google.protobuf.internal.enum_type_wrapper
 import google.protobuf.message
+import sys
 import typing
 
+if sys.version_info >= (3, 10):
+    import typing as typing_extensions
+else:
+    import typing_extensions
+
 DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
+
+class _NodeType:
+    ValueType = typing.NewType("ValueType", builtins.int)
+    V: typing_extensions.TypeAlias = ValueType
+
+class _NodeTypeEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_NodeType.ValueType], builtins.type):
+    DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
+    UNSPECIFIED: _NodeType.ValueType  # 0
+    PHOENIX: _NodeType.ValueType  # 1
+    ARGUS_TEMPERATURE: _NodeType.ValueType  # 2
+    ARGUS_PRESSURE: _NodeType.ValueType  # 3
+    ARGUS_STRAIN: _NodeType.ValueType  # 4
+
+class NodeType(_NodeType, metaclass=_NodeTypeEnumTypeWrapper): ...
+
+UNSPECIFIED: NodeType.ValueType  # 0
+PHOENIX: NodeType.ValueType  # 1
+ARGUS_TEMPERATURE: NodeType.ValueType  # 2
+ARGUS_PRESSURE: NodeType.ValueType  # 3
+ARGUS_STRAIN: NodeType.ValueType  # 4
+global___NodeType = NodeType
 
 @typing.final
 class Envelope(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
+    CREATED_BY_FIELD_NUMBER: builtins.int
     THERMOCOUPLE_READING_FIELD_NUMBER: builtins.int
     PRESSURE_READING_FIELD_NUMBER: builtins.int
+    @property
+    def created_by(self) -> global___Node: ...
     @property
     def thermocouple_reading(self) -> argus.temperature.thermocouple_reading_pb2.ThermocoupleReading: ...
     @property
@@ -25,11 +56,32 @@ class Envelope(google.protobuf.message.Message):
     def __init__(
         self,
         *,
+        created_by: global___Node | None = ...,
         thermocouple_reading: argus.temperature.thermocouple_reading_pb2.ThermocoupleReading | None = ...,
         pressure_reading: argus.pressure.pressure_reading_pb2.PressureReading | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["message", b"message", "pressure_reading", b"pressure_reading", "thermocouple_reading", b"thermocouple_reading"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["message", b"message", "pressure_reading", b"pressure_reading", "thermocouple_reading", b"thermocouple_reading"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["created_by", b"created_by", "message", b"message", "pressure_reading", b"pressure_reading", "thermocouple_reading", b"thermocouple_reading"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["created_by", b"created_by", "message", b"message", "pressure_reading", b"pressure_reading", "thermocouple_reading", b"thermocouple_reading"]) -> None: ...
     def WhichOneof(self, oneof_group: typing.Literal["message", b"message"]) -> typing.Literal["thermocouple_reading", "pressure_reading"] | None: ...
 
 global___Envelope = Envelope
+
+@typing.final
+class Node(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    TYPE_FIELD_NUMBER: builtins.int
+    ID_FIELD_NUMBER: builtins.int
+    type: global___NodeType.ValueType
+    id: builtins.int
+    def __init__(
+        self,
+        *,
+        type: global___NodeType.ValueType = ...,
+        id: builtins.int | None = ...,
+    ) -> None: ...
+    def HasField(self, field_name: typing.Literal["_id", b"_id", "id", b"id"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["_id", b"_id", "id", b"id", "type", b"type"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing.Literal["_id", b"_id"]) -> typing.Literal["id"] | None: ...
+
+global___Node = Node

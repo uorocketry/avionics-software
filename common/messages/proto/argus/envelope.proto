@@ -6,8 +6,22 @@ import "argus/pressure/pressure_reading.proto";
 import "argus/temperature/thermocouple_reading.proto";
 
 message Envelope {
+	Node created_by = 1;
 	oneof message {
-		temperature.thermocouple_reading.ThermocoupleReading thermocouple_reading = 1;
-		pressure.pressure_reading.PressureReading pressure_reading = 2;
+		temperature.thermocouple_reading.ThermocoupleReading thermocouple_reading = 2;
+		pressure.pressure_reading.PressureReading pressure_reading = 3;
 	}
+}
+
+message Node {
+	NodeType type = 1;
+	optional int32 id = 2;
+}
+
+enum NodeType {
+	UNSPECIFIED = 0;
+	PHOENIX = 1;
+	ARGUS_TEMPERATURE = 2;
+	ARGUS_PRESSURE = 3;
+	ARGUS_STRAIN = 4;
 }

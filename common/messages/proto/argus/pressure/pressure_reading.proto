@@ -21,7 +21,7 @@ message PressureReading {
 	// Voltage difference measured at the pressure sensor wheatstone bridge in millivolts
 	float voltage = 5;
 
-	// Pressure reading in Pascals
+	// Pressure reading in psi
 	double pressure = 8;
 
 	// Temperature of the manifold from the NTC resistor at the time of the recording in degrees Celsius

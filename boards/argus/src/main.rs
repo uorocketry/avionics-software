@@ -2,10 +2,8 @@
 #![no_std]
 #![no_main]
 
-// #[cfg(not(any(feature = "pressure", feature = "temperature", feature = "strain")))]
-// compile_error!(
-// 	"You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'."
-// );
+#[cfg(not(any(feature = "pressure", feature = "temperature", feature = "strain")))]
+compile_error!("You must enable exactly one of the features: 'pressure', 'temperature', or 'strain'.");
 
 use argus::adc::service::{AdcConfig, AdcService};
 use argus::adc::types::AdcDevice;
@@ -168,6 +166,32 @@ async fn main(spawner: Spawner) {
 		spawner.must_spawn(tasks::calibrate_pressure_sensors(
 			StateMachineWorker::new(state_machine_orchestrator),
 			pressure_service,
+		));
+	}
+
+	// Spawn tasks needed for strain board
+	#[cfg(feature = "strain")]
+	{
+		// Imported inside the block to avoid unused leaking the import when the feature is not enabled
+		use argus::strain::service::PressureService;
+		use argus::strain::tasks;
+
+		let strain_service = PRESSURE_SERVICE.init(AsyncMutex::new(PressureService::new(
+			adc_service,
+			sd_card_service,
+			serial_service,
+			session_service,
+		)));
+
+		// Setup the strain service before starting the tasks
+		strain_service.lock().await.setup().await.unwrap();
+
+		spawner.must_spawn(tasks::measure_strain(StateMachineWorker::new(state_machine_orchestrator), strain_service));
+		spawner.must_spawn(tasks::log_measurements(
+			StateMachineWorker::new(state_machine_orchestrator),
+			serial_service,
+			sd_card_service,
+			session_service,
 		));
 	}
 

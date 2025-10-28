@@ -26,7 +26,7 @@ from messages.argus import adc_pb2 as argus_dot_adc__pb2
 from messages.argus.pressure import pressure_channel_pb2 as argus_dot_pressure_dot_pressure__channel__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n%argus/pressure/pressure_reading.proto\x12(messages.argus.pressure.pressure_reading\x1a\x0f\x61rgus/adc.proto\x1a%argus/pressure/pressure_channel.proto\"\x94\x02\n\x0fPressureReading\x12\x1a\n\rlocal_session\x18\x01 \x01(\x05H\x00\x88\x01\x01\x12\x31\n\nadc_device\x18\x02 \x01(\x0e\x32\x1d.messages.argus.adc.AdcDevice\x12S\n\x10pressure_channel\x18\x03 \x01(\x0e\x32\x39.messages.argus.pressure.pressure_channel.PressureChannel\x12\x13\n\x0brecorded_at\x18\x04 \x01(\x04\x12\x0f\n\x07voltage\x18\x05 \x01(\x02\x12\x10\n\x08pressure\x18\x08 \x01(\x02\x12\x13\n\x0btemperature\x18\x06 \x01(\x01\x42\x10\n\x0e_local_sessionb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n%argus/pressure/pressure_reading.proto\x12(messages.argus.pressure.pressure_reading\x1a\x0f\x61rgus/adc.proto\x1a%argus/pressure/pressure_channel.proto\"\x94\x02\n\x0fPressureReading\x12\x1a\n\rlocal_session\x18\x01 \x01(\x05H\x00\x88\x01\x01\x12\x31\n\nadc_device\x18\x02 \x01(\x0e\x32\x1d.messages.argus.adc.AdcDevice\x12S\n\x10pressure_channel\x18\x03 \x01(\x0e\x32\x39.messages.argus.pressure.pressure_channel.PressureChannel\x12\x13\n\x0brecorded_at\x18\x04 \x01(\x04\x12\x0f\n\x07voltage\x18\x05 \x01(\x02\x12\x10\n\x08pressure\x18\x08 \x01(\x01\x12\x13\n\x0btemperature\x18\x06 \x01(\x01\x42\x10\n\x0e_local_sessionb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
