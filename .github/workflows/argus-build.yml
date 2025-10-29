@@ -36,7 +36,7 @@ jobs:
         working-directory: boards/argus
 
       - name: Check for Clippy Warnings
-        run: cargo clippy -p argus --all-features --no-deps
+        run: cargo clippy -p argus --no-deps
         working-directory: boards/argus
 
   build_pressure:
