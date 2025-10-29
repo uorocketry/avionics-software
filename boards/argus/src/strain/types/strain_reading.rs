@@ -19,7 +19,7 @@ pub struct StrainReading {
 	// ADC device from which the reading was taken
 	pub adc_device: AdcDevice,
 
-	// Identifier for the strain within the ADC device
+	// Identifier for the strain gauge within the ADC device
 	pub strain_channel: StrainChannel,
 
 	// Milliseconds since the board's epoch when the reading was recorded
