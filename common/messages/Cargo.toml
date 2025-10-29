@@ -16,16 +16,13 @@ std = [
 
 [dependencies]
 bitflags = { version = "2.3.1", default-features = false, features = ["serde"] }
-defmt = "0.3.2"
-heapless = { version = "0.8", features = ["defmt-03"] }
+defmt = { workspace = true }
+heapless = { workspace = true }
 mavlink = { git = "https://github.com/uorocketry/rust-mavlink.git", features = [
   "uorocketry",
 ], default-features = false }
 prost = { workspace = true }
-serde = { version = "1.0.150", features = [
-  "derive",
-  "alloc",
-], default-features = false }
+serde = { workspace = true }
 ublox = { git = "https://github.com/uorocketry/ublox", default-features = false, features = [
   "serde",
 ] }

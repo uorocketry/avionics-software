@@ -1239,7 +1239,7 @@ dependencies = [
  "bitflags 2.9.2",
  "defmt 0.3.100",
  "glob",
- "heapless 0.8.0",
+ "heapless 0.9.1",
  "mavlink",
  "prost",
  "prost-build",

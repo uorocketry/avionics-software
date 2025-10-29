@@ -22,21 +22,22 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from messages.argus.pressure import pressure_reading_pb2 as argus_dot_pressure_dot_pressure__reading__pb2
 from messages.argus.temperature import thermocouple_reading_pb2 as argus_dot_temperature_dot_thermocouple__reading__pb2
+from messages.argus.pressure import pressure_reading_pb2 as argus_dot_pressure_dot_pressure__reading__pb2
+from messages.argus.strain import strain_reading_pb2 as argus_dot_strain_dot_strain__reading__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14\x61rgus/envelope.proto\x12\x17messages.argus.envelope\x1a%argus/pressure/pressure_reading.proto\x1a,argus/temperature/thermocouple_reading.proto\"\x85\x02\n\x08\x45nvelope\x12\x31\n\ncreated_by\x18\x01 \x01(\x0b\x32\x1d.messages.argus.envelope.Node\x12\x64\n\x14thermocouple_reading\x18\x02 \x01(\x0b\x32\x44.messages.argus.temperature.thermocouple_reading.ThermocoupleReadingH\x00\x12U\n\x10pressure_reading\x18\x03 \x01(\x0b\x32\x39.messages.argus.pressure.pressure_reading.PressureReadingH\x00\x42\t\n\x07message\"O\n\x04Node\x12/\n\x04type\x18\x01 \x01(\x0e\x32!.messages.argus.envelope.NodeType\x12\x0f\n\x02id\x18\x02 \x01(\x05H\x00\x88\x01\x01\x42\x05\n\x03_id*e\n\x08NodeType\x12\x0f\n\x0bUNSPECIFIED\x10\x00\x12\x0b\n\x07PHOENIX\x10\x01\x12\x15\n\x11\x41RGUS_TEMPERATURE\x10\x02\x12\x12\n\x0e\x41RGUS_PRESSURE\x10\x03\x12\x10\n\x0c\x41RGUS_STRAIN\x10\x04\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14\x61rgus/envelope.proto\x12\x17messages.argus.envelope\x1a,argus/temperature/thermocouple_reading.proto\x1a%argus/pressure/pressure_reading.proto\x1a!argus/strain/strain_reading.proto\"\xd4\x02\n\x08\x45nvelope\x12\x31\n\ncreated_by\x18\x01 \x01(\x0b\x32\x1d.messages.argus.envelope.Node\x12\x64\n\x14thermocouple_reading\x18\x02 \x01(\x0b\x32\x44.messages.argus.temperature.thermocouple_reading.ThermocoupleReadingH\x00\x12U\n\x10pressure_reading\x18\x03 \x01(\x0b\x32\x39.messages.argus.pressure.pressure_reading.PressureReadingH\x00\x12M\n\x0estrain_reading\x18\x04 \x01(\x0b\x32\x33.messages.argus.strain.strain_reading.StrainReadingH\x00\x42\t\n\x07message\"O\n\x04Node\x12/\n\x04type\x18\x01 \x01(\x0e\x32!.messages.argus.envelope.NodeType\x12\x0f\n\x02id\x18\x02 \x01(\x05H\x00\x88\x01\x01\x42\x05\n\x03_id*e\n\x08NodeType\x12\x0f\n\x0bUNSPECIFIED\x10\x00\x12\x0b\n\x07PHOENIX\x10\x01\x12\x15\n\x11\x41RGUS_TEMPERATURE\x10\x02\x12\x12\n\x0e\x41RGUS_PRESSURE\x10\x03\x12\x10\n\x0c\x41RGUS_STRAIN\x10\x04\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'argus.envelope_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_NODETYPE']._serialized_start=479
-  _globals['_NODETYPE']._serialized_end=580
-  _globals['_ENVELOPE']._serialized_start=135
-  _globals['_ENVELOPE']._serialized_end=396
-  _globals['_NODE']._serialized_start=398
-  _globals['_NODE']._serialized_end=477
+  _globals['_NODETYPE']._serialized_start=593
+  _globals['_NODETYPE']._serialized_end=694
+  _globals['_ENVELOPE']._serialized_start=170
+  _globals['_ENVELOPE']._serialized_end=510
+  _globals['_NODE']._serialized_start=512
+  _globals['_NODE']._serialized_end=591
 # @@protoc_insertion_point(module_scope)
