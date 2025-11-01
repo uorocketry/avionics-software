@@ -1,1 +1,0 @@
-While it's not good practice to commit grafana's volume directly to git since all databases are local and secrets are well known the entire volume is commited.
