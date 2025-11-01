@@ -10,10 +10,6 @@ from peewee import (
 from models.recording_session import HostRecordingSession
 from utils.database import database
 
-from argus.temperature.thermocouple_reading_pb2 import (
-    ThermocoupleReading as ThermocoupleReadingProto,
-)
-
 
 class ThermocoupleReading(Model):
     # The recording session this reading belongs to
@@ -47,21 +43,5 @@ class ThermocoupleReading(Model):
     cold_junction_temperature = DoubleField(null=True)
 
     class Meta:
-        database = database  # This should be your Peewee database instance
+        database = database
         table_name = "thermocouple_readings"
-
-    @staticmethod
-    def from_protobuf(proto: ThermocoupleReadingProto):
-        return ThermocoupleReading(
-            local_session=proto.local_session,
-            adc_device=proto.adc_device,
-            thermocouple_channel=proto.thermocouple_channel,
-            recorded_at=int(proto.recorded_at),
-            voltage=proto.voltage,
-            compensated_temperature=proto.compensated_temperature,
-            uncompensated_temperature=proto.uncompensated_temperature,
-            cold_junction_temperature=proto.cold_junction_temperature,
-        )
-
-
-database.evolve()

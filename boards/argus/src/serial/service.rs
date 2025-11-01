@@ -10,6 +10,8 @@ use heapless::String;
 use messages::argus::envelope::{envelope::Message as EnvelopeMessage, Envelope};
 use prost::Message;
 
+use crate::node::CURRENT_NODE;
+
 pub struct SerialService {
 	pub uart: Uart<'static, mode::Async>,
 }
@@ -44,7 +46,10 @@ impl SerialService {
 		&mut self,
 		message: EnvelopeMessage,
 	) -> Result<(), UsartError> {
-		let envelope = Envelope { message: Some(message) };
+		let envelope = Envelope {
+			created_by: Some(CURRENT_NODE),
+			message: Some(message),
+		};
 		let frame = envelope.encode_length_delimited_to_vec();
 
 		self.uart.write_all(&frame).await?;

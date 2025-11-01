@@ -1,3 +1,4 @@
+use defmt::error;
 use embassy_time::Instant;
 use strum::EnumCount;
 
@@ -9,6 +10,7 @@ use crate::pressure::config::LINEAR_TRANSFORMATIONS_FILE_NAME;
 use crate::pressure::types::{PressureChannel, PressureReading, PressureReadingQueue, PressureServiceError};
 use crate::sd::service::SDCardService;
 use crate::serial::service::SerialService;
+use crate::session::service::SessionService;
 use crate::utils::types::AsyncMutex;
 
 // A channel for buffering the pressure readings and decoupling the logging to sd task from the measurement task
@@ -19,8 +21,9 @@ pub struct PressureService<const ADC_COUNT: usize> {
 	pub adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
 	pub serial_service: &'static AsyncMutex<SerialService>,
+	pub session_service: &'static AsyncMutex<SessionService>,
 
-	// Linear transformation service to apply error corrections obtained from calibration to raw readings
+	// Linear transformations that are applied on top of the raw readings for each ADC and channel
 	pub linear_transformation_service: LinearTransformationService<PressureChannel, f64, ADC_COUNT, { PressureChannel::COUNT }>,
 }
 
@@ -29,11 +32,13 @@ impl<const ADC_COUNT: usize> PressureService<ADC_COUNT> {
 		adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 		sd_card_service: &'static AsyncMutex<SDCardService>,
 		serial_service: &'static AsyncMutex<SerialService>,
+		session_service: &'static AsyncMutex<SessionService>,
 	) -> Self {
 		Self {
 			adc_service,
 			sd_card_service,
 			serial_service,
+			session_service,
 			linear_transformation_service: LinearTransformationService::new(sd_card_service, LINEAR_TRANSFORMATIONS_FILE_NAME),
 		}
 	}
@@ -49,18 +54,21 @@ impl<const ADC_COUNT: usize> PressureService<ADC_COUNT> {
 			driver.apply_configurations().await?;
 		}
 
-		self.linear_transformation_service.load_transformations().await?;
+		match self.linear_transformation_service.load_transformations().await {
+			Err(e) => error!("Failed to load linear transformations: {:?}", e),
+			_ => {}
+		}
 		Ok(())
 	}
 
-	pub async fn read_pressure_sensor(
+	pub async fn read_pressure(
 		&mut self,
 		adc: AdcDevice,
 		channel: PressureChannel,
 	) -> Result<PressureReading, PressureServiceError> {
 		let mut adc_service = self.adc_service.lock().await;
 
-		// Get the respective "adc channel" pair for the "thermocouple channel"
+		// Get the respective "adc channel" pair for the "pressure channel"
 		let (positive_channel, negative_channel) = channel.to_analog_input_channel_pair();
 
 		// Read the voltage from the ADC in millivolts
@@ -68,11 +76,17 @@ impl<const ADC_COUNT: usize> PressureService<ADC_COUNT> {
 			.read_differential(positive_channel, negative_channel)
 			.await? * 1000.0; // Convert to millivolts
 
+		// Apply any linear transformations to get the pressure in psi
+		let pressure = self.linear_transformation_service.apply_transformation(adc, channel, voltage as f64);
+
 		let pressure_reading = PressureReading {
-			timestamp: Instant::now().as_millis(),
+			local_session: self.session_service.lock().await.current_session.clone(),
+			adc_device: adc,
+			pressure_channel: channel,
+			recorded_at: Instant::now().as_millis(),
 			voltage,
-			pressure: 0.0,    // Placeholder, actual pressure calculation can be added later
-			temperature: 0.0, // Placeholder, actual temperature calculation can be added
+			pressure,
+			temperature: 0.0, // SHOULD DO: replace once NTC temperature measurement is implemented
 		};
 
 		Ok(pressure_reading)

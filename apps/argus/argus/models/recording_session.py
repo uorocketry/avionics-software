@@ -10,6 +10,3 @@ class HostRecordingSession(Model):
     class Meta:
         table_name = "host_recording_sessions"
         database = database
-
-
-database.evolve()

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package messages.argus.pressure.pressure_reading;
+
+import "argus/adc.proto";
+import "argus/pressure/pressure_channel.proto";
+
+message PressureReading {
+	// Local session from the device that took the reading
+	optional int32 local_session = 1;
+
+	// ADC device from which the reading was taken
+	adc.AdcDevice adc_device = 2;
+
+	// Identifier for the pressure within the ADC device
+	pressure_channel.PressureChannel pressure_channel = 3;
+
+	// Milliseconds since the board's epoch when the reading was recorded
+	uint64 recorded_at = 4;
+
+	// Voltage difference measured at the pressure sensor wheatstone bridge in millivolts
+	float voltage = 5;
+
+	// Pressure reading in psi
+	double pressure = 8;
+
+	// Temperature of the manifold from the NTC resistor at the time of the recording in degrees Celsius
+	double temperature = 6;
+}

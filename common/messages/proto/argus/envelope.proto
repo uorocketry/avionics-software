@@ -2,12 +2,28 @@ syntax = "proto3";
 
 package messages.argus.envelope;
 
-import "argus/temperature/thermocouple_calibration.proto";
 import "argus/temperature/thermocouple_reading.proto";
+import "argus/pressure/pressure_reading.proto";
+import "argus/strain/strain_reading.proto";
 
 message Envelope {
+	Node created_by = 1;
 	oneof message {
-		temperature.thermocouple_calibration.ThermocoupleCalibration thermocouple_calibration = 1;
 		temperature.thermocouple_reading.ThermocoupleReading thermocouple_reading = 2;
+		pressure.pressure_reading.PressureReading pressure_reading = 3;
+		strain.strain_reading.StrainReading strain_reading = 4;
 	}
+}
+
+message Node {
+	NodeType type = 1;
+	optional int32 id = 2;
+}
+
+enum NodeType {
+	UNSPECIFIED = 0;
+	PHOENIX = 1;
+	ARGUS_TEMPERATURE = 2;
+	ARGUS_PRESSURE = 3;
+	ARGUS_STRAIN = 4;
 }

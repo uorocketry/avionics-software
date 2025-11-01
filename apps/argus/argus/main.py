@@ -2,15 +2,14 @@ import asyncio
 import argparse
 import contextlib
 import utils.logger
+import messages.argus
 from services.persistence_service import PersistenceService
 from services.protobuf_serial_service import ProtobufSerialService
 from services.grpc_service import GrpcService
 from services.argus_service import ArgusService
 from services.message_ingestion_service import MessageIngestionService
 from services.session_service import SessionService
-
-# from argus.envelope_pb2 import Envelope
-# from argus.temperature.thermocouple_calibration_pb2 import ThermocoupleCalibration
+from utils.database import database
 
 program = argparse.ArgumentParser(description="Argus Ground Station Application")
 
@@ -19,6 +18,7 @@ program.add_argument("--baudrate", type=int, default=115200)
 
 
 async def main():
+    database.evolve()
     args = program.parse_args()
     session_service = SessionService()
     session_service.start_session()

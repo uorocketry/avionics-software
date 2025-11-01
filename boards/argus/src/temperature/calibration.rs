@@ -57,7 +57,7 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 		// Start collecting data points
 		let mut calibration_data_points: Vec<CalibrationDataPoint, MAX_CALIBRATION_DATA_POINTS> = Vec::new();
 		for data_point_index in 0..data_points_count {
-			let message: String<64> = format!("Data Point #{}. Enter expected value in degrees celsius:\n", data_point_index + 1)
+			let message: String<64> = format!("Data Point #{}. Enter expected value in degrees Celsius:\n", data_point_index + 1)
 				.map_err(|_| TemperatureServiceError::FormatError)?;
 			let expected_temperature: f64 = self.prompt(message.as_str()).await?;
 			let measured_temperature: f64 = self.read_thermocouple(adc, channel).await?.compensated_temperature;

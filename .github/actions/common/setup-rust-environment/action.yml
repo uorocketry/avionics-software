@@ -15,14 +15,6 @@ runs:
         workspaces: |
           . -> target
 
-    - name: Cache Rustup Toolchains
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.rustup/toolchains/
-          ~/.rustup/update-hashes/
-        key: ${{ runner.os }}-rustup-stable-thumbv7em-none-eabihf
-
     - name: Disable man-db (skip Manual Page Installs)
       shell: bash
       run: |

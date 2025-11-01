@@ -1,6 +1,6 @@
 import logging
 from services.session_service import SessionService
-from dtos import message_type_to_model
+from dtos import proto_to_model
 
 
 class PersistenceService:
@@ -10,10 +10,10 @@ class PersistenceService:
 
     def transform_protobuf_to_model(self, proto):
         message_type = type(proto)
-        model_class = message_type_to_model.get(message_type)
-        if model_class is None:
+        transformer = proto_to_model.get(message_type)
+        if transformer is None:
             raise ValueError(f"No model class found for message type {message_type}")
-        return model_class.from_protobuf(proto)
+        return transformer(proto)
 
     def store_protobuf(self, proto):
         model = self.transform_protobuf_to_model(proto)
