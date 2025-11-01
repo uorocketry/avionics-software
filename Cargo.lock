@@ -67,7 +67,7 @@ dependencies = [
  "defmt 0.3.100",
  "defmt-rtt",
  "embassy-embedded-hal 0.3.2",
- "embassy-executor",
+ "embassy-executor 0.7.0",
  "embassy-futures",
  "embassy-net",
  "embassy-stm32",
@@ -472,7 +472,21 @@ dependencies = [
  "critical-section",
  "defmt 0.3.100",
  "document-features",
- "embassy-executor-macros",
+ "embassy-executor-macros 0.6.2",
+]
+
+[[package]]
+name = "embassy-executor"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06070468370195e0e86f241c8e5004356d696590a678d47d6676795b2e439c6b"
+dependencies = [
+ "cortex-m",
+ "critical-section",
+ "defmt 1.0.1",
+ "document-features",
+ "embassy-executor-macros 0.7.0",
+ "embassy-executor-timer-queue",
 ]
 
 [[package]]
@@ -486,6 +500,24 @@ dependencies = [
  "quote",
  "syn 2.0.106",
 ]
+
+[[package]]
+name = "embassy-executor-macros"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfdddc3a04226828316bf31393b6903ee162238576b1584ee2669af215d55472"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
+name = "embassy-executor-timer-queue"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fc328bf943af66b80b98755db9106bf7e7471b0cf47dc8559cd9a6be504cc9c"
 
 [[package]]
 name = "embassy-futures"
@@ -679,7 +711,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc55c748d16908a65b166d09ce976575fb8852cf60ccd06174092b41064d8f83"
 dependencies = [
- "embassy-executor",
+ "embassy-executor 0.7.0",
  "heapless 0.8.0",
 ]
 
@@ -880,7 +912,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebf10fe8d8fcdca0d69d961e2ffdc51b5101811649342078d4efa8ca2370fe17"
 dependencies = [
  "defmt 1.0.1",
- "embassy-executor",
+ "embassy-executor 0.7.0",
  "embedded-test-macros",
  "heapless 0.8.0",
  "semihosting",
@@ -1420,6 +1452,23 @@ checksum = "3672b37090dbd86368a4145bc067582552b29c27377cad4e0a306c97f9bd7772"
 dependencies = [
  "fixedbitset",
  "indexmap",
+]
+
+[[package]]
+name = "phoenix"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt 0.3.100",
+ "defmt-rtt",
+ "embassy-executor 0.9.1",
+ "embassy-stm32",
+ "embassy-sync 0.6.2",
+ "embassy-time 0.5.0",
+ "embedded-alloc",
+ "panic-probe",
+ "static_cell",
 ]
 
 [[package]]
