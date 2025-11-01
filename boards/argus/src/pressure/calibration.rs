@@ -56,7 +56,7 @@ impl<const ADC_COUNT: usize> PressureService<ADC_COUNT> {
 		let mut calibration_data_points: Vec<CalibrationDataPoint, MAX_CALIBRATION_DATA_POINTS> = Vec::new();
 		for data_point_index in 0..data_points_count {
 			let message: String<64> =
-				format!("Data Point #{}. Enter expected value in psi:\n", data_point_index + 1).map_err(|_| PressureServiceError::FormatError)?;
+				format!("Data Point #{}. Enter expected value:\n", data_point_index + 1).map_err(|_| PressureServiceError::FormatError)?;
 			let expected_pressure: f64 = self.prompt(message.as_str()).await?;
 			let measured_pressure: f64 = self.read_pressure(adc, channel).await?.pressure;
 			let data_point = CalibrationDataPoint {
@@ -65,7 +65,7 @@ impl<const ADC_COUNT: usize> PressureService<ADC_COUNT> {
 			};
 			calibration_data_points.push(data_point).unwrap(); // Safe due to prior checks
 
-			let confirmation_message: String<64> = format!("Expected = {:.2} °C, Measured = {:.2}C\n", expected_pressure, measured_pressure)
+			let confirmation_message: String<64> = format!("Expected = {:.2}, Measured = {:.2}\n", expected_pressure, measured_pressure)
 				.map_err(|_| PressureServiceError::FormatError)?;
 			self.send_message(confirmation_message.as_str()).await?;
 		}
