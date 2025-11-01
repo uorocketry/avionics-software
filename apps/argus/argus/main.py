@@ -18,6 +18,7 @@ program.add_argument("--baudrate", type=int, default=115200)
 
 
 async def main():
+    database.evolve()
     args = program.parse_args()
     session_service = SessionService()
     session_service.start_session()
@@ -31,8 +32,6 @@ async def main():
     )
     argus_service = ArgusService(protobuf_serial_service=protobuf_serial_service)
     grpc_service = GrpcService(services=[argus_service], port=50051)
-
-    database.evolve()
 
     ingestion_task = asyncio.create_task(
         asyncio.to_thread(message_ingestion_service.ingest_loop)
