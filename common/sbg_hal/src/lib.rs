@@ -1,5 +1,5 @@
-// #![no_std]
-
+#![no_std]
+#![no_main]
 
 pub mod sbg_device;
 pub mod sbg_frame;

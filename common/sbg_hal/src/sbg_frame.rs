@@ -1,8 +1,11 @@
 
 
-use crate::data_structs::frame_identifiers::*;
+use crate::{data_structs::frame_identifiers::*, sbg_device::{END_BIT, SYNC_BIT_1, SYNC_BIT_2}};
 
 pub const CLASS_IDENTIFIER_MASK: u8 = 0b10000000;
+pub const CRC_LOW_BITS_MASK: u16 = 0x00FF;
+pub const CRC_HIGH_BITS_MASK: u16 = 0xFF00;
+
 pub const MESSAGE_FIELD_OFFSET: usize = 2;
 pub const CLASS_FIELD_OFFSET: usize = 3;
 pub const LENGTH_OFFSET_HIGH: usize = 5;
@@ -23,6 +26,7 @@ pub const FRAME_OFFSET_EXTENDED: usize = 11;
 pub const CRC_OFFSET_HIGH_EXTENDED: usize = 12;
 pub const CRC_OFFSET_LOW_EXTENDED: usize = 13;
 
+pub const PRE_DATA_OFFSET: usize = 6;
 
 pub enum FrameTypes {
     Standard(SbgFrameStandard),
@@ -136,7 +140,7 @@ impl DATA {
 }
 
 #[derive(Default)]
-struct SbgFrameStandard {
+pub struct SbgFrameStandard{
     msg: u8,
     class: CLASS,
     length: u16,
@@ -148,10 +152,25 @@ impl SbgFrameStandard {
     pub fn new(msg: u8, class: CLASS, length: u16, data: [u8; 4086], crc: u16) -> SbgFrameStandard {
         SbgFrameStandard { msg: msg, class: class, length: length, data: DATA::new(data), crc: crc}
     }
+    pub fn serialize(self, buffer: &mut [u8]) {
+        buffer[0] = SYNC_BIT_1;
+        buffer[1] = SYNC_BIT_2;
+        buffer[2] = self.msg;
+        buffer[3] = self.class as u8;
+        buffer[4] = self.length as u8;
+        buffer[5] = (self.length >> 8) as u8;
+
+        for i in 0..self.length as usize {
+            buffer[PRE_DATA_OFFSET + i] = self.data.data[i];
+        }
+        buffer[PRE_DATA_OFFSET + self.length as usize] = (self.crc & CRC_LOW_BITS_MASK) as u8;
+        buffer[PRE_DATA_OFFSET + self.length as usize + 1] = (self.crc >> 8) as u8;
+        buffer[PRE_DATA_OFFSET + self.length as usize + 2] = END_BIT;
+    }
 }
 
 #[derive(Default)]
-struct SbgFrameExtended {
+pub struct SbgFrameExtended {
     msg: u8,
     class: CLASS,
     length: u16,

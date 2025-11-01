@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 defmt = {workspace = true}
+defmt-test = "0.4.0"
 embassy-time = { version = "0.4.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
 embassy-embedded-hal = { version = "0.3.0" }
 embedded-hal-async = { version = "1.0" }
@@ -16,3 +17,6 @@ nb = "1.1.0"
 heapless = {workspace = true}
 cortex-m = { workspace = true }
 bytemuck = { version = "1.24", features = ["derive"] }
+
+[lib]
+harness = false

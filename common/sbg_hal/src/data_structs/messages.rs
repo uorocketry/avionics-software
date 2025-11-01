@@ -34,7 +34,6 @@ pub struct SbgEcomLogStatus {
     pub cpu_usage: u32,
 }
 
-
 // SBG_ECOM_CLASS_LOG_ECOM_0 -- Message 04 SBG_ECOM_LOG_MAG -- <https://developer.sbg-systems.com/sbgECom/5.3/binary_messages.html#SBG_ECOM_LOG_MAG>
 /// Struct for the SBG_ECOM_LOG_MAG message
 #[repr(C, packed)]
@@ -56,4 +55,28 @@ pub struct SbgEcomLogMag {
     pub accel_y: f32,
     /// Acceleration along the Z axis in the body frame (ms^-2) 
     pub accel_z: f32,
+}
+
+// SBG_ECOM_CLASS_LOG_ECOM_0 () -- Message 44 SBG_ECOM_LOG_IMU_SHORT -- <https://developer.sbg-systems.com/sbgECom/5.3/binary_messages.html#SBG_ECOM_LOG_IMU_SHORT>
+/// Struct for the SBG_ECOM_LOG_MAG message
+#[repr(C, packed)]
+    #[derive(Clone, Copy, Debug, Zeroable, Pod)]
+pub struct SbgEcomLogImuShort {
+    /// Time since sensor is powered up in µs
+    pub time_stamp: u32,
+    /// IMU status bitmask, <https://developer.sbg-systems.com/sbgECom/5.3/binary_messages.html#IMU_STATUS>
+    pub imu_status: u16,
+    /// Magnetic field along the X axis in the body frame (Arbitrary Units)
+    pub acceleration_x: f32,
+    /// Magnetic field along the Y axis in the body frame (Arbitrary Units)
+    pub acceleration_y: f32,
+    /// Magnetic field along the Z axis in the body frame (Arbitrary Units)
+    pub acceleration_z: f32,
+    /// Acceleration along the X axis in the body frame (ms^-2) 
+    pub rate_x: f32,
+    /// Acceleration along the Y axis in the body frame (ms^-2) 
+    pub rate_y: f32,
+    /// Acceleration along the Z axis in the body frame (ms^-2) 
+    pub rate_z: f32,
+    pub temperature: u16
 }

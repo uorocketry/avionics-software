@@ -1,5 +1,11 @@
 #![allow(non_camel_case_types)]
 
+pub enum FRAME_TYPE {
+    Standard,
+    Extended
+}
+
+
 // Frame's message ID
 #[derive(Clone, Debug)]
 pub enum CLASS {

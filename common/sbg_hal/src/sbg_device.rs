@@ -1,10 +1,14 @@
 
-use std::path::Prefix;
+use core::iter::Flatten;
+use core::ptr::NonNull;
 
-use defmt::warn;
+use bytemuck::NoUninit;
+// use defmt::warn;
 // use defmt::{error, warn};
 use embedded_io_async::{Read, Write};
-use crate::sbg_frame::{FrameTypes, SbgFrameFactory};
+use crate::data_structs::commands::SbgCommand;
+use crate::sbg_frame::{FrameTypes, SbgFrameFactory, SbgFrameStandard};
+use crate::data_structs::*;
 
 pub const BUFFER_SIZE: usize = 4096;
 pub const SYNC_BIT_1: u8 = 0xFF;
@@ -24,6 +28,14 @@ pub struct SbgDevice<'a, U, T>{
 #[derive(Debug)]
 pub enum SeekError {
     FailedToFindBytes
+}
+
+fn generate_owned_buffer(buffer: &[u8]) -> [u8; 4086] {
+    let mut owned = [0; 4086];
+    for i in 0..buffer.len() {
+        owned[i] = buffer[i]
+    }
+    owned
 }
 
 fn seek_bytes(bytes_to_find: &[u8], buffer: &[u8]) -> Result<usize, SeekError> {
@@ -50,17 +62,18 @@ fn seek_bytes(bytes_to_find: &[u8], buffer: &[u8]) -> Result<usize, SeekError> {
 
 
 
-impl <'a, U, T> SbgDevice<'a, U,T> where U: Read + Write, T: Fn(&[u8]) -> u16 {
-        pub fn new(uart: U, crc_provider: T, buffer: &'a mut[u8]) -> SbgDevice<'a, U, T> {
+impl <'a, U, T> SbgDevice<'a, U,T> where U: Rexad + Write, T: Fn(&[u8]) -> u16 {
+        pub fn new(datastream_provider: U, crc_provider: T, buffer: &'a mut[u8]) -> SbgDevice<'a, U, T> {
+            // recieves the max size of the buffer here as a mutable borrow occurs within struct creation (mutable borrow is necissary as the buffer size is not known)
             let max = buffer.len();
-            SbgDevice {datastream_provider: uart, crc_provider: crc_provider, buffer: buffer, buffer_index: 0, buffer_max: max}
+            SbgDevice {datastream_provider, crc_provider: crc_provider, buffer: buffer, buffer_index: 0, buffer_max: max}
         }
         
         fn append_to_internal_buffer(&mut self, data_to_append:&[u8]){
             for i in data_to_append {
                 // Checks if buffer is overflowing and resets to 0
                 if self.buffer_index >= self.buffer_max - 1{
-                    warn!("SBG buffer overflow!");
+                    // warn!("SBG buffer overflow!");
                     self.buffer_index = 0;        
                 }
                 self.buffer[self.buffer_index] = i.clone();
@@ -90,6 +103,29 @@ impl <'a, U, T> SbgDevice<'a, U,T> where U: Read + Write, T: Fn(&[u8]) -> u16 {
             trimmed_data = &buffer[0..(frame.get_length() as usize + PRE_DATA_OFFSET)];
 
             (self.crc_provider)(trimmed_data) == frame.get_crc()
+        }
+
+        // Put this in check crc function
+        fn generate_crc(&self, msg: u8, class: u8, length: u16, data: &[u8]) -> u16 {
+            let mut buffer = [0; 4096];
+            let trimmed_data: &[u8];
+
+
+            // Appends frame's message id, class, and length. See: <https://developer.sbg-systems.com/sbgECom/5.3/md_doc_2binary_protocol.html#crcDefinition>
+            buffer[0] = msg;
+            buffer[1] = class;
+            buffer[2] = length as u8;
+            buffer[3] = (length >> 8) as u8;
+
+
+            for i in 0..data.len() {
+                buffer[PRE_DATA_OFFSET + i] = data[i];
+            }
+
+            // Trim out placeholder 0s for CRC 
+            trimmed_data = &buffer[0..(length as usize + PRE_DATA_OFFSET)];
+
+            (self.crc_provider)(trimmed_data)
         }
 
 
@@ -132,6 +168,19 @@ impl <'a, U, T> SbgDevice<'a, U,T> where U: Read + Write, T: Fn(&[u8]) -> u16 {
             }
  
             SbgFrameFactory::new_raw(&self.buffer)
+        }
+
+        pub async fn write_frame(&mut self, frame: (impl SbgCommand + NoUninit)) {
+            let payload = bytemuck::bytes_of(&frame);
+            let crc = self.generate_crc(frame.msg_number(), frame_identifiers::CLASS::SBG_ECOM_CLASS_CMD_0 as u8, payload.len() as u16, payload);
+            let payload_owned = generate_owned_buffer(payload);
+  
+            let frame = SbgFrameStandard::new(frame.msg_number(), frame_identifiers::CLASS::SBG_ECOM_CLASS_CMD_0, payload.len() as u16, payload_owned, crc);
+            
+            let mut data: [u8; 4096] = [0; 4096];
+
+            frame.serialize(&mut data);
+            self.datastream_provider.write(&data).await;
         }
         
         pub fn transmit() {}
