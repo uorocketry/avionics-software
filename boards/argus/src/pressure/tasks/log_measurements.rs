@@ -73,5 +73,5 @@ fn get_path_from_adc_and_channel(
 	adc_index: usize,
 	channel: usize,
 ) -> FileName {
-	format!("T_{}_{}.csv", adc_index, channel).unwrap() as FileName
+	format!("P_{}_{}.csv", adc_index, channel).unwrap() as FileName
 }

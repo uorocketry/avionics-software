@@ -3,6 +3,7 @@
 #![no_main]
 
 pub mod adc;
+pub mod led_indicator;
 pub mod linear_transformation;
 pub mod node;
 pub mod sd;

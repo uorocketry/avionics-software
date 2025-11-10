@@ -1,0 +1,3 @@
+[tasks.attach]
+command = "probe-rs"
+args = ["attach", "--chip", "STM32H733VGTx", "--protocol", "swd", "../../target/thumbv7em-none-eabihf/debug/argus"]

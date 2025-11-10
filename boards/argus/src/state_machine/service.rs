@@ -68,7 +68,10 @@ impl StateMachineWorker {
 	where
 		Act: FnMut(&'static AsyncMutex<StateMachineOrchestrator>) -> Fut,
 		Fut: Future<Output = Result<(), Err>>, {
-		self.current_state.changed_and(|state| desired_states.contains(state)).await;
+		// Wait until we're in one of the desired states
+		if !desired_states.contains(&self.current_state.get().await) {
+			self.current_state.changed_and(|state| desired_states.contains(state)).await;
+		}
 		action(self.orchestrator).await
 	}
 

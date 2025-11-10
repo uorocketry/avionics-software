@@ -4,6 +4,7 @@ use embassy_futures::yield_now;
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
+use crate::led_indicator::service::LedIndicatorService;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
 use crate::strain::service::{StrainService, STRAIN_READING_QUEUE};
@@ -15,6 +16,7 @@ use crate::utils::types::AsyncMutex;
 pub async fn measure_strain(
 	mut worker: StateMachineWorker,
 	strain_service_mutex: &'static AsyncMutex<StrainService<{ AdcDevice::COUNT }>>,
+	led_indicator_service_mutex: &'static AsyncMutex<LedIndicatorService<2>>,
 ) {
 	worker
 		.run_while(&[States::Recording], async |_| -> Result<(), ()> {
@@ -35,6 +37,9 @@ pub async fn measure_strain(
 					}
 				}
 			}
+
+			// Blink LED to indicate measurement cycle complete
+			led_indicator_service_mutex.lock().await.blink(1).await;
 
 			// Yield to allow other tasks to run, especially the NTC measurement task
 			yield_now().await;
