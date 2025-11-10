@@ -4,6 +4,7 @@ use embassy_futures::yield_now;
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
+use crate::led_indicator::service::LedIndicatorService;
 use crate::pressure::service::{PressureService, PRESSURE_READING_QUEUE};
 use crate::pressure::types::PressureChannel;
 use crate::state_machine::service::StateMachineWorker;
@@ -15,6 +16,7 @@ use crate::utils::types::AsyncMutex;
 pub async fn measure_pressure_sensors(
 	mut worker: StateMachineWorker,
 	pressure_service_mutex: &'static AsyncMutex<PressureService<{ AdcDevice::COUNT }>>,
+	led_indicator_service_mutex: &'static AsyncMutex<LedIndicatorService<2>>,
 ) {
 	worker
 		.run_while(&[States::Recording], async |_| -> Result<(), ()> {
@@ -35,6 +37,9 @@ pub async fn measure_pressure_sensors(
 					}
 				}
 			}
+
+			// Blink LED to indicate measurement cycle complete
+			led_indicator_service_mutex.lock().await.blink(1).await;
 
 			// Yield to allow other tasks to run, especially the NTC measurement task
 			yield_now().await;

@@ -1,5 +1,5 @@
 use defmt::error;
-use embassy_time::Instant;
+use embassy_time::{Instant, Timer};
 use strum::EnumCount;
 
 use crate::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
@@ -44,6 +44,9 @@ impl<const ADC_COUNT: usize> StrainService<ADC_COUNT> {
 	}
 
 	pub async fn setup(&mut self) -> Result<(), StrainServiceError> {
+		// Delay for 100ms to ensure ADCs are powered up
+		Timer::after_millis(100).await;
+
 		for driver in self.adc_service.lock().await.drivers.iter_mut() {
 			driver.reference_range = ReferenceRange::Avdd;
 			driver.data_rate = DataRate::Sps100;

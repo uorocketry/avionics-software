@@ -7,6 +7,7 @@ compile_error!("You must enable exactly one of the features: 'pressure', 'temper
 
 use argus::adc::service::{AdcConfig, AdcService};
 use argus::adc::types::AdcDevice;
+use argus::led_indicator::service::LedIndicatorService;
 use argus::sd::service::SDCardService;
 use argus::sd::task::sd_card_task;
 use argus::serial::service::SerialService;
@@ -35,6 +36,7 @@ static SD_CARD_SERVICE: StaticCell<AsyncMutex<SDCardService>> = StaticCell::new(
 static ADC_SERVICE: StaticCell<AsyncMutex<AdcService<{ AdcDevice::COUNT }>>> = StaticCell::new();
 static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new();
 static SESSION_SERVICE: StaticCell<AsyncMutex<SessionService>> = StaticCell::new();
+static LED_INDICATOR_SERVICE: StaticCell<AsyncMutex<LedIndicatorService<2>>> = StaticCell::new();
 static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrator>> = StaticCell::new();
 
 #[cfg(feature = "temperature")]
@@ -58,6 +60,10 @@ async fn main(spawner: Spawner) {
 		peripherals.PC4,
 	)));
 	let session_service = SESSION_SERVICE.init(AsyncMutex::new(SessionService::new(sd_card_service)));
+	let led_indicator_service = LED_INDICATOR_SERVICE.init(AsyncMutex::new(LedIndicatorService::new([
+		peripherals.PA3.degrade(),
+		peripherals.PA2.degrade(),
+	])));
 	let adc_service = ADC_SERVICE.init(AsyncMutex::new(AdcService::new(
 		peripherals.SPI4,
 		peripherals.PE2,
@@ -96,7 +102,7 @@ async fn main(spawner: Spawner) {
 	let state_machine_orchestrator = STATE_MACHINE_ORCHESTRATOR.init(AsyncMutex::new(StateMachineOrchestrator::new()));
 
 	// General tasks that must run regardless of board type
-	spawner.must_spawn(sd_card_task(sd_card_service));
+	spawner.must_spawn(sd_card_task(sd_card_service, led_indicator_service));
 
 	// Spawn tasks needed for temperature board
 	#[cfg(feature = "temperature")]
@@ -122,6 +128,7 @@ async fn main(spawner: Spawner) {
 		spawner.must_spawn(tasks::measure_thermocouples(
 			StateMachineWorker::new(state_machine_orchestrator),
 			temperature_service,
+			led_indicator_service,
 		));
 		spawner.must_spawn(tasks::log_measurements(
 			StateMachineWorker::new(state_machine_orchestrator),
@@ -155,6 +162,7 @@ async fn main(spawner: Spawner) {
 		spawner.must_spawn(tasks::measure_pressure_sensors(
 			StateMachineWorker::new(state_machine_orchestrator),
 			pressure_service,
+			led_indicator_service,
 		));
 		spawner.must_spawn(tasks::measure_manifold_temperature(
 			StateMachineWorker::new(state_machine_orchestrator),
@@ -189,7 +197,11 @@ async fn main(spawner: Spawner) {
 		// Setup the strain service before starting the tasks
 		strain_service.lock().await.setup().await.unwrap();
 
-		spawner.must_spawn(tasks::measure_strain(StateMachineWorker::new(state_machine_orchestrator), strain_service));
+		spawner.must_spawn(tasks::measure_strain(
+			StateMachineWorker::new(state_machine_orchestrator),
+			strain_service,
+			led_indicator_service,
+		));
 		spawner.must_spawn(tasks::log_measurements(
 			StateMachineWorker::new(state_machine_orchestrator),
 			serial_service,

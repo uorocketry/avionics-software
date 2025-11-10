@@ -7,6 +7,9 @@ use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, Line, OperationScope, SdCardError};
 use crate::utils::types::AsyncMutex;
 
+/// Handles session management for data logging.
+/// It reads the last session number from a session.txt file on the SD card, increments it,
+/// and writes it back for the next boot. It also keeps track of the current session in memory.
 pub struct SessionService {
 	pub current_session: Option<i32>,
 	sd_card_service: &'static AsyncMutex<SDCardService>,
