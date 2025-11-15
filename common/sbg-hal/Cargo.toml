@@ -1,0 +1,57 @@
+[package]
+name = "sbg_hal"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+harness = false
+test = false
+doctest = false
+
+[dependencies]
+defmt = { workspace = true }
+defmt-rtt = { workspace = true }
+embassy-embedded-hal = { version = "0.3.0" }
+embedded-hal-async = { version = "1.0" }
+embedded-nal-async = "0.8.0"
+embedded-io-async = { version = "0.6.1" }
+embedded-hal = "1.0.0"
+bitflags = { version = "2.3.1", features = ["serde"] }
+nb = "1.1.0"
+heapless = { workspace = true }
+cortex-m = { workspace = true }
+bytemuck = { version = "1.24", features = ["derive"] }
+
+[dev-dependencies]
+cortex-m = { workspace = true }
+cortex-m-rt = { workspace = true }
+# # tokio = { version = "1.48.0", features = ["macros", "rt", "rt-multi-thread"] }
+# # tokio-macros = { version = "2.6.0" }
+critical-section = "1.1"
+
+embassy-executor = { version = "0.7.0", features = [
+    "nightly",
+    "task-arena-size-10240",
+    "arch-cortex-m",
+    "executor-thread",
+    "executor-interrupt",
+    "defmt",
+] }
+embassy-stm32 = { version = "0.2.0", features = [
+    "defmt",
+    "stm32h733vg",
+    "time-driver-tim2",
+    "exti",
+    "memory-x",
+    "unstable-pac",
+    "chrono",
+] }
+crc = "3.3.0"
+# panic-probe = { workspace = true }
+embedded-test = { version = "0.6.2", features = ["defmt", "embassy"] }
+
+
+[[test]]
+name = "onboard_read"
+path = "tests/onboard/reading.rs"
+harness = false
