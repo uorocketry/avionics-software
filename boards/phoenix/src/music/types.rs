@@ -1,8 +1,8 @@
 /// A note, representing either a pitch (with a frequency in Hz), or a rest.
-// NOTE: Derive Copy since it's basically just a cheap u32 copy
+// NOTE: Derive Copy since it's basically just a cheap integer copy
 #[derive(Clone, Copy)]
 pub enum Note {
-	Pitch(u32),
+	Pitch(u16),
 	Rest,
 }
 

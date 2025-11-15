@@ -1,5 +1,4 @@
 //! Playback of some simple songs with the buzzer
-use embassy_stm32::timer::GeneralInstance4Channel;
 use embassy_time::Timer;
 
 use crate::{
@@ -8,12 +7,12 @@ use crate::{
 	utils::types::AsyncMutex,
 };
 
-pub struct MusicService<T: GeneralInstance4Channel> {
-	sound_service: &'static AsyncMutex<SoundService<T>>,
+pub struct MusicService {
+	sound_service: &'static AsyncMutex<SoundService>,
 }
 
-impl<T: GeneralInstance4Channel> MusicService<T> {
-	pub fn new(sound_service: &'static AsyncMutex<SoundService<T>>) -> Self {
+impl MusicService {
+	pub fn new(sound_service: &'static AsyncMutex<SoundService>) -> Self {
 		Self { sound_service }
 	}
 
@@ -28,7 +27,7 @@ impl<T: GeneralInstance4Channel> MusicService<T> {
 		for (note, length) in song {
 			let duration = (length * beat_length) as u64;
 			match note {
-				Note::Pitch(freq) => sound.play_pitch(*freq, duration).await,
+				Note::Pitch(freq) => sound.play_pitch(*freq as u32, duration).await,
 				Note::Rest => Timer::after_millis(duration).await,
 			}
 		}

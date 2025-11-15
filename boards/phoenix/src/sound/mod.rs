@@ -3,3 +3,4 @@
 //! For more complex sound output, see [crate::music].
 
 pub mod service;
+pub mod types;

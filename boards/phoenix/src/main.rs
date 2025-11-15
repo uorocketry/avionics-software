@@ -4,7 +4,6 @@
 
 use defmt::info;
 use embassy_executor::Spawner;
-use embassy_stm32::peripherals::TIM3;
 use panic_probe as _;
 use phoenix::{
 	sound::service::SoundService,
@@ -15,9 +14,10 @@ use phoenix::{
 };
 use static_cell::StaticCell;
 
-static SOUND_SERVICE: StaticCell<AsyncMutex<SoundService<TIM3>>> = StaticCell::new();
+/// To change the pin used for sound, see [phoenix::sound::types]
+static SOUND_SERVICE: StaticCell<AsyncMutex<SoundService>> = StaticCell::new();
 #[cfg(feature = "music")]
-static MUSIC_SERVICE: StaticCell<AsyncMutex<phoenix::music::service::MusicService<TIM3>>> = StaticCell::new();
+static MUSIC_SERVICE: StaticCell<AsyncMutex<phoenix::music::service::MusicService>> = StaticCell::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -29,7 +29,12 @@ async fn main(spawner: Spawner) {
 
 	#[cfg(feature = "music")]
 	{
-		use phoenix::music::service::MusicService;
+		use defmt::error;
+		use phoenix::music::{service::MusicService, tasks::play_music_forever};
 		let music = MUSIC_SERVICE.init(AsyncMutex::new(MusicService::new(sound)));
+		match spawner.spawn(play_music_forever(music)) {
+			Ok(_) => (),
+			Err(e) => error!("Could not spawn music task: {}", e),
+		}
 	}
 }

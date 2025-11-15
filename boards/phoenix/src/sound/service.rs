@@ -3,32 +3,34 @@ use embassy_stm32::{
 	gpio::OutputType,
 	time::{Hertz, khz},
 	timer::{
-		Channel1Pin, GeneralInstance4Channel,
+		Channel1Pin,
 		simple_pwm::{PwmPin, SimplePwm},
 	},
 };
 use embassy_time::Timer;
 
+use crate::sound::types::TimerPin;
+
 /// Play sounds using a PWM buzzer.
 ///
-/// This struct requires generics over the timer peripheral used for PWM generation, due to a lack of an `AnyPin` in embassy.
-/// This can cause some issues when depending on this service in contexts where generics are not possible (e.g. in an embassy task).
-pub struct SoundService<T: GeneralInstance4Channel> {
-	pwm: SimplePwm<'static, T>,
+/// Due to there being no equivalent of what `AnyPin` is to GPIO pins for timer pins, the timer
+/// picked has to be hard-coded in [TimerPin].
+pub struct SoundService {
+	pwm: SimplePwm<'static, TimerPin>,
 }
 
-impl<T: GeneralInstance4Channel> SoundService<T> {
+impl SoundService {
 	pub fn new(
-		timer: impl Peripheral<P = T> + 'static,
-		buzzer: impl Peripheral<P = impl Channel1Pin<T>> + 'static,
+		pin: impl Peripheral<P = TimerPin> + 'static,
+		buzzer: impl Peripheral<P = impl Channel1Pin<TimerPin>> + 'static,
 	) -> Self {
 		let buzz_out_pin = PwmPin::new_ch1(buzzer, OutputType::PushPull);
-		let pwm = SimplePwm::new(timer, Some(buzz_out_pin), None, None, None, khz(4), Default::default());
-		let mut snd = Self { pwm };
+		let pwm = SimplePwm::new(pin, Some(buzz_out_pin), None, None, None, khz(4), Default::default());
+		let mut sound_service = Self { pwm };
 		// Set the volume to 100% by default
-		snd.set_volume(100);
+		sound_service.set_volume(100).unwrap();
 
-		snd
+		sound_service
 	}
 
 	/// Play some pitch with a frequency of `freq` Hz, for `duration` ms.
@@ -46,16 +48,33 @@ impl<T: GeneralInstance4Channel> SoundService<T> {
 	/// Set the duty cycle of the buzzer to change output volume.
 	///
 	/// 100% volume is equal to 50% duty cycle, 0% is 0% duty cycle.
-	/// The caller is responsible for ensuring that `volume_percent <= 200` (the max
-	/// duty cycle).
+	/// Returns `Err(())` if the value is invalid (> 100). For an unchecked variant prone to
+	/// panicking, see [SoundService::set_volume_unchecked]
 	pub fn set_volume(
 		&mut self,
 		volume_percent: u8,
+	) -> Result<(), u8> {
+		// Technically since volume percentage is half of duty cycle percentage, it's
+		// allowable to go up to 200% (Although it makes no real difference)
+		if volume_percent > 200 {
+			// For now just return the delta in volume
+			return Err(volume_percent - 200);
+		}
+
+		self.set_volume_unchecked(volume_percent);
+
+		Ok(())
+	}
+
+	/// Set the duty cycle of the buzzer to change output volume.
+	///
+	/// See [SoundService::set_volume] for a checked variant which returns a [Result]
+	/// rather than panic on an invalid value.
+	pub fn set_volume_unchecked(
+		&mut self,
+		volume_percent: u8,
 	) {
-		// NOTE: I'm not sure on how expensive modulo is on this
-		// hardware, so I'll just leave it as is without any protections for
-		// going over 100% duty cycle.
-		let duty_cycle = volume_percent / 2;
-		self.pwm.ch1().set_duty_cycle_percent(duty_cycle);
+		let duty_cycle_percent = volume_percent / 2;
+		self.pwm.ch1().set_duty_cycle_percent(duty_cycle_percent);
 	}
 }
