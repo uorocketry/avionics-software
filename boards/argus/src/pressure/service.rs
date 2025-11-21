@@ -2,6 +2,7 @@ use defmt::{error, info};
 use embassy_time::{Instant, Timer};
 use serial::service::SerialService;
 use strum::EnumCount;
+use utils::types::AsyncMutex;
 
 use crate::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
 use crate::adc::service::AdcService;
@@ -11,7 +12,6 @@ use crate::pressure::config::LINEAR_TRANSFORMATIONS_FILE_NAME;
 use crate::pressure::types::{PressureChannel, PressureReading, PressureReadingQueue, PressureServiceError};
 use crate::sd::service::SDCardService;
 use crate::session::service::SessionService;
-use crate::utils::types::AsyncMutex;
 
 // A channel for buffering the pressure readings and decoupling the logging to sd task from the measurement task
 pub static PRESSURE_READING_QUEUE: PressureReadingQueue = PressureReadingQueue::new();

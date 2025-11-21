@@ -2,12 +2,12 @@ use defmt::error;
 use embassy_executor::task;
 use embassy_futures::yield_now;
 use strum::EnumCount;
+use utils::types::AsyncMutex;
 
 use crate::adc::types::AdcDevice;
 use crate::pressure::service::PressureService;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
-use crate::utils::types::AsyncMutex;
 
 #[task]
 pub async fn calibrate_pressure_sensors(
