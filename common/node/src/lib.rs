@@ -1,3 +1,4 @@
+#![no_std]
 use messages::argus::envelope::{Node, NodeType};
 
 // The identifier for this board (node) with some params set at compile time.
@@ -12,4 +13,6 @@ pub const CURRENT_NODE: Node = Node {
 	r#type: NodeType::ArgusPressure as i32,
 	#[cfg(feature = "strain")]
 	r#type: NodeType::ArgusStrain as i32,
+	#[cfg(feature = "pheonix")]
+	r#type: NodeType::Phoenix as i32,
 };

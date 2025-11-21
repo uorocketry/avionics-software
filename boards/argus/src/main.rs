@@ -10,20 +10,19 @@ use argus::adc::types::AdcDevice;
 use argus::led_indicator::service::LedIndicatorService;
 use argus::sd::service::SDCardService;
 use argus::sd::task::sd_card_task;
-use argus::serial::service::SerialService;
 use argus::session::service::SessionService;
 use argus::state_machine::service::{StateMachineOrchestrator, StateMachineWorker};
 use argus::state_machine::types::Events;
-use argus::utils::hal::configure_hal;
-use argus::utils::types::AsyncMutex;
 use defmt::info;
 use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::Pin;
 use embassy_stm32::{bind_interrupts, peripherals, usart};
 use panic_probe as _;
+use serial::service::SerialService;
 use static_cell::StaticCell;
 use strum::EnumCount;
+use utils::{hal::configure_hal, types::AsyncMutex};
 
 // Mapping of NVIC interrupts to Embassy interrupt handlers
 bind_interrupts!(struct InterruptRequests {

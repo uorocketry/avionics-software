@@ -2,6 +2,7 @@ use defmt::{error, info};
 use embassy_executor::task;
 use embassy_futures::yield_now;
 use strum::EnumCount;
+use utils::types::AsyncMutex;
 
 use crate::adc::types::AdcDevice;
 use crate::led_indicator::service::LedIndicatorService;
@@ -9,7 +10,6 @@ use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
 use crate::temperature::service::{TemperatureService, THERMOCOUPLE_READING_QUEUE};
 use crate::temperature::types::ThermocoupleChannel;
-use crate::utils::types::AsyncMutex;
 
 // Task that iterates through the ADCs and channels, measures the temperature, and enqueues the readings to a channel
 #[task]

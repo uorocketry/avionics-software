@@ -1,17 +1,15 @@
+use embassy_stm32::Peripheral;
 use embassy_stm32::interrupt::typelevel::Binding;
 use embassy_stm32::mode;
 use embassy_stm32::usart::ConfigError;
 pub use embassy_stm32::usart::Error as UsartError;
 use embassy_stm32::usart::{Config, Instance, InterruptHandler, RxDma, RxPin, TxDma, TxPin, Uart};
-use embassy_stm32::Peripheral;
 use embassy_time::Timer;
 use embedded_io_async::Write;
 use heapless::String;
-use messages::argus::envelope::{envelope::Message as EnvelopeMessage, Envelope};
+use messages::argus::envelope::{Envelope, envelope::Message as EnvelopeMessage};
+use node::CURRENT_NODE;
 use prost::Message;
-
-use crate::node::CURRENT_NODE;
-
 pub struct SerialService {
 	pub uart: Uart<'static, mode::Async>,
 }

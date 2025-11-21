@@ -41,6 +41,18 @@ version = "0.9.1"
 [workspace.dependencies.messages]
 path = "./common/messages"
 
+[workspace.dependencies.node]
+path = "./common/node"
+
+[workspace.dependencies.serial]
+path = "./common/serial"
+
+[workspace.dependencies.utils]
+path = "./common/utils"
+
+[workspace.dependencies.rfd900x]
+path = "./common/rfd900x"
+
 [workspace.dependencies.nb]
 version = "1.1.0"
 

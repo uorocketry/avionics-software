@@ -2,10 +2,10 @@ use core::str::FromStr;
 
 use defmt::info;
 use heapless::{format, Vec};
+use utils::types::AsyncMutex;
 
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, Line, OperationScope, SdCardError};
-use crate::utils::types::AsyncMutex;
 
 /// Handles session management for data logging.
 /// It reads the last session number from a session.txt file on the SD card, increments it,

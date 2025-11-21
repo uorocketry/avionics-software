@@ -1,5 +1,6 @@
 use defmt::{error, info};
 use embassy_time::{Instant, Timer};
+use serial::service::SerialService;
 use strum::EnumCount;
 
 use crate::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
@@ -9,7 +10,6 @@ use crate::linear_transformation::service::LinearTransformationService;
 use crate::pressure::config::LINEAR_TRANSFORMATIONS_FILE_NAME;
 use crate::pressure::types::{PressureChannel, PressureReading, PressureReadingQueue, PressureServiceError};
 use crate::sd::service::SDCardService;
-use crate::serial::service::SerialService;
 use crate::session::service::SessionService;
 use crate::utils::types::AsyncMutex;
 

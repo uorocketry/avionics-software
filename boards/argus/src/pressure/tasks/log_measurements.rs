@@ -3,6 +3,7 @@ use defmt::info;
 use embassy_executor::task;
 use heapless::format;
 use messages::argus::envelope::envelope::Message;
+use serial::service::SerialService;
 use strum::EnumCount;
 
 use crate::adc::types::AdcDevice;
@@ -10,7 +11,6 @@ use crate::pressure::service::PRESSURE_READING_QUEUE;
 use crate::pressure::types::{PressureChannel, PressureReading};
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope};
-use crate::serial::service::SerialService;
 use crate::session::service::SessionService;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;

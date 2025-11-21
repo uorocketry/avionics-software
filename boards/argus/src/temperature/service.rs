@@ -1,19 +1,19 @@
 use defmt::{error, info};
 use embassy_time::{Instant, Timer};
+use serial::service::SerialService;
 use strum::EnumCount;
+use utils::types::AsyncMutex;
 
 use crate::adc::driver::types::{AnalogChannel, DataRate, Filter, Gain, ReferenceRange};
 use crate::adc::service::AdcService;
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::service::LinearTransformationService;
 use crate::sd::service::SDCardService;
-use crate::serial::service::SerialService;
 use crate::session::service::SessionService;
 use crate::temperature::config::{LINEAR_TRANSFORMATIONS_FILE_NAME, RTD_RESISTANCE_AT_0C};
 use crate::temperature::rtd;
 use crate::temperature::thermocouple::type_k;
 use crate::temperature::types::{TemperatureServiceError, ThermocoupleChannel, ThermocoupleReading, ThermocoupleReadingQueue};
-use crate::utils::types::AsyncMutex;
 
 // A channel for buffering the temperature readings and decoupling the logging to sd task from the measurement task
 pub static THERMOCOUPLE_READING_QUEUE: ThermocoupleReadingQueue = ThermocoupleReadingQueue::new();
