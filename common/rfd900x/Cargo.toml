@@ -1,0 +1,30 @@
+[package]
+name = "rfd900x"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serial = { workspace = true, features = ["pheonix"] }
+embedded-alloc = { workspace = true }
+embedded-hal = { version = "1.0.0", features = ["defmt-03"] }
+embedded-hal-async = { version = "1.0" }
+embedded-hal-bus = { version = "0.3.0", features = ["async", "defmt-03"] }
+embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
+embedded-nal-async = "0.8.0"
+embassy-stm32 = { version = "0.2.0", features = [
+    "defmt",
+    "stm32h733vg",
+    "time-driver-tim2",
+    "exti",
+    "memory-x",
+    "unstable-pac",
+    "chrono",
+] }
+embassy-time = { version = "0.4.0", features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+    "tick-hz-32_768",
+] }
+heapless = "0.9.2"
+defmt = { workspace = true }
+defmt-rtt = { workspace = true }
