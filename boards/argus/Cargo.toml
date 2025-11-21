@@ -7,12 +7,12 @@ edition = "2021"
 harness = false
 
 [features]
-pressure = ["serial/pressure"]
-temperature = ["serial/temperature"]
-strain = ["serial/strain"]
+pressure = []
+temperature = []
+strain = []
 
 #TODO: Fix this
-calibration = ["serial/pressure"]
+calibration = []
 
 [dependencies]
 serial = { workspace = true }

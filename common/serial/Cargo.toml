@@ -4,12 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 
-[features]
-pressure = ["node", "node/pressure"]
-temperature = ["node", "node/temperature"]
-strain = ["node", "node/strain"]
-pheonix = ["node", "node/pheonix"]
-
 # Trim out unused dependencies
 [dependencies]
 chrono = { workspace = true }
@@ -85,7 +79,6 @@ smlang = { workspace = true }
 static_cell = "2"
 stm32-fmc = "0.3.0"
 strum = { version = "0.27.2", default-features = false, features = ["derive"] }
-node = { workspace = true, optional = true }
 
 [lib]
 path = "lib.rs"

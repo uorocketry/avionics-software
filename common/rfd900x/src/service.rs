@@ -8,6 +8,7 @@ use embassy_stm32::{
 };
 use embassy_time::{self, Duration, Timer};
 use heapless::String;
+use messages::argus::envelope::Node;
 use serial::service::{SerialService, UsartError};
 
 use crate::data::*;
@@ -88,10 +89,32 @@ impl Config {
 			duty_cycle: duty_cycle,
 			lbt_rssi: lbt_rssi,
 		};
-		if (!check_config(config)) {
+		if (!config.check()) {
 			return Err(ConfigurationError::InvalidConfig);
 		}
 		Ok(config)
+	}
+
+	/// Checks a config agaisnt min and max as specified in the datasheet. True indicates that a config is valid
+	pub fn check(&self) -> bool {
+		if (self.air_speed < 12 || self.air_speed > 250) {
+			return false;
+		} else if (self.net_id > 55) {
+			return false;
+		} else if (self.tx_power > 30) {
+			return false;
+		} else if (self.min_freq < 902_000 || self.min_freq > 927_000) {
+			return false;
+		} else if (self.max_freq < 903_000 || self.max_freq > 928_000) {
+			return false;
+		} else if (self.num_of_channels < 1 || self.num_of_channels > 50) {
+			return false;
+		} else if (self.duty_cycle < 10 || self.duty_cycle > 100) {
+			return false;
+		} else if (self.lbt_rssi > 220) {
+			return false;
+		}
+		return true;
 	}
 }
 
@@ -127,8 +150,9 @@ impl RFD900XService {
 		tx_dma: impl Peripheral<P = impl TxDma<T>> + 'static,
 		rx_dma: impl Peripheral<P = impl RxDma<T>> + 'static,
 		config: Config,
+		node_type: Node,
 	) -> RFD900XService {
-		let mut uart_service = SerialService::new(peri, tx, rx, interrupt_requests, tx_dma, rx_dma, UART_BAUD);
+		let mut uart_service = SerialService::new(peri, tx, rx, interrupt_requests, tx_dma, rx_dma, UART_BAUD, node_type);
 		let mut rfd_service = RFD900XService {
 			uart_service: uart_service.expect("Failed to Initialize UART"),
 			config: config,
@@ -171,7 +195,7 @@ impl RFD900XService {
 	pub async fn write_config(&mut self) -> Result<(), ConfigurationError> {
 		let config: Config = self.config;
 
-		if (!check_config(config)) {
+		if (!config.check()) {
 			return Err(ConfigurationError::InvalidConfig);
 		}
 
@@ -262,26 +286,4 @@ pub fn prepare_for_register(
 	}
 
 	return len;
-}
-
-/// Checks a config agaisnt min and max as specified in the datasheet. True indicates that a config is valid
-pub fn check_config(config: Config) -> bool {
-	if (config.air_speed < 12 || config.air_speed > 250) {
-		return false;
-	} else if (config.net_id > 55) {
-		return false;
-	} else if (config.tx_power > 30) {
-		return false;
-	} else if (config.min_freq < 902_000 || config.min_freq > 927_000) {
-		return false;
-	} else if (config.max_freq < 903_000 || config.max_freq > 928_000) {
-		return false;
-	} else if (config.num_of_channels < 1 || config.num_of_channels > 50) {
-		return false;
-	} else if (config.duty_cycle < 10 || config.duty_cycle > 100) {
-		return false;
-	} else if (config.lbt_rssi > 220) {
-		return false;
-	}
-	return true;
 }

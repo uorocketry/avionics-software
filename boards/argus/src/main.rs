@@ -18,6 +18,7 @@ use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::Pin;
 use embassy_stm32::{bind_interrupts, peripherals, usart};
+use messages::argus::envelope::{Node, NodeType};
 use panic_probe as _;
 use serial::service::SerialService;
 use static_cell::StaticCell;
@@ -37,15 +38,31 @@ static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new()
 static SESSION_SERVICE: StaticCell<AsyncMutex<SessionService>> = StaticCell::new();
 static LED_INDICATOR_SERVICE: StaticCell<AsyncMutex<LedIndicatorService<2>>> = StaticCell::new();
 static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrator>> = StaticCell::new();
+// static NODE_TYPE: StaticCell<Node> = StaticCell::new();
 
 #[cfg(feature = "temperature")]
 static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::TemperatureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
+#[cfg(feature = "temperature")]
+static NODE_TYPE: Node = Node {
+	r#type: NodeType::ArgusTemperature as i32,
+	id: Some(0),
+};
 
 #[cfg(feature = "pressure")]
 static PRESSURE_SERVICE: StaticCell<AsyncMutex<argus::pressure::service::PressureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
+#[cfg(feature = "pressure")]
+static NODE_TYPE: Node = Node {
+	r#type: NodeType::ArgusPressure as i32,
+	id: Some(0),
+};
 
 #[cfg(feature = "strain")]
 static STRAIN_SERVICE: StaticCell<AsyncMutex<argus::strain::service::StrainService<{ AdcDevice::COUNT }>>> = StaticCell::new();
+#[cfg(feature = "strain")]
+static NODE_TYPE: Node = Node {
+	r#type: NodeType::ArgusStrain as i32,
+	id: Some(0),
+};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -94,6 +111,7 @@ async fn main(spawner: Spawner) {
 			peripherals.DMA1_CH2,
 			peripherals.DMA1_CH3,
 			115200,
+			NODE_TYPE,
 		)
 		.unwrap(),
 	));

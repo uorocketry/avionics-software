@@ -7,11 +7,10 @@ use embassy_stm32::usart::{Config, Instance, InterruptHandler, RxDma, RxPin, TxD
 use embassy_time::Timer;
 use embedded_io_async::Write;
 use heapless::String;
-use messages::argus::envelope::{Envelope, envelope::Message as EnvelopeMessage};
-use node::CURRENT_NODE;
 use prost::Message;
 pub struct SerialService {
 	pub uart: Uart<'static, mode::Async>,
+	pub node_type: Node,
 }
 
 impl SerialService {
@@ -23,13 +22,17 @@ impl SerialService {
 		tx_dma: impl Peripheral<P = impl TxDma<T>> + 'static,
 		rx_dma: impl Peripheral<P = impl RxDma<T>> + 'static,
 		baudrate: u32,
+		node_type: Node,
 	) -> Result<Self, ConfigError> {
 		let mut config = Config::default();
 		config.baudrate = baudrate;
 
 		let uart = Uart::<'static, mode::Async>::new(peri, rx, tx, interrupt_requests, tx_dma, rx_dma, config)?;
 
-		Ok(Self { uart })
+		Ok(Self {
+			uart: uart,
+			node_type: node_type,
+		})
 	}
 
 	/// Write the full buffer, waiting until all bytes are sent.
@@ -45,7 +48,7 @@ impl SerialService {
 		message: EnvelopeMessage,
 	) -> Result<(), UsartError> {
 		let envelope = Envelope {
-			created_by: Some(CURRENT_NODE),
+			created_by: Some(self.node_type),
 			message: Some(message),
 		};
 		let frame = envelope.encode_length_delimited_to_vec();

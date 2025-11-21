@@ -41,8 +41,6 @@ version = "0.9.1"
 [workspace.dependencies.messages]
 path = "./common/messages"
 
-[workspace.dependencies.node]
-path = "./common/node"
 
 [workspace.dependencies.serial]
 path = "./common/serial"
