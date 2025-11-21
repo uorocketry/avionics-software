@@ -7,6 +7,7 @@ use embassy_stm32::usart::{Config, Instance, InterruptHandler, RxDma, RxPin, TxD
 use embassy_time::Timer;
 use embedded_io_async::Write;
 use heapless::String;
+use messages::argus::envelope::Node;
 use prost::Message;
 pub struct SerialService {
 	pub uart: Uart<'static, mode::Async>,
