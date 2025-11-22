@@ -3,14 +3,12 @@
 #![feature(impl_trait_in_assoc_type)]
 
 use defmt::info;
+use defmt_rtt as _;
 use embassy_executor::Spawner;
 use panic_probe as _;
 use phoenix::{
 	sound::service::SoundService,
-	utils::{
-		hal::{HEAP, configure_hal},
-		types::AsyncMutex,
-	},
+	utils::{hal::configure_hal, types::AsyncMutex},
 };
 use static_cell::StaticCell;
 
@@ -23,7 +21,6 @@ static MUSIC_SERVICE: StaticCell<AsyncMutex<phoenix::music::service::MusicServic
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	let p = configure_hal();
-	info!("Heap usage: {} bytes", HEAP.used());
 
 	let sound = SOUND_SERVICE.init(AsyncMutex::new(SoundService::new(p.TIM3, p.PC6)));
 

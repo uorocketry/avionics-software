@@ -67,7 +67,7 @@ dependencies = [
  "defmt 0.3.100",
  "defmt-rtt",
  "embassy-embedded-hal 0.3.2",
- "embassy-executor 0.7.0",
+ "embassy-executor",
  "embassy-futures",
  "embassy-net",
  "embassy-stm32",
@@ -82,7 +82,7 @@ dependencies = [
  "embedded-nal-async",
  "embedded-sdmmc",
  "embedded-storage",
- "embedded-test 0.6.2",
+ "embedded-test",
  "enum_dispatch",
  "grounded",
  "heapless 0.9.1",
@@ -318,18 +318,8 @@ version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc7f46116c46ff9ab3eb1597a45688b6715c6e628b5c133e288e709a29bcb4ee"
 dependencies = [
- "darling_core 0.20.11",
- "darling_macro 0.20.11",
-]
-
-[[package]]
-name = "darling"
-version = "0.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cdf337090841a411e2a7f3deb9187445851f91b309c0c0a29e05f74a00a48c0"
-dependencies = [
- "darling_core 0.21.3",
- "darling_macro 0.21.3",
+ "darling_core",
+ "darling_macro",
 ]
 
 [[package]]
@@ -347,37 +337,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "darling_core"
-version = "0.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1247195ecd7e3c85f83c8d2a366e4210d588e802133e1e355180a9870b517ea4"
-dependencies = [
- "fnv",
- "ident_case",
- "proc-macro2",
- "quote",
- "strsim",
- "syn 2.0.106",
-]
-
-[[package]]
 name = "darling_macro"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc34b93ccb385b40dc71c6fceac4b2ad23662c7eeb248cf10d529b7e055b6ead"
 dependencies = [
- "darling_core 0.20.11",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "darling_macro"
-version = "0.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d38308df82d1080de0afee5d069fa14b0326a88c14f15c5ccda35b4a6c414c81"
-dependencies = [
- "darling_core 0.21.3",
+ "darling_core",
  "quote",
  "syn 2.0.106",
 ]
@@ -507,21 +472,7 @@ dependencies = [
  "critical-section",
  "defmt 0.3.100",
  "document-features",
- "embassy-executor-macros 0.6.2",
-]
-
-[[package]]
-name = "embassy-executor"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06070468370195e0e86f241c8e5004356d696590a678d47d6676795b2e439c6b"
-dependencies = [
- "cortex-m",
- "critical-section",
- "defmt 1.0.1",
- "document-features",
- "embassy-executor-macros 0.7.0",
- "embassy-executor-timer-queue",
+ "embassy-executor-macros",
 ]
 
 [[package]]
@@ -530,29 +481,11 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3577b1e9446f61381179a330fc5324b01d511624c55f25e3c66c9e3c626dbecf"
 dependencies = [
- "darling 0.20.11",
+ "darling",
  "proc-macro2",
  "quote",
  "syn 2.0.106",
 ]
-
-[[package]]
-name = "embassy-executor-macros"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfdddc3a04226828316bf31393b6903ee162238576b1584ee2669af215d55472"
-dependencies = [
- "darling 0.20.11",
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "embassy-executor-timer-queue"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fc328bf943af66b80b98755db9106bf7e7471b0cf47dc8559cd9a6be504cc9c"
 
 [[package]]
 name = "embassy-futures"
@@ -746,7 +679,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc55c748d16908a65b166d09ce976575fb8852cf60ccd06174092b41064d8f83"
 dependencies = [
- "embassy-executor 0.7.0",
+ "embassy-executor",
  "heapless 0.8.0",
 ]
 
@@ -947,8 +880,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebf10fe8d8fcdca0d69d961e2ffdc51b5101811649342078d4efa8ca2370fe17"
 dependencies = [
  "defmt 1.0.1",
- "embassy-executor 0.7.0",
- "embedded-test-macros 0.6.1",
+ "embassy-executor",
+ "embedded-test-macros",
  "heapless 0.8.0",
  "semihosting",
  "serde",
@@ -956,44 +889,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "embedded-test"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0412372bfbc3b737b1e68ad0c199983455d98e9aa8bf6c9495de83cef08444f9"
-dependencies = [
- "defmt 1.0.1",
- "embassy-executor 0.9.1",
- "embedded-test-linker-script",
- "embedded-test-macros 0.7.0",
- "semihosting",
-]
-
-[[package]]
-name = "embedded-test-linker-script"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "892fd6c812db2dc4fde8cac39717b772661bb26b24cd54cb5d6d89b37b5cd8c2"
-
-[[package]]
 name = "embedded-test-macros"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "832520ef06a9dd2970a9106f94aca45dc47b746d14dbecc0819a47a7b5c1b5be"
 dependencies = [
- "darling 0.20.11",
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "embedded-test-macros"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "915da3553882d09e9f8a718b19bc90931a414c0a66f9bbefa23e21f2832dc7c7"
-dependencies = [
- "darling 0.21.3",
- "proc-macro-error2",
+ "darling",
  "proc-macro2",
  "quote",
  "syn 2.0.106",
@@ -1529,12 +1430,11 @@ dependencies = [
  "cortex-m-rt",
  "defmt 0.3.100",
  "defmt-rtt",
- "embassy-executor 0.9.1",
+ "embassy-executor",
  "embassy-stm32",
  "embassy-sync 0.6.2",
- "embassy-time 0.5.0",
+ "embassy-time 0.4.0",
  "embedded-alloc",
- "embedded-test 0.7.0",
  "panic-probe",
  "static_cell",
 ]

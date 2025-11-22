@@ -1,22 +1,10 @@
 //! Setup and configuration of the HAL.
-use core::mem::MaybeUninit;
-
 use embassy_stm32::{
 	Config, Peripherals, init,
 	rcc::{AHBPrescaler, APBPrescaler, HSIPrescaler, Pll, PllDiv, PllMul, PllPreDiv, PllSource, Sysclk, VoltageScale},
 };
-use embedded_alloc::LlffHeap as Heap;
-
-const HEAP_SIZE: usize = 40_000;
-
-#[global_allocator]
-pub static HEAP: Heap = Heap::empty();
 
 pub fn configure_hal() -> Peripherals {
-	static mut HEAP_MEMORY: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
-
-	unsafe { HEAP.init(&raw mut HEAP_MEMORY as usize, HEAP_SIZE) }
-
 	let mut config = Config::default();
 
 	// Clock configuration
