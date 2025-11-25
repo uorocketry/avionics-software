@@ -18,18 +18,18 @@ pub const TEMPO: f32 = 120.0;
 pub const PLAYLIST: [Melody; 2] = [MARIO_MELODY, TWINKLE_MELODY];
 
 pub const MARIO_MELODY: Melody = &[
-	(E5, 1.0),
-	(E5, 1.0),
-	(Rest, 1.0),
-	(E5, 1.0),
-	(Rest, 1.0),
-	(C5, 1.0),
-	(E5, 1.0),
-	(Rest, 1.0),
-	(G5, 2.0),
-	(Rest, 2.0),
-	(G4, 2.0),
-	(Rest, 2.0),
+	(E5, 0.25),
+	(E5, 0.25),
+	(Rest, 0.25),
+	(E5, 0.25),
+	(Rest, 0.25),
+	(C5, 0.25),
+	(E5, 0.25),
+	(Rest, 0.25),
+	(G5, 0.5),
+	(Rest, 0.5),
+	(G4, 0.5),
+	(Rest, 0.5),
 ];
 
 /// Melody for "Twinkle, Twinkle, Little Star"
