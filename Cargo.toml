@@ -1,61 +1,41 @@
 [workspace]
 resolver = "2"
 
-members = ["boards/*", "common/*", "apps/sergw"]
+members = ["apps/sergw", "boards/*", "common/*"]
 
 # Specify which members to build by default. Some libraries, such as messages, contain dev-dependencies that will give
 # compile errors if built directly.
 default-members = ["boards/*"]
 
-[workspace.dependencies.chrono]
-git = "https://github.com/uorocketry/chrono"
-default-features = false
-
-[workspace.dependencies.cortex-m]
-version = "0.7.6"
-features = ["critical-section-single-core"]
-
-[workspace.dependencies.prost]
-version = "0.14.1"
-features = ["derive"]
-default-features = false
-
-[workspace.dependencies.cortex-m-rt]
-version = "0.7.1"
-
-[workspace.dependencies.defmt]
-version = "0.3.2"
-
-[workspace.dependencies.defmt-rtt]
-version = "0.4"
-
-[workspace.dependencies.embedded-alloc]
-version = "0.6.0"
-
-[workspace.dependencies.enum_dispatch]
-version = "0.3.11"
-
-[workspace.dependencies.heapless]
-version = "0.9.1"
-
-[workspace.dependencies.messages]
-path = "./common/messages"
-
-[workspace.dependencies.nb]
-version = "1.1.0"
-
-[workspace.dependencies.panic-probe]
-version = "0.3"
-features = ["print-defmt"]
-
-[workspace.dependencies.serde]
-version = "1.0.150"
-default-features = false
-features = ["derive"]
-
-[workspace.dependencies.serde-csv-core]
-version = "0.3.2"
-features = ["defmt"]
-
-[workspace.dependencies.smlang]
-version = "0.8.0"
+# Here we put together any dependencies that are used basically everywhere, and allow for more consistency between packages, and a smoother dependency upgrade experience
+# Only minimal feature flags are enabled here, due to the additive nature of inheriting workspace dependencies (can only add feature flags when inheriting, not remove any)
+# NOTE: defmt compatibility feature flags are enabled when available here, unsure how desirable this is
+[workspace.dependencies]
+chrono = { git = "https://github.com/uorocketry/chrono", default-features = false }
+cortex-m = { version = "0.7.6", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7.1"
+critical-section = "1.1"
+csv = { path = './common/csv' }
+defmt = "0.3.2"
+defmt-rtt = "0.4"
+embassy-embedded-hal = { version = "0.3.0", features = ["defmt"] }
+embassy-executor = { version = "0.7.0", features = ["defmt"] }
+embassy-futures = { version = "0.1.0", features = ["defmt"] }
+embassy-net = { version = "0.7.0", features = ["defmt"] }
+embassy-stm32 = { version = "0.2.0", features = ["defmt"] }
+embassy-sync = { version = "0.6.2", features = ["defmt"] }
+embassy-time = { version = "0.4.0", features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+] }
+embassy-usb = { version = "0.4.0", features = ["defmt"] }
+embedded-alloc = "0.6.0"
+enum_dispatch = "0.3.11"
+heapless = "0.9.1"
+messages = { path = "./common/messages" }
+nb = "1.1.0"
+panic-probe = { version = "0.3", features = ["print-defmt"] }
+prost = { version = "0.14.1", default-features = false, features = ["derive"] }
+serde = { version = "1.0.150", features = ["derive"], default-features = false }
+serde-csv-core = { version = "0.3.2", features = ["defmt"] }
+smlang = "0.8.0"
