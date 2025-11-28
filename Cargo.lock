@@ -1543,6 +1543,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "phoenix"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt 0.3.100",
+ "defmt-rtt",
+ "embassy-executor",
+ "embassy-stm32",
+ "embassy-sync 0.6.2",
+ "embassy-time 0.4.0",
+ "embedded-alloc",
+ "panic-probe",
+ "static_cell",
+]
+
+[[package]]
 name = "pid"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
