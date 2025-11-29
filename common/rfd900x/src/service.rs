@@ -1,20 +1,8 @@
 use core::fmt::Write;
 
-use defmt::info;
-use embassy_stm32::usart;
-use embassy_stm32::{
-	Peripheral,
-	can::config,
-	interrupt::typelevel::Binding,
-	pac::usart::Usart,
-	sai::B,
-	usart::{Instance, InterruptHandler, RxDma, RxPin, TxDma, TxPin, Uart},
-};
 use embassy_time::{self, Duration, Timer};
 use embedded_io_async::ErrorType;
 use heapless::String;
-use messages::argus::envelope::Node;
-use serial_ring_buffered::service::RingBufferedSerialService;
 use utils::serial::traits::AsyncSerialProvider;
 
 use crate::config::*;

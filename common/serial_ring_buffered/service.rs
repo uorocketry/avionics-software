@@ -1,16 +1,11 @@
-use defmt::info;
 use embassy_stm32::interrupt::typelevel::Binding;
 use embassy_stm32::mode::{self, Async};
 use embassy_stm32::usart::{Config, Instance, InterruptHandler, RxDma, RxPin, TxDma, TxPin, Uart};
 use embassy_stm32::usart::{ConfigError, RingBufferedUartRx, UartTx};
 use embassy_stm32::{Peripheral, usart};
-use embassy_time::Timer;
 use embedded_io::ReadReady;
 use embedded_io_async::{Error, ErrorType, Read, Write};
-use heapless::String;
 use messages::argus::envelope::Node;
-use messages::argus::envelope::{Envelope, envelope::Message as EnvelopeMessage};
-use prost::Message;
 use utils::serial::traits::{AsyncSerialError, AsyncSerialProvider};
 
 #[derive(Debug)]
