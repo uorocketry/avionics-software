@@ -15,7 +15,7 @@ chrono = { git = "https://github.com/uorocketry/chrono", default-features = fals
 cortex-m = { version = "0.7.6", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7.1"
 critical-section = "1.1"
-csv = { path = './common/csv' }
+csv = { path = "./common/csv" }
 defmt = "0.3.2"
 defmt-rtt = "0.4"
 embassy-embedded-hal = { version = "0.3.0", features = ["defmt"] }
