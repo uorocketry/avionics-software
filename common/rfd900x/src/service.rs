@@ -318,26 +318,3 @@ pub fn number_of_digits(n: u32) -> usize {
 	}
 	digits
 }
-
-// /// Extracts the ascii representation of a digit in a specific positon, where i is the position in 10^i
-// fn extract_ascii(
-// 	n: u32,
-// 	i: u32,
-// ) -> u8 {
-// 	let extract_divisor = 10_u32.pow(i);
-// 	(((n / extract_divisor) % 10) + ASCII_NUMBER_OFFSET) as u8
-// }
-
-// /// Converts a u32 into a its ascii form, returns number of digits in array
-// pub fn prepare_for_register(
-// 	val: u32,
-// 	buffer: &mut [u8],
-// ) -> usize {
-// 	let mut len = number_of_digits(val);
-
-// 	for i in (0..len).rev() {
-// 		buffer[(len - 1) - i] = extract_ascii(val, i as u32);
-// 	}
-
-// 	return len;
-// }
