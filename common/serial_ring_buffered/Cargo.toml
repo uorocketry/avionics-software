@@ -1,12 +1,18 @@
 [package]
-name = "serial"
+name = "serial_ring_buffered"
 version = "0.1.0"
 edition = "2024"
 
 
+[lib]
+path = "lib.rs"
+
 # Trim out unused dependencies
 [dependencies]
+
+
 chrono = { workspace = true }
+
 cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
 critical-section = "1.1"
@@ -54,6 +60,7 @@ embedded-alloc = { workspace = true }
 embedded-hal = { version = "1.0.0", features = ["defmt-03"] }
 embedded-hal-async = { version = "1.0" }
 embedded-hal-bus = { version = "0.3.0", features = ["async", "defmt-03"] }
+embedded-io = "0.6.1"
 embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
 embedded-nal-async = "0.8.0"
 embedded-sdmmc = { version = "0.9.0", default-features = false, features = [
@@ -80,6 +87,3 @@ static_cell = "2"
 stm32-fmc = "0.3.0"
 strum = { version = "0.27.2", default-features = false, features = ["derive"] }
 utils = { workspace = true }
-
-[lib]
-path = "lib.rs"

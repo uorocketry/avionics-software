@@ -1373,12 +1373,25 @@ version = "0.13.1"
 source = "git+https://github.com/uorocketry/rust-mavlink.git#e9f4057deedce85cae542fdbef75c5f56a360c9c"
 dependencies = [
  "bitflags 1.3.2",
- "mavlink-bindgen",
- "mavlink-core",
- "num-derive",
+ "mavlink-bindgen 0.13.1",
+ "mavlink-core 0.13.1",
+ "num-derive 0.3.3",
  "num-traits",
  "serde",
  "serde_arrays",
+]
+
+[[package]]
+name = "mavlink"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cad9bd7a9d546da9d25e692ac0a276f0fb7df4b412ae06a07ec473ac90cb588"
+dependencies = [
+ "bitflags 2.9.2",
+ "mavlink-bindgen 0.16.2",
+ "mavlink-core 0.16.2",
+ "num-derive 0.4.2",
+ "num-traits",
 ]
 
 [[package]]
@@ -1389,9 +1402,24 @@ dependencies = [
  "crc-any",
  "lazy_static",
  "proc-macro2",
- "quick-xml",
+ "quick-xml 0.26.0",
  "quote",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "mavlink-bindgen"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70320e411d3daf25576e94b919dc1787bfe7b0384076ddca2cf3b7ccb120da1e"
+dependencies = [
+ "crc-any",
+ "lazy_static",
+ "proc-macro2",
+ "quick-xml 0.38.4",
+ "quote",
+ "regex",
+ "thiserror 2.0.15",
 ]
 
 [[package]]
@@ -1409,8 +1437,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "mavlink-core"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfff2f6e0215164e3f3c26168a028cdfd0b24eddf1744dc81f8b3dbdb28f45ab"
+dependencies = [
+ "byteorder",
+ "crc-any",
+ "embedded-io",
+ "embedded-io-async",
+]
+
+[[package]]
 name = "mavlink_device"
 version = "0.1.0"
+dependencies = [
+ "defmt 0.3.100",
+ "defmt-rtt",
+ "embassy-executor",
+ "embassy-time 0.4.0",
+ "embedded-io-async",
+ "mavlink 0.16.2",
+ "utils",
+]
 
 [[package]]
 name = "memchr"
@@ -1426,7 +1475,7 @@ dependencies = [
  "defmt 0.3.100",
  "glob",
  "heapless 0.9.2",
- "mavlink",
+ "mavlink 0.13.1",
  "prost",
  "prost-build",
  "protoc-bin-vendored",
@@ -1496,53 +1545,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "node"
-version = "0.1.0"
-dependencies = [
- "chrono 0.4.38",
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "csv",
- "defmt 0.3.100",
- "defmt-rtt",
- "derive_more",
- "embassy-embedded-hal 0.3.2",
- "embassy-executor",
- "embassy-futures",
- "embassy-net",
- "embassy-stm32",
- "embassy-sync 0.6.2",
- "embassy-time 0.4.0",
- "embassy-usb",
- "embedded-alloc",
- "embedded-hal 1.0.0",
- "embedded-hal-async",
- "embedded-hal-bus",
- "embedded-io-async",
- "embedded-nal-async",
- "embedded-sdmmc",
- "embedded-storage",
- "embedded-test",
- "enum_dispatch",
- "grounded",
- "heapless 0.9.2",
- "itoa",
- "libm",
- "messages",
- "micromath",
- "num-traits",
- "panic-probe",
- "pid",
- "prost",
- "serde",
- "smlang",
- "static_cell",
- "stm32-fmc",
- "strum",
-]
-
-[[package]]
 name = "num-derive"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1551,6 +1553,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "num-derive"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -1608,8 +1621,12 @@ dependencies = [
  "embassy-stm32",
  "embassy-time 0.4.0",
  "embedded-test",
+ "mavlink 0.16.2",
+ "mavlink_device",
+ "messages",
  "panic-probe",
  "rfd900x",
+ "serial_ring_buffered",
  "static_cell",
  "utils",
 ]
@@ -1814,6 +1831,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "quick-xml"
+version = "0.38.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b66c2058c55a409d601666cffe35f04333cf1013010882cec174a7467cd4e21c"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1878,7 +1904,9 @@ dependencies = [
  "embedded-io-async",
  "embedded-nal-async",
  "heapless 0.9.2",
- "serial 0.1.0",
+ "messages",
+ "serial_ring_buffered",
+ "utils",
 ]
 
 [[package]]
@@ -2079,7 +2107,6 @@ dependencies = [
  "libm",
  "messages",
  "micromath",
- "node",
  "num-traits",
  "panic-probe",
  "pid",
@@ -2089,6 +2116,7 @@ dependencies = [
  "static_cell",
  "stm32-fmc",
  "strum",
+ "utils",
 ]
 
 [[package]]
@@ -2131,6 +2159,55 @@ checksum = "15c6d3b776267a75d31bbdfd5d36c0ca051251caafc285827052bc53bcdc8162"
 dependencies = [
  "libc",
  "serial-core",
+]
+
+[[package]]
+name = "serial_ring_buffered"
+version = "0.1.0"
+dependencies = [
+ "chrono 0.4.38",
+ "cortex-m",
+ "cortex-m-rt",
+ "critical-section",
+ "csv",
+ "defmt 0.3.100",
+ "defmt-rtt",
+ "derive_more",
+ "embassy-embedded-hal 0.3.2",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-net",
+ "embassy-stm32",
+ "embassy-sync 0.6.2",
+ "embassy-time 0.4.0",
+ "embassy-usb",
+ "embedded-alloc",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+ "embedded-hal-bus",
+ "embedded-io",
+ "embedded-io-async",
+ "embedded-nal-async",
+ "embedded-sdmmc",
+ "embedded-storage",
+ "embedded-test",
+ "enum_dispatch",
+ "grounded",
+ "heapless 0.9.2",
+ "itoa",
+ "libm",
+ "messages",
+ "micromath",
+ "num-traits",
+ "panic-probe",
+ "pid",
+ "prost",
+ "serde",
+ "smlang",
+ "static_cell",
+ "stm32-fmc",
+ "strum",
+ "utils",
 ]
 
 [[package]]

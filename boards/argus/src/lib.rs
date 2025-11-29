@@ -5,6 +5,7 @@
 pub mod adc;
 pub mod led_indicator;
 pub mod linear_transformation;
+pub mod node;
 pub mod sd;
 pub mod session;
 pub mod state_machine;

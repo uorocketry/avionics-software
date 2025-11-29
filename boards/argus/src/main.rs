@@ -8,6 +8,7 @@ compile_error!("You must enable exactly one of the features: 'pressure', 'temper
 use argus::adc::service::{AdcConfig, AdcService};
 use argus::adc::types::AdcDevice;
 use argus::led_indicator::service::LedIndicatorService;
+use argus::node::node::CURRENT_NODE;
 use argus::sd::service::SDCardService;
 use argus::sd::task::sd_card_task;
 use argus::session::service::SessionService;
@@ -17,9 +18,11 @@ use defmt::info;
 use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::Pin;
+use embassy_stm32::usart::Uart;
 use embassy_stm32::{bind_interrupts, peripherals, usart};
 use messages::argus::envelope::{Node, NodeType};
 use panic_probe as _;
+use serde::ser;
 use serial::service::SerialService;
 use static_cell::StaticCell;
 use strum::EnumCount;
@@ -38,35 +41,25 @@ static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new()
 static SESSION_SERVICE: StaticCell<AsyncMutex<SessionService>> = StaticCell::new();
 static LED_INDICATOR_SERVICE: StaticCell<AsyncMutex<LedIndicatorService<2>>> = StaticCell::new();
 static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrator>> = StaticCell::new();
-// static NODE_TYPE: StaticCell<Node> = StaticCell::new();
+// static CURRENT_NODE: StaticCell<Node> = StaticCell::new();
 
 #[cfg(feature = "temperature")]
 static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::TemperatureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
-#[cfg(feature = "temperature")]
-static NODE_TYPE: Node = Node {
-	r#type: NodeType::ArgusTemperature as i32,
-	id: Some(0),
-};
 
 #[cfg(feature = "pressure")]
 static PRESSURE_SERVICE: StaticCell<AsyncMutex<argus::pressure::service::PressureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
-#[cfg(feature = "pressure")]
-static NODE_TYPE: Node = Node {
-	r#type: NodeType::ArgusPressure as i32,
-	id: Some(0),
-};
 
 #[cfg(feature = "strain")]
 static STRAIN_SERVICE: StaticCell<AsyncMutex<argus::strain::service::StrainService<{ AdcDevice::COUNT }>>> = StaticCell::new();
-#[cfg(feature = "strain")]
-static NODE_TYPE: Node = Node {
-	r#type: NodeType::ArgusStrain as i32,
-	id: Some(0),
-};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
+
+	let mut serial_config = usart::Config::default();
+
+	serial_config.baudrate = 115200;
+
 	let peripherals = configure_hal();
 	let sd_card_service = SD_CARD_SERVICE.init(AsyncMutex::new(SDCardService::new(
 		peripherals.SPI1,
@@ -110,8 +103,8 @@ async fn main(spawner: Spawner) {
 			InterruptRequests,
 			peripherals.DMA1_CH2,
 			peripherals.DMA1_CH3,
-			115200,
-			NODE_TYPE,
+			CURRENT_NODE,
+			serial_config,
 		)
 		.unwrap(),
 	));
