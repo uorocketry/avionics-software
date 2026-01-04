@@ -1,5 +1,6 @@
 use core::fmt::Write;
 
+use defmt::info;
 use embassy_time::{self, Duration, Timer};
 use embedded_io_async::ErrorType;
 use heapless::String;
@@ -29,7 +30,8 @@ impl embedded_io_async::Error for RFD900XError {
 
 #[derive(Copy, Clone, Debug, defmt::Format)]
 pub struct Config {
-	pub air_speed: u8,
+	pub serial_speed: u16,
+	pub air_speed: u16,
 	pub net_id: u8,
 	pub tx_power: u8,
 	pub ecc: bool,
@@ -47,8 +49,10 @@ pub struct Config {
 impl Config {
 	/// asserts are there to check that entered values are valid (transmit power isnt too high, frequency isnt too high, etc) according to docs
 	pub fn new(
+		// Baud rate of uart line
+		serial_speed: u16,
 		// Air data rate (Needs to be same for both modems)
-		air_speed: u8,
+		air_speed: u16,
 		// Network ID. (Needs to be same for both modems)
 		net_id: u8,
 		// Transmit power in dBm. Maximum is 30dBm (Parameter does not need to be same for both radios)
@@ -75,6 +79,7 @@ impl Config {
 		encryption_level: EncryptionLevel,
 	) -> Result<Config, ConfigurationError> {
 		let config = Config {
+			serial_speed: serial_speed,
 			air_speed: air_speed,
 			net_id: net_id,
 			tx_power: tx_power,
@@ -97,7 +102,10 @@ impl Config {
 
 	/// Checks a config agaisnt min and max as specified in the datasheet. True indicates that a config is valid
 	pub fn check(&self) -> bool {
-		if (self.air_speed < 12 || self.air_speed > 250) {
+		if (self.serial_speed < 1 || self.serial_speed > 1000) {
+			return false;
+		}
+		if (self.air_speed < 12 || self.air_speed > 750) {
 			return false;
 		} else if (self.net_id > 55) {
 			return false;
@@ -123,6 +131,7 @@ impl Config {
 impl Default for Config {
 	fn default() -> Self {
 		Self {
+			serial_speed: SERIAL_SPEED_DEFAULT,
 			air_speed: AIR_SPEED_DEFAULT,
 			net_id: NET_ID_DEFAULT,
 			tx_power: TX_POWER_DEFAULT,
@@ -193,6 +202,7 @@ where
 			return Err(ConfigurationError::InvalidConfig);
 		}
 
+		self.write_register_with_delay(Registers::SerialSpeed, config.serial_speed as u32).await;
 		self.write_register_with_delay(Registers::AirSpeed, config.air_speed as u32).await;
 		self.write_register_with_delay(Registers::NetId, config.net_id as u32).await;
 		self.write_register_with_delay(Registers::TxPower, config.tx_power as u32).await;

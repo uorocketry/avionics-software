@@ -69,11 +69,25 @@ path = "./common/utils"
 [workspace.dependencies.rfd900x]
 path = "./common/rfd900x"
 
-[workspace.dependencies.mavlink_device]
-path = "./common/mavlink_device"
+[workspace.dependencies.mavlink]
+path = "./common/mavlink_dialect"
+
+# TODO: Rename mavlink_XXX to uor_mavlink_XXX to show that it is unaffiliated with the actual mavlink crate
+[workspace.dependencies.mavlink_communications]
+path = "./common/mavlink_communications"
+
+[workspace.dependencies.mavlink_communications_traits]
+path = "./common/mavlink_communications_traits"
+default-features = false
+[workspace.dependencies.mavlink_communications_macros]
+path = "./common/mavlink_communications_macros"
+
+[workspace.dependencies.mavlink_service]
+path = "./common/mavlink_service"
 
 [workspace.dependencies.nb]
 version = "1.1.0"
+default-features = false
 
 [workspace.dependencies.panic-probe]
 version = "0.3"

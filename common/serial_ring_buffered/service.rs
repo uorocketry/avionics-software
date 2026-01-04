@@ -1,3 +1,4 @@
+use defmt::info;
 use embassy_stm32::interrupt::typelevel::Binding;
 use embassy_stm32::mode::{self, Async};
 use embassy_stm32::usart::{Config, Instance, InterruptHandler, RxDma, RxPin, TxDma, TxPin, Uart};
@@ -103,7 +104,7 @@ impl RingBufferedSerialService {
 				}
 			}
 			Err(error) => {
-				// Overruns can still contain valid data if the buffer has not been read from for a while (This may induce packet loss)
+				// Overruns can still contain valid data if the buffer has not been read from for a while (early packets are more likley to be invalid however)
 				if error == usart::Error::Overrun {
 					match self.rx_component.read(buff).await {
 						Ok(len) => {
