@@ -1,1 +1,1 @@
-Contains the publisher and subscribers used to transmit and recieve mavlink frames
+Contains the publisher and subscribers used to transmit and receive mavlink frames

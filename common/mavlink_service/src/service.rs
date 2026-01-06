@@ -123,26 +123,6 @@ where
 		self.io_service.write(buf).await;
 	}
 
-	pub async fn send_heartbeat(&mut self) -> Result<(), MavlinkError> {
-		// Header and payload data for frame
-		info!("Sending heartbeat");
-		let header = MavHeader {
-			system_id: 1,
-			component_id: 1,
-			sequence: self.internal_sequence,
-		};
-		let payload = HEARTBEAT_DATA {
-			custom_mode: 0,
-			mavtype: self.mav_type,
-			autopilot: self.autopilot,
-			base_mode: self.current_system_mode,
-			system_status: self.current_system_state,
-			mavlink_version: 0x3,
-		};
-
-		self.write_frame(header, payload).await
-	}
-
 	pub async fn update(&mut self) {
 		match self.current_system_state {
 			MavState::MAV_STATE_UNINIT => self.set_state(MavState::MAV_STATE_BOOT),
@@ -198,16 +178,5 @@ where
 		state: MavState,
 	) {
 		self.current_system_state = state;
-	}
-}
-
-pub async fn start_heartbeat_loop<T>(mavlink_service: &'static AsyncMutex<MavlinkService<T>>)
-where
-	T: Read + Write, {
-	loop {
-		mavlink_service.lock().await.send_heartbeat().await;
-		info!("Sent heartbeat");
-
-		Timer::after(Duration::from_millis(1000)).await;
 	}
 }

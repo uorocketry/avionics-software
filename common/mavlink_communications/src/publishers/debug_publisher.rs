@@ -14,7 +14,6 @@ use utils::types::AsyncMutex;
 pub struct DebugDataPublisher<const N: usize> {
 	buffer: RingBuffer<DEBUG_DATA, N>,
 }
-
 impl<const N: usize> DebugDataPublisher<N> {
 	pub fn new(
 		timestamp: u32,
@@ -27,7 +26,6 @@ impl<const N: usize> DebugDataPublisher<N> {
 	pub fn push(
 		&mut self,
 		mut value: DEBUG_DATA,
-		index: u8,
 	) {
 		// TODO: Check if we want this to be automatic or set by the application using the publisher
 		value.time_boot_ms = Instant::now().as_millis() as u32;

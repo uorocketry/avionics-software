@@ -26,14 +26,11 @@ macro_rules! initialize_task_pool {
 				let mut delay;
 				{
 					let mut mavlink = mavlink_mutex.lock().await;
-					// This should be encapuslated by the publisher struct
-					// Struct should hold a reference to the mavlink service (the IO service)
-					// !!! ABOVE IS NO LONGER TRUE, PRIOR LOGIC IS NOW ENCAPSULATED ^^^^ !!!
 					let mut publisher = publisher.lock().await;
 					let sequence = mavlink.get_internal_sequence();
 					delay = publisher.get_delay().clone();
-					publisher.publish(&mut mavlink.write_buffer, sequence);
-					// warn!("A publisher published!");
+					let len = publisher.publish(&mut mavlink.write_buffer, sequence);
+					mavlink.write_internal(len).await;
 				}
 				Timer::after(delay).await;
 			}

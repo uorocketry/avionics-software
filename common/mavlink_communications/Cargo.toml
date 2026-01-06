@@ -5,9 +5,13 @@ edition = "2024"
 
 [dependencies]
 mavlink = { features = ["common"], workspace = true }
+mavlink_service = { workspace = true }
 
 mavlink_communications_traits = { workspace = true }
 mavlink_communications_macros = { workspace = true }
+rfd900x = { workspace = true }
+serial_ring_buffered = { workspace = true }
+
 embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
 embassy-executor = { version = "0.7.0", features = [
     "nightly",
