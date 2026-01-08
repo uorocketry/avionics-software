@@ -1,13 +1,12 @@
-use core::hint::select_unpredictable;
-
 use defmt::{self, info};
 use embassy_executor::{Spawner, task};
 use embassy_time::{Duration, Timer};
 use embedded_io_async::{Read, Write};
 use mavlink::{
-	MAVLinkV2MessageRaw, MAX_FRAME_SIZE, MavHeader, MessageData,
+	MAV_STX, MAVLinkMessageRaw, MAVLinkV1MessageRaw, MAVLinkV2MessageRaw, MAX_FRAME_SIZE, MavHeader, MessageData,
 	common::{HEARTBEAT_DATA, MavAutopilot, MavComponent, MavMessage, MavMode, MavModeFlag, MavState, MavType, PROTOCOL_VERSION_DATA},
-	read_v1_raw_message_async, read_v2_msg_async, read_v2_raw_message_async,
+	peek_reader::PeekReader,
+	read_v1_msg_async, read_v1_raw_message_async, read_v2_raw_message_async,
 };
 use utils::types::AsyncMutex;
 
@@ -16,7 +15,7 @@ use crate::data::SystemId;
 #[derive(Debug)]
 pub enum MavlinkError {
 	TransmitFailed,
-	RecieveFailed,
+	ReceiveFailed,
 	NoFrameAvailable,
 }
 
@@ -100,12 +99,22 @@ where
 		let current_sequence = self.internal_sequence.clone();
 		self.increment_internal_sequence();
 		return current_sequence;
+		MAV_STX
 	}
 
+	// TODO: THIS DOES NOT WORK. IF IT IS CALLED TO FREQUENTLY, FRAMES WILL BE TRUNCATED RESULTING IN PACKET LOSS.
+	// NEED TO USE A PEEKREADER BUT THEY DO NOT SUPPORT ASYNC. LOOK FOR A WORKAROUND
 	pub async fn read_frame(&mut self) -> Result<MAVLinkV2MessageRaw, MavlinkError> {
 		match read_v2_raw_message_async::<MavMessage>(&mut self.io_service).await {
 			Ok(frame) => Ok(frame),
-			Err(_) => Err(MavlinkError::RecieveFailed),
+			Err(_) => Err(MavlinkError::ReceiveFailed),
+		}
+	}
+
+	pub async fn read_v1_frame(&mut self) -> Result<MAVLinkV1MessageRaw, MavlinkError> {
+		match read_v1_raw_message_async::<MavMessage>(&mut self.io_service).await {
+			Ok(frame) => Ok(frame),
+			Err(_) => Err(MavlinkError::ReceiveFailed),
 		}
 	}
 

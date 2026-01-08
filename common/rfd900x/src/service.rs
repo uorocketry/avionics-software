@@ -268,7 +268,7 @@ impl<T> ErrorType for RFD900XService<T> {
 
 impl<T> embedded_io_async::Read for RFD900XService<T>
 where
-	T: AsyncSerialProvider,
+	T: embedded_io_async::Read,
 {
 	async fn read(
 		&mut self,
@@ -287,17 +287,12 @@ where
 		&mut self,
 		mut buf: &mut [u8],
 	) -> Result<(), embedded_io_async::ReadExactError<Self::Error>> {
-		while !buf.is_empty() {
-			match self.read(buf).await {
-				Ok(0) => break,
-				Ok(n) => buf = &mut buf[n..],
-				Err(e) => return Err(embedded_io_async::ReadExactError::Other(RFD900XError::ReadError)),
+		match self.io_service.read_exact(buf).await {
+			Ok(_) => {
+				// info!("Read {:?}", buf);
+				return Ok(());
 			}
-		}
-		if buf.is_empty() {
-			Ok(())
-		} else {
-			Err(embedded_io_async::ReadExactError::UnexpectedEof)
+			Err(e) => return Err(embedded_io_async::ReadExactError::Other(RFD900XError::ReadError)),
 		}
 	}
 }

@@ -1,17 +1,25 @@
+// TODO: Standardize use of proc_macro2 crate over proc_macro
+
 extern crate proc_macro;
-use std::{path::is_separator, process::id};
+use std::{
+	any::type_name,
+	path::is_separator,
+	process::{Output, id},
+};
 
 use mavlink_communications_traits::publish_subscribe_tools::publisher::Publisher;
-use proc_macro::{Ident, TokenStream};
+use proc_macro::{Ident, TokenStream, token_stream};
 use proc_macro2::Group;
 use quote::{quote, quote_spanned};
 use syn::{
-	Data, DeriveInput, Expr, Fields, GenericParam, LitBool, Meta, MetaList, MetaNameValue, Type, parenthesized, parse, parse_macro_input, parse2,
-	token::Static,
+	Data, DeriveInput, Expr, Fields, GenericArgument, GenericParam, LitBool, Meta, MetaList, MetaNameValue, Pat, PathArguments, Type, parenthesized,
+	parse, parse_macro_input, parse2, token::Static,
 };
 
-mod variants;
-use variants::*;
+mod publish_variants;
+use publish_variants::*;
+mod subscribe_variants;
+use subscribe_variants::*;
 mod utils;
 use utils::*;
 // TODO: Either move some of this shit into a macro or a function as the definition is getting way too long
@@ -21,14 +29,12 @@ use utils::*;
 #[proc_macro_derive(Publisher, attributes(configure_publisher))]
 pub fn derive_publish(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
-	let name = &input.ident;
+	let name: &syn::Ident = &input.ident;
 
 	let mut burst_mode = false;
 	let mut is_buffered = true;
 	let mut data_field = None;
 	let mut override_timestamp = true;
-
-	println!("{:#?}", &input);
 
 	// Parse macro attributes
 	let attrs = &input.attrs;
@@ -100,12 +106,13 @@ pub fn derive_publish(input: TokenStream) -> TokenStream {
 	}
 
 	if generic_ident.is_none() && is_buffered {
-		return TokenStream::from(syn::Error::new(input.ident.span(), "This type lacks the buffer size constant generic").to_compile_error());
+		return TokenStream::from(syn::Error::new(input.ident.span(), "This struct lacks the buffer size constant generic").to_compile_error());
 	}
 
 	// TODO: All below should be moved into a function to allow for easier configuration
 	// Check that named fields are present
 	let fields;
+
 	if let Fields::Named(struct_fields) = &data.fields {
 		fields = struct_fields;
 	} else {
@@ -124,7 +131,7 @@ pub fn derive_publish(input: TokenStream) -> TokenStream {
 			if let Type::Path(type_data) = &i.ty {
 				for x in &type_data.path.segments {
 					if x.ident == "RingBuffer" {
-						data_field = i.ident.clone()
+						data_field = i.ident.clone();
 					}
 				}
 			}
@@ -148,4 +155,90 @@ pub fn derive_publish(input: TokenStream) -> TokenStream {
 		output = select_buffered_mode_stream(generic_ident.as_ref().unwrap(), name, &data_field.as_ref().unwrap(), override_timestamp);
 	}
 	output.into()
+}
+
+#[proc_macro_derive(Subscriber, attributes(configure_subscriber))]
+pub fn derive_subscribe(input: TokenStream) -> TokenStream {
+	// TODO: Ensure that all variables take a reference to input, rather than copying/cloning
+	let input = parse_macro_input!(input as DeriveInput);
+	let name: &syn::Ident = &input.ident;
+
+	// let frame_type;
+
+	// Check that derive macro is applied to struct
+	let data;
+	if let Data::Struct(struct_data) = &input.data {
+		data = struct_data;
+	} else {
+		return TokenStream::from(syn::Error::new(input.ident.span(), "This derive macro must be applied to a struct").to_compile_error());
+	}
+
+	// Extract generics from unknown struct
+	let generics = &input.generics;
+	let mut generic_ident = None;
+
+	for i in &generics.params {
+		if let GenericParam::Const(param) = i {
+			generic_ident = Some(param.ident.clone());
+		}
+	}
+
+	if generic_ident.is_none() {
+		return TokenStream::from(syn::Error::new(input.ident.span(), "This struct lacks the buffer size constant generic").to_compile_error());
+	}
+
+	// Check that named fields are present
+	let fields;
+	if let Fields::Named(struct_fields) = &data.fields {
+		fields = struct_fields;
+	} else {
+		return TokenStream::from(
+			syn::Error::new(
+				input.ident.span(),
+				"This derive macro must be applied to a struct who posses named fields",
+			)
+			.to_compile_error(),
+		);
+	}
+
+	let mut name_of_type: Option<proc_macro2::Ident> = None;
+	let mut rb_ident = None;
+	for i in &fields.named {
+		if let Type::Path(type_data) = &i.ty {
+			for x in &type_data.path.segments {
+				if x.ident == "RingBuffer" {
+					rb_ident = i.ident.clone();
+					// Look for the type
+					// TODO: move this into a function
+					if let PathArguments::AngleBracketed(arguments) = x.arguments.clone() {
+						// Index of the type
+						// TODO: Get rid of this magic number, (0 is the index of the type name in the array arguments)
+						let arg = arguments.args.get(0);
+						if let None = arg {
+							println!("FUCK YOU");
+							return TokenStream::from(
+								syn::Error::new(input.ident.span(), "Array type is malformed. Insure that the type is defined").to_compile_error(),
+							);
+						}
+						// TODO: Add error shit for this block:
+						if let Some(GenericArgument::Type(Type::Path(path))) = arg {
+							// idfk, its needed to "chisel the ice" into the type
+							// TODO: Get rid of this magic number, (0 is the index of the type name in the array arguments)
+							if let Some(type_path) = path.path.segments.get(0) {
+								name_of_type = Some(type_path.ident.clone());
+							}
+						}
+						// TODO: END OF BLOCK
+					}
+				}
+			}
+		}
+	}
+
+	println!("{:#?}", input);
+	println!("{:?}", name_of_type);
+
+	// Unwrap on "name_of_type" should always resolve to Some(x), and is only used to get around the need to initialize the variable
+	let output = subscriber_stream(&generic_ident.unwrap(), name, &rb_ident.unwrap(), &name_of_type.unwrap());
+	return output.into();
 }

@@ -7,7 +7,7 @@ edition = "2024"
 mavlink = { features = ["common"], workspace = true }
 mavlink_service = { workspace = true }
 
-mavlink_communications_traits = { workspace = true }
+mavlink_communications_traits = { workspace = true, features = ["delayed"] }
 mavlink_communications_macros = { workspace = true }
 rfd900x = { workspace = true }
 serial_ring_buffered = { workspace = true }

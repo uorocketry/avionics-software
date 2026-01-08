@@ -173,3 +173,37 @@ impl AsyncSerialProvider for &mut RingBufferedSerialService {
 		}
 	}
 }
+
+impl embedded_io_async::Read for RingBufferedSerialService {
+	async fn read(
+		&mut self,
+		buf: &mut [u8],
+	) -> Result<usize, RingBufferedError> {
+		// info!("Reached point -1");
+		let response = self.rx_component.read(buf).await;
+
+		match response {
+			Ok(len) => return Ok(len),
+			Err(_) => return Err(RingBufferedError::ReadError),
+		}
+	}
+
+	async fn read_exact(
+		&mut self,
+		mut buf: &mut [u8],
+	) -> Result<(), embedded_io_async::ReadExactError<RingBufferedError>> {
+		while !buf.is_empty() {
+			match self.rx_component.read_exact(buf).await {
+				Ok(_) => {
+					return Ok(());
+				}
+				Err(e) => return Err(embedded_io_async::ReadExactError::Other(RingBufferedError::ReadError)),
+			}
+		}
+		if buf.is_empty() {
+			Ok(())
+		} else {
+			Err(embedded_io_async::ReadExactError::UnexpectedEof)
+		}
+	}
+}

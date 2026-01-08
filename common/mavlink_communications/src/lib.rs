@@ -3,5 +3,6 @@
 
 pub mod macros;
 pub mod publishers;
+pub mod subscribers;
 // Importing derive macros
-use mavlink_communications_macros::Publisher;
+use mavlink_communications_macros::{Publisher, Subscriber};
