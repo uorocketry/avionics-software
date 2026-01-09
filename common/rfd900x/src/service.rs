@@ -4,7 +4,9 @@ use defmt::info;
 use embassy_time::{self, Duration, Timer};
 use embedded_io_async::ErrorType;
 use heapless::String;
-use utils::serial::traits::AsyncSerialProvider;
+use serial_ring_buffered::service::RingBufferedSerialService;
+use serial_ring_buffered::service::RingBufferedSerialServiceRx;
+use serial_ring_buffered::service::RingBufferedSerialServiceTx;
 
 use crate::config::*;
 use crate::data::*;
@@ -149,19 +151,16 @@ impl Default for Config {
 	}
 }
 
-pub struct RFD900XService<T> {
-	io_service: T,
+pub struct RFD900XService {
+	io_service: RingBufferedSerialService,
 	config: Config,
 }
 
-impl<T> RFD900XService<T>
-where
-	T: AsyncSerialProvider,
-{
+impl RFD900XService {
 	pub async fn new(
-		io_service: T,
+		io_service: RingBufferedSerialService,
 		config: Config,
-	) -> RFD900XService<T> {
+	) -> RFD900XService {
 		let mut rfd_service = RFD900XService {
 			io_service: io_service,
 			config: config,
@@ -178,7 +177,7 @@ where
 		&mut self,
 		data: &[u8],
 	) -> Result<(), RFD900XError> {
-		match self.io_service.write(data).await {
+		match self.io_service.tx_component.write(data).await {
 			Ok(_) => Ok(()),
 			Err(_) => Err(RFD900XError::WriteError),
 		}
@@ -256,26 +255,30 @@ where
 		payload[end_of_payload_offset..end_of_payload_offset + 2].copy_from_slice(b"\r\n");
 
 		self.io_service
+			.tx_component
 			.write(&payload[0..end_of_payload_offset + 2])
 			.await
 			.expect("Failed to write over uart");
 	}
+
+	/// WARNING, ALL CONFIGURATION MUST BE DONE BEFORE THE SPLIT (UNLESS I DECIDE TO PORT THE FUNCTION TO THE RESPECTIVE ELEMENT)
+	pub fn split(self) -> (RFD900Tx, RFD900Rx) {
+		let io_split = self.io_service.split();
+		return (RFD900Tx { component: io_split.0 }, RFD900Rx { component: io_split.1 });
+	}
 }
 
-impl<T> ErrorType for RFD900XService<T> {
+impl ErrorType for RFD900XService {
 	type Error = RFD900XError;
 }
 
-impl<T> embedded_io_async::Read for RFD900XService<T>
-where
-	T: embedded_io_async::Read,
-{
+impl embedded_io_async::Read for RFD900XService {
 	async fn read(
 		&mut self,
 		buf: &mut [u8],
 	) -> Result<usize, RFD900XError> {
 		// info!("Reached point -1");
-		let response = self.io_service.read(buf).await;
+		let response = self.io_service.rx_component.read(buf).await;
 
 		match response {
 			Ok(len) => return Ok(len),
@@ -297,15 +300,12 @@ where
 	}
 }
 
-impl<T> embedded_io_async::Write for RFD900XService<T>
-where
-	T: AsyncSerialProvider,
-{
+impl embedded_io_async::Write for RFD900XService {
 	async fn write(
 		&mut self,
 		buf: &[u8],
 	) -> Result<usize, RFD900XError> {
-		let response = self.io_service.write(buf).await;
+		let response = self.io_service.tx_component.write(buf).await;
 		match response {
 			Ok(_) => return Ok(buf.len()),
 			Err(_) => return Err(RFD900XError::UsartError),
@@ -322,4 +322,66 @@ pub fn number_of_digits(n: u32) -> usize {
 		digits += 1;
 	}
 	digits
+}
+
+pub struct RFD900Tx {
+	pub component: RingBufferedSerialServiceTx,
+}
+
+impl ErrorType for RFD900Tx {
+	type Error = RFD900XError;
+}
+
+impl embedded_io_async::Write for RFD900Tx {
+	async fn write(
+		&mut self,
+		buf: &[u8],
+	) -> Result<usize, Self::Error> {
+		match self.component.write(buf).await {
+			Ok(size) => Ok(size),
+			Err(_) => Err(RFD900XError::WriteError),
+		}
+	}
+}
+
+pub struct RFD900Rx {
+	pub component: RingBufferedSerialServiceRx,
+}
+
+impl ErrorType for RFD900Rx {
+	type Error = RFD900XError;
+}
+
+impl embedded_io_async::Read for RFD900Rx {
+	async fn read(
+		&mut self,
+		buf: &mut [u8],
+	) -> Result<usize, RFD900XError> {
+		// info!("Reached point -1");
+		let response = self.component.read(buf).await;
+
+		match response {
+			Ok(len) => return Ok(len),
+			Err(_) => return Err(RFD900XError::ReadError),
+		}
+	}
+
+	async fn read_exact(
+		&mut self,
+		mut buf: &mut [u8],
+	) -> Result<(), embedded_io_async::ReadExactError<RFD900XError>> {
+		while !buf.is_empty() {
+			match self.component.read_exact(buf).await {
+				Ok(_) => {
+					return Ok(());
+				}
+				Err(e) => return Err(embedded_io_async::ReadExactError::Other(RFD900XError::ReadError)),
+			}
+		}
+		if buf.is_empty() {
+			Ok(())
+		} else {
+			Err(embedded_io_async::ReadExactError::UnexpectedEof)
+		}
+	}
 }

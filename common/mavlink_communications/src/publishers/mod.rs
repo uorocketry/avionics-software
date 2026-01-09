@@ -2,7 +2,7 @@ use embassy_executor::task;
 use embassy_time::Timer;
 use mavlink::MAV_STX_V2;
 use mavlink_communications_traits::publish_subscribe_tools::publisher::DelayedPublisher;
-use mavlink_service::service::MavlinkService;
+use mavlink_service::service::{MavlinkService, MavlinkServiceTx};
 use rfd900x::service::RFD900XService;
 use serial_ring_buffered::service::RingBufferedSerialService;
 use utils::types::AsyncMutex;
@@ -19,7 +19,7 @@ pub mod named_value_int_publisher;
 // TODO: Move this somewhere
 #[task]
 pub async fn update_heartbeat(
-	mavlink: &'static AsyncMutex<MavlinkService<RFD900XService<&'static mut RingBufferedSerialService>>>,
+	mavlink: &'static AsyncMutex<MavlinkService>,
 	heartbeat_publisher: &'static AsyncMutex<DelayedPublisher<HeartbeatPublisher>>,
 ) {
 	loop {

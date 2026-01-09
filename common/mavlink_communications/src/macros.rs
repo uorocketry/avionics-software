@@ -12,7 +12,7 @@ macro_rules! initialize_publisher_pool {
 		pub fn start_publishers(
 			publishers: &'static mut [&'static AsyncMutex<dyn PeriodicPublisher>],
 			task_scheduler: &Spawner,
-			mavlink: &'static AsyncMutex<MavlinkService<$transceiver_type>>,
+			mavlink: &'static AsyncMutex<MavlinkServiceTx>,
 		) {
 			for i in publishers.iter() {
 				task_scheduler.must_spawn(__start_publisher(i, mavlink));
@@ -22,7 +22,7 @@ macro_rules! initialize_publisher_pool {
 		#[task(pool_size = $num_of_tasks)]
 		async fn __start_publisher(
 			publisher: &'static AsyncMutex<dyn PeriodicPublisher>,
-			mavlink: &'static AsyncMutex<MavlinkService<$transceiver_type>>,
+			mavlink: &'static AsyncMutex<MavlinkServiceTx>,
 		) {
 			loop {
 				let mut delay;
@@ -30,9 +30,13 @@ macro_rules! initialize_publisher_pool {
 					let mut mavlink = mavlink.lock().await;
 					let mut publisher = publisher.lock().await;
 					let sequence = mavlink.get_internal_sequence();
-					delay = publisher.get_delay().clone();
 					let len = publisher.publish(&mut mavlink.write_buffer, sequence);
-					mavlink.write_internal(len).await;
+					delay = publisher.get_delay().clone();
+
+					if len != 0 {
+						mavlink.increment_internal_sequence();
+						mavlink.write_internal(len).await;
+					}
 				}
 				Timer::after(delay).await;
 			}
@@ -53,7 +57,7 @@ macro_rules! initialize_subscriber_pool {
 		pub fn start_subscribers(
 			subscribers: &'static mut [&'static AsyncMutex<dyn Subscriber>],
 			task_scheduler: &Spawner,
-			mavlink: &'static AsyncMutex<MavlinkService<$transceiver_type>>,
+			mavlink: &'static AsyncMutex<MavlinkServiceRx>,
 			delay: embassy_time::Duration,
 		) {
 			task_scheduler.spawn(__start_subscribe_tasks(subscribers, mavlink, delay));
@@ -62,11 +66,12 @@ macro_rules! initialize_subscriber_pool {
 		#[task]
 		async fn __start_subscribe_tasks(
 			subscribers: &'static mut [&'static AsyncMutex<dyn Subscriber>],
-			mavlink: &'static AsyncMutex<MavlinkService<$transceiver_type>>,
+			mavlink: &'static AsyncMutex<MavlinkServiceRx>,
 			delay: embassy_time::Duration,
 		) {
 			loop {
 				Timer::after(delay).await;
+
 				if let Ok(frame) = mavlink.lock().await.read_frame().await {
 					for i in subscribers.iter() {
 						let mut subscriber = i.lock().await;

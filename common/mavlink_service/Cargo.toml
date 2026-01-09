@@ -24,3 +24,4 @@ embassy-time = { version = "0.4.0", features = [
 utils = { workspace = true }
 defmt = { workspace = true }
 defmt-rtt = { workspace = true }
+rfd900x = { workspace = true }

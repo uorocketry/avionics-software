@@ -17,3 +17,4 @@ embassy-stm32 = { version = "0.2.0", features = [
     "chrono",
 ] }
 embedded-alloc = { workspace = true }
+embedded-io-async = { workspace = true, features = ["defmt-03"] }

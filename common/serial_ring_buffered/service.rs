@@ -120,57 +120,16 @@ impl RingBufferedSerialService {
 			}
 		}
 	}
-}
 
-impl AsyncSerialProvider for RingBufferedSerialService {
-	async fn read(
-		&mut self,
-		buff: &mut [u8],
-	) -> Result<usize, AsyncSerialError> {
-		match self.read_raw(buff).await {
-			Ok(len) => return Ok(len),
-			Err(error) => match error {
-				RingBufferedError::NoDataAvailable => return Err(AsyncSerialError::NoDataAvailable),
-				RingBufferedError::ReadError => return Err(AsyncSerialError::ReadError),
-				RingBufferedError::WriteError => return Err(AsyncSerialError::WriteError),
-			},
-		}
-	}
+	pub fn split(self: Self) -> (RingBufferedSerialServiceTx, RingBufferedSerialServiceRx) {
+		let rx = RingBufferedSerialServiceRx {
+			component: self.rx_component,
+		};
+		let tx = RingBufferedSerialServiceTx {
+			component: self.tx_component,
+		};
 
-	async fn write(
-		&mut self,
-		data: &[u8],
-	) -> Result<(), AsyncSerialError> {
-		match self.write_all(data).await {
-			Ok(_) => return Ok(()),
-			Err(_) => return Err(AsyncSerialError::WriteError),
-		}
-	}
-}
-
-impl AsyncSerialProvider for &mut RingBufferedSerialService {
-	async fn read(
-		&mut self,
-		buff: &mut [u8],
-	) -> Result<usize, AsyncSerialError> {
-		match self.read_raw(buff).await {
-			Ok(len) => return Ok(len),
-			Err(error) => match error {
-				RingBufferedError::NoDataAvailable => return Err(AsyncSerialError::NoDataAvailable),
-				RingBufferedError::ReadError => return Err(AsyncSerialError::ReadError),
-				RingBufferedError::WriteError => return Err(AsyncSerialError::WriteError),
-			},
-		}
-	}
-
-	async fn write(
-		&mut self,
-		data: &[u8],
-	) -> Result<(), AsyncSerialError> {
-		match self.write_all(data).await {
-			Ok(_) => return Ok(()),
-			Err(_) => return Err(AsyncSerialError::WriteError),
-		}
+		return (tx, rx);
 	}
 }
 
@@ -194,6 +153,68 @@ impl embedded_io_async::Read for RingBufferedSerialService {
 	) -> Result<(), embedded_io_async::ReadExactError<RingBufferedError>> {
 		while !buf.is_empty() {
 			match self.rx_component.read_exact(buf).await {
+				Ok(_) => {
+					return Ok(());
+				}
+				Err(e) => return Err(embedded_io_async::ReadExactError::Other(RingBufferedError::ReadError)),
+			}
+		}
+		if buf.is_empty() {
+			Ok(())
+		} else {
+			Err(embedded_io_async::ReadExactError::UnexpectedEof)
+		}
+	}
+}
+
+pub struct RingBufferedSerialServiceTx {
+	pub component: UartTx<'static, Async>,
+}
+
+impl ErrorType for RingBufferedSerialServiceTx {
+	type Error = RingBufferedError;
+}
+
+impl embedded_io_async::Write for RingBufferedSerialServiceTx {
+	async fn write(
+		&mut self,
+		buf: &[u8],
+	) -> Result<usize, Self::Error> {
+		match <UartTx<'static, Async> as Write>::write(&mut self.component, buf).await {
+			Ok(size) => Ok(size),
+			Err(_) => Err(RingBufferedError::WriteError),
+		}
+	}
+}
+
+pub struct RingBufferedSerialServiceRx {
+	pub component: RingBufferedUartRx<'static>,
+}
+
+impl ErrorType for RingBufferedSerialServiceRx {
+	type Error = RingBufferedError;
+}
+
+impl embedded_io_async::Read for RingBufferedSerialServiceRx {
+	async fn read(
+		&mut self,
+		buf: &mut [u8],
+	) -> Result<usize, RingBufferedError> {
+		// info!("Reached point -1");
+		let response = self.component.read(buf).await;
+
+		match response {
+			Ok(len) => return Ok(len),
+			Err(_) => return Err(RingBufferedError::ReadError),
+		}
+	}
+
+	async fn read_exact(
+		&mut self,
+		mut buf: &mut [u8],
+	) -> Result<(), embedded_io_async::ReadExactError<RingBufferedError>> {
+		while !buf.is_empty() {
+			match self.component.read_exact(buf).await {
 				Ok(_) => {
 					return Ok(());
 				}

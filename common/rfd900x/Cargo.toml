@@ -16,3 +16,4 @@ heapless = { workspace = true }
 defmt = { workspace = true }
 messages = { workspace = true }
 utils = { workspace = true }
+serial_ring_buffered = { workspace = true }
