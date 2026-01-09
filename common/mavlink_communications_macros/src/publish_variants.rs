@@ -3,34 +3,31 @@ use quote::quote;
 use syn::Ident;
 // TODO: Can probably change this to one function, rather than deciding between two
 pub fn select_value_mode_stream(
-	name: &Ident,
-	value_field: &Ident,
-	timestamp_override: bool,
+    name: &Ident,
+    value_field: &Ident,
+    timestamp_override: bool,
 ) -> TokenStream {
-	if timestamp_override == true {
-		return __value_mode_stream_ts_override(name, value_field);
-	} else {
-		return __value_mode_stream(name, value_field);
-	}
+    if timestamp_override == true {
+        return __value_mode_stream_ts_override(name, value_field);
+    } else {
+        return __value_mode_stream(name, value_field);
+    }
 }
 pub fn select_buffered_mode_stream(
-	generic_ident: &Ident,
-	name: &Ident,
-	value_field: &Ident,
-	timestamp_override: bool,
+    generic_ident: &Ident,
+    name: &Ident,
+    value_field: &Ident,
+    timestamp_override: bool,
 ) -> TokenStream {
-	if timestamp_override == true {
-		return __buffered_mode_stream_ts_override(generic_ident, name, value_field);
-	} else {
-		return __buffered_mode_stream(generic_ident, name, value_field);
-	}
+    if timestamp_override == true {
+        return __buffered_mode_stream_ts_override(generic_ident, name, value_field);
+    } else {
+        return __buffered_mode_stream(generic_ident, name, value_field);
+    }
 }
 
-fn __value_mode_stream(
-	name: &Ident,
-	value_field: &Ident,
-) -> TokenStream {
-	quote! {
+fn __value_mode_stream(name: &Ident, value_field: &Ident) -> TokenStream {
+    quote! {
 		impl mavlink_communications_traits::publish_subscribe_tools::publisher::Publisher for #name {
 		fn publish(
 			&mut self,
@@ -57,11 +54,8 @@ fn __value_mode_stream(
 	.into()
 }
 
-fn __value_mode_stream_ts_override(
-	name: &Ident,
-	value_field: &Ident,
-) -> TokenStream {
-	quote! {
+fn __value_mode_stream_ts_override(name: &Ident, value_field: &Ident) -> TokenStream {
+    quote! {
 		impl mavlink_communications_traits::publish_subscribe_tools::publisher::Publisher for #name {
 		fn publish(
 			&mut self,
@@ -90,12 +84,8 @@ fn __value_mode_stream_ts_override(
 	.into()
 }
 
-fn __buffered_mode_stream(
-	generic_ident: &Ident,
-	name: &Ident,
-	rb_ident: &Ident,
-) -> TokenStream {
-	quote! {
+fn __buffered_mode_stream(generic_ident: &Ident, name: &Ident, rb_ident: &Ident) -> TokenStream {
+    quote! {
 		impl<const #generic_ident: usize> mavlink_communications_traits::publish_subscribe_tools::publisher::Publisher for #name<#generic_ident> {
 		fn publish(
 			&mut self,
@@ -129,11 +119,11 @@ fn __buffered_mode_stream(
 	.into()
 }
 fn __buffered_mode_stream_ts_override(
-	generic_ident: &Ident,
-	name: &Ident,
-	rb_ident: &Ident,
+    generic_ident: &Ident,
+    name: &Ident,
+    rb_ident: &Ident,
 ) -> TokenStream {
-	quote! {
+    quote! {
 		impl<const #generic_ident: usize> mavlink_communications_traits::publish_subscribe_tools::publisher::Publisher for #name<#generic_ident> {
 		fn publish(
 			&mut self,
@@ -170,12 +160,12 @@ fn __buffered_mode_stream_ts_override(
 
 // TODO: UNIMPLEMENTED
 pub fn __buffered_burst_mode_stream(
-	generic_ident: &Ident,
-	name: &Ident,
-	rb_ident: &Ident,
+    generic_ident: &Ident,
+    name: &Ident,
+    rb_ident: &Ident,
 ) -> TokenStream {
-	todo!();
-	quote! {
+    todo!();
+    quote! {
 		impl<const #generic_ident: usize> mavlink_communications_traits::publish_subscribe_tools::publisher::Publisher for #name<#generic_ident> {
 		fn publish(
 			&mut self,

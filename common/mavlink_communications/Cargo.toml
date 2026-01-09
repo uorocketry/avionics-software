@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 mavlink = { features = ["common"], workspace = true }
-mavlink_service = { workspace = true }
+# mavlink_service = { workspace = true }
 
 mavlink_communications_traits = { workspace = true, features = ["delayed"] }
 mavlink_communications_macros = { workspace = true }

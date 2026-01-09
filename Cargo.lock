@@ -89,6 +89,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0674a1ddeecb70197781e945de4b3b8ffb61fa939a5597bcf48503737663100"
 
 [[package]]
+name = "arbitrary"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
+dependencies = [
+ "derive_arbitrary",
+]
+
+[[package]]
 name = "argus"
 version = "0.1.0"
 dependencies = [
@@ -211,11 +220,12 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.9.2"
+version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a65b545ab31d687cff52899d4890855fec459eb6afe0da6417b8a18da87aa29"
+checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 dependencies = [
- "serde",
+ "arbitrary",
+ "serde_core",
 ]
 
 [[package]]
@@ -507,6 +517,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_arbitrary"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e567bd82dcff979e4b03460c307b3cdc9e96fde3d73bed1496d2bc75d9dd62a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "derive_more"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -683,7 +704,7 @@ checksum = "e1e0bb733acdddbc7097765a47ce80bde2385647cf1d8427331931e06cff9a87"
 dependencies = [
  "aligned",
  "bit_field",
- "bitflags 2.9.2",
+ "bitflags 2.10.0",
  "block-device-driver",
  "cfg-if",
  "chrono 0.4.41",
@@ -715,7 +736,7 @@ dependencies = [
  "nb 1.1.0",
  "proc-macro2",
  "quote",
- "rand_core",
+ "rand_core 0.6.4",
  "sdio-host",
  "static_assertions",
  "stm32-fmc",
@@ -1369,6 +1390,24 @@ checksum = "0ca88d725a0a943b096803bd34e73a4437208b6077654cc4ecb2947a5f91618d"
 
 [[package]]
 name = "mavlink"
+version = "0.1.0"
+dependencies = [
+ "arbitrary",
+ "bitflags 2.10.0",
+ "embedded-io",
+ "embedded-io-async",
+ "mavlink-bindgen 0.16.2",
+ "mavlink-core 0.16.2",
+ "num-derive 0.4.2",
+ "num-traits",
+ "rand",
+ "serde",
+ "serde_arrays 0.2.0",
+ "ts-rs",
+]
+
+[[package]]
+name = "mavlink"
 version = "0.13.1"
 source = "git+https://github.com/uorocketry/rust-mavlink.git#e9f4057deedce85cae542fdbef75c5f56a360c9c"
 dependencies = [
@@ -1378,20 +1417,7 @@ dependencies = [
  "num-derive 0.3.3",
  "num-traits",
  "serde",
- "serde_arrays",
-]
-
-[[package]]
-name = "mavlink"
-version = "0.16.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cad9bd7a9d546da9d25e692ac0a276f0fb7df4b412ae06a07ec473ac90cb588"
-dependencies = [
- "bitflags 2.9.2",
- "mavlink-bindgen 0.16.2",
- "mavlink-core 0.16.2",
- "num-derive 0.4.2",
- "num-traits",
+ "serde_arrays 0.1.0",
 ]
 
 [[package]]
@@ -1413,11 +1439,13 @@ version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70320e411d3daf25576e94b919dc1787bfe7b0384076ddca2cf3b7ccb120da1e"
 dependencies = [
+ "arbitrary",
  "crc-any",
  "lazy_static",
  "proc-macro2",
  "quick-xml 0.38.4",
  "quote",
+ "rand",
  "regex",
  "thiserror 2.0.15",
 ]
@@ -1432,7 +1460,7 @@ dependencies = [
  "embedded-io",
  "embedded-io-async",
  "serde",
- "serde_arrays",
+ "serde_arrays 0.1.0",
  "serial 0.4.0",
 ]
 
@@ -1442,14 +1470,18 @@ version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfff2f6e0215164e3f3c26168a028cdfd0b24eddf1744dc81f8b3dbdb28f45ab"
 dependencies = [
+ "arbitrary",
  "byteorder",
  "crc-any",
  "embedded-io",
  "embedded-io-async",
+ "rand",
+ "serde",
+ "serde_arrays 0.2.0",
 ]
 
 [[package]]
-name = "mavlink_device"
+name = "mavlink_communications"
 version = "0.1.0"
 dependencies = [
  "defmt 0.3.100",
@@ -1457,7 +1489,46 @@ dependencies = [
  "embassy-executor",
  "embassy-time 0.4.0",
  "embedded-io-async",
- "mavlink 0.16.2",
+ "mavlink 0.1.0",
+ "mavlink_communications_macros",
+ "mavlink_communications_traits",
+ "rfd900x",
+ "serial_ring_buffered",
+ "utils",
+]
+
+[[package]]
+name = "mavlink_communications_macros"
+version = "0.1.0"
+dependencies = [
+ "darling",
+ "mavlink_communications_traits",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
+name = "mavlink_communications_traits"
+version = "0.1.0"
+dependencies = [
+ "embassy-time 0.4.0",
+ "embedded-io-async",
+ "mavlink 0.1.0",
+]
+
+[[package]]
+name = "mavlink_service"
+version = "0.1.0"
+dependencies = [
+ "defmt 0.3.100",
+ "defmt-rtt",
+ "embassy-executor",
+ "embassy-time 0.4.0",
+ "embedded-io-async",
+ "mavlink 0.1.0",
+ "mavlink_communications",
+ "rfd900x",
  "utils",
 ]
 
@@ -1471,7 +1542,7 @@ checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
 name = "messages"
 version = "0.1.0"
 dependencies = [
- "bitflags 2.9.2",
+ "bitflags 2.10.0",
  "defmt 0.3.100",
  "glob",
  "heapless 0.9.2",
@@ -1527,7 +1598,7 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74523f3a35e05aba87a1d978330aef40f67b0304ac79c1c00b294c9830543db6"
 dependencies = [
- "bitflags 2.9.2",
+ "bitflags 2.10.0",
  "cfg-if",
  "cfg_aliases",
  "libc",
@@ -1609,7 +1680,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pheonix"
+name = "phoenix"
 version = "0.1.0"
 dependencies = [
  "cortex-m",
@@ -1620,9 +1691,12 @@ dependencies = [
  "embassy-executor",
  "embassy-stm32",
  "embassy-time 0.4.0",
+ "embedded-io-async",
  "embedded-test",
- "mavlink 0.16.2",
- "mavlink_device",
+ "mavlink 0.1.0",
+ "mavlink_communications",
+ "mavlink_communications_traits",
+ "mavlink_service",
  "messages",
  "panic-probe",
  "rfd900x",
@@ -1663,6 +1737,15 @@ name = "portable-atomic"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f84267b20a16ea918e43c6a88433c2d54fa145c92a811b5b047ccbe153674483"
+
+[[package]]
+name = "ppv-lite86"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
+dependencies = [
+ "zerocopy",
+]
 
 [[package]]
 name = "prettyplease"
@@ -1855,10 +1938,39 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
 
 [[package]]
+name = "rand"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6db2770f06117d490610c7488547d543617b21bfa07796d7a12f6f1bd53850d1"
+dependencies = [
+ "rand_chacha",
+ "rand_core 0.9.3",
+]
+
+[[package]]
+name = "rand_chacha"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3022b5f1df60f26e1ffddd6c66e8aa15de382ae63b3a0c1bfc0e4d3e3f325cb"
+dependencies = [
+ "ppv-lite86",
+ "rand_core 0.9.3",
+]
+
+[[package]]
 name = "rand_core"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
+
+[[package]]
+name = "rand_core"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
+dependencies = [
+ "getrandom",
+]
 
 [[package]]
 name = "regex"
@@ -1894,15 +2006,8 @@ name = "rfd900x"
 version = "0.1.0"
 dependencies = [
  "defmt 0.3.100",
- "defmt-rtt",
- "embassy-stm32",
  "embassy-time 0.4.0",
- "embedded-alloc",
- "embedded-hal 1.0.0",
- "embedded-hal-async",
- "embedded-hal-bus",
  "embedded-io-async",
- "embedded-nal-async",
  "heapless 0.9.2",
  "messages",
  "serial_ring_buffered",
@@ -1945,7 +2050,7 @@ version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11181fbabf243db407ef8df94a6ce0b2f9a733bd8be4ad02b4eda9602296cac8"
 dependencies = [
- "bitflags 2.9.2",
+ "bitflags 2.10.0",
  "errno",
  "libc",
  "linux-raw-sys",
@@ -2043,6 +2148,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_arrays"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94a16b99c5ea4fe3daccd14853ad260ec00ea043b2708d1fd1da3106dcd8d9df"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_core"
 version = "1.0.228"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2075,47 +2189,15 @@ dependencies = [
 name = "serial"
 version = "0.1.0"
 dependencies = [
- "chrono 0.4.38",
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "csv",
  "defmt 0.3.100",
- "defmt-rtt",
- "derive_more",
  "embassy-embedded-hal 0.3.2",
- "embassy-executor",
- "embassy-futures",
- "embassy-net",
  "embassy-stm32",
- "embassy-sync 0.6.2",
  "embassy-time 0.4.0",
- "embassy-usb",
- "embedded-alloc",
- "embedded-hal 1.0.0",
- "embedded-hal-async",
- "embedded-hal-bus",
+ "embedded-io",
  "embedded-io-async",
- "embedded-nal-async",
- "embedded-sdmmc",
- "embedded-storage",
- "embedded-test",
- "enum_dispatch",
- "grounded",
  "heapless 0.9.2",
- "itoa",
- "libm",
  "messages",
- "micromath",
- "num-traits",
- "panic-probe",
- "pid",
  "prost",
- "serde",
- "smlang",
- "static_cell",
- "stm32-fmc",
- "strum",
  "utils",
 ]
 
@@ -2165,48 +2247,12 @@ dependencies = [
 name = "serial_ring_buffered"
 version = "0.1.0"
 dependencies = [
- "chrono 0.4.38",
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "csv",
  "defmt 0.3.100",
- "defmt-rtt",
- "derive_more",
  "embassy-embedded-hal 0.3.2",
- "embassy-executor",
- "embassy-futures",
- "embassy-net",
  "embassy-stm32",
- "embassy-sync 0.6.2",
- "embassy-time 0.4.0",
- "embassy-usb",
- "embedded-alloc",
- "embedded-hal 1.0.0",
- "embedded-hal-async",
- "embedded-hal-bus",
  "embedded-io",
  "embedded-io-async",
- "embedded-nal-async",
- "embedded-sdmmc",
- "embedded-storage",
- "embedded-test",
- "enum_dispatch",
- "grounded",
- "heapless 0.9.2",
- "itoa",
- "libm",
  "messages",
- "micromath",
- "num-traits",
- "panic-probe",
- "pid",
- "prost",
- "serde",
- "smlang",
- "static_cell",
- "stm32-fmc",
- "strum",
  "utils",
 ]
 
@@ -2216,7 +2262,7 @@ version = "4.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21f60a586160667241d7702c420fc223939fb3c0bb8d3fac84f78768e8970dee"
 dependencies = [
- "bitflags 2.9.2",
+ "bitflags 2.10.0",
  "cfg-if",
  "core-foundation",
  "core-foundation-sys",
@@ -2406,6 +2452,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "termcolor"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
+dependencies = [
+ "winapi-util",
+]
+
+[[package]]
 name = "termios"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2455,11 +2510,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "ts-rs"
+version = "11.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4994acea2522cd2b3b85c1d9529a55991e3ad5e25cdcd3de9d505972c4379424"
+dependencies = [
+ "thiserror 2.0.15",
+ "ts-rs-macros",
+]
+
+[[package]]
+name = "ts-rs-macros"
+version = "11.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee6ff59666c9cbaec3533964505d39154dc4e0a56151fdea30a09ed0301f62e2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+ "termcolor",
+]
+
+[[package]]
 name = "ublox"
 version = "0.4.5"
 source = "git+https://github.com/uorocketry/ublox#286d43a3ae9a3ba30a04be04c65bf89aca6b1bfe"
 dependencies = [
- "bitflags 2.9.2",
+ "bitflags 2.10.0",
  "chrono 0.4.38",
  "defmt 0.3.100",
  "num-traits",
@@ -2570,6 +2647,7 @@ dependencies = [
  "embassy-stm32",
  "embassy-sync 0.6.2",
  "embedded-alloc",
+ "embedded-io-async",
 ]
 
 [[package]]
@@ -2606,6 +2684,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9683f9a5a998d873c0d21fcbe3c083009670149a8fab228644b8bd36b2c48cb3"
 dependencies = [
  "wit-bindgen-rt",
+]
+
+[[package]]
+name = "winapi-util"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
+dependencies = [
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2791,7 +2878,7 @@ version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f42320e61fe2cfd34354ecb597f86f413484a798ba44a8ca1165c58d42da6c1"
 dependencies = [
- "bitflags 2.9.2",
+ "bitflags 2.10.0",
 ]
 
 [[package]]

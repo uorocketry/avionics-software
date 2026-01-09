@@ -25,3 +25,4 @@ utils = { workspace = true }
 defmt = { workspace = true }
 defmt-rtt = { workspace = true }
 rfd900x = { workspace = true }
+mavlink_communications = { workspace = true }

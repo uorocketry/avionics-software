@@ -12,23 +12,17 @@ use utils::types::AsyncMutex;
 
 #[derive(Publisher)]
 pub struct DebugDataPublisher<const N: usize> {
-	buffer: RingBuffer<DEBUG_DATA, N>,
+    buffer: RingBuffer<DEBUG_DATA, N>,
 }
 impl<const N: usize> DebugDataPublisher<N> {
-	pub fn new(
-		timestamp: u32,
-		value: f32,
-		index: u8,
-	) -> DebugDataPublisher<N> {
-		return DebugDataPublisher { buffer: RingBuffer::new() };
-	}
+    pub fn new(timestamp: u32, value: f32, index: u8) -> DebugDataPublisher<N> {
+        return DebugDataPublisher {
+            buffer: RingBuffer::new(),
+        };
+    }
 
-	pub fn push(
-		&mut self,
-		mut value: DEBUG_DATA,
-	) {
-		// TODO: Check if we want this to be automatic or set by the application using the publisher
-		value.time_boot_ms = Instant::now().as_millis() as u32;
-		self.buffer.push(value);
-	}
+    pub fn push(&mut self, mut value: DEBUG_DATA) {
+        value.time_boot_ms = Instant::now().as_millis() as u32;
+        self.buffer.push(value);
+    }
 }
