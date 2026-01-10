@@ -26,3 +26,4 @@ defmt = { workspace = true }
 defmt-rtt = { workspace = true }
 rfd900x = { workspace = true }
 mavlink_communications = { workspace = true }
+mavlink_communications_traits = { workspace = true }

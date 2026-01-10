@@ -7,9 +7,9 @@
 macro_rules! initialize_publisher_pool {
     ($num_of_tasks:literal) => {
         pub fn start_publishers(
-            publishers: &'static mut [&'static utils::AsyncMutex<dyn mavlink_communications_traits::publish_subscribe_tools::publisher::PeriodicPublisher>],
+            publishers: &'static mut [&'static utils::types::AsyncMutex<dyn mavlink_communications_traits::publish_subscribe_tools::publisher::PeriodicPublisher>],
             task_scheduler: &Spawner,
-            mavlink: &'static utils::AsyncMutex<mavlink_service::service::MavlinkServiceTx>,
+            mavlink: &'static utils::types::AsyncMutex<mavlink_service::service::MavlinkServiceTx>,
         ) {
             for i in publishers.iter() {
                 task_scheduler.must_spawn(__start_publisher(i, mavlink));
@@ -18,8 +18,8 @@ macro_rules! initialize_publisher_pool {
 
         #[task(pool_size = $num_of_tasks)]
         async fn __start_publisher(
-            publisher: &'static utils::AsyncMutex<dyn mavlink_communications_traits::publish_subscribe_tools::publisher::PeriodicPublisher>,
-            mavlink: &'static utils::AsyncMutex<mavlink_service::service::MavlinkServiceTx>,
+            publisher: &'static utils::types::AsyncMutex<dyn mavlink_communications_traits::publish_subscribe_tools::publisher::PeriodicPublisher>,
+            mavlink: &'static utils::types::AsyncMutex<mavlink_service::service::MavlinkServiceTx>,
         ) {
             loop {
                 let mut delay;
@@ -49,11 +49,11 @@ macro_rules! initialize_publisher_pool {
 macro_rules! initialize_subscriber_pool {
     () => {
         pub fn start_subscribers(
-            subscribers: &'static mut [&'static utils::AsyncMutex<
+            subscribers: &'static mut [&'static utils::types::AsyncMutex<
                 dyn mavlink_communications_traits::publish_subscribe_tools::subscriber::Subscriber,
             >],
             task_scheduler: &Spawner,
-            mavlink: &'static utils::AsyncMutex<MavlinkServiceRx>,
+            mavlink: &'static utils::types::AsyncMutex<MavlinkServiceRx>,
             delay: embassy_time::Duration,
         ) {
             task_scheduler.spawn(__start_subscribe_tasks(subscribers, mavlink, delay));
@@ -61,10 +61,10 @@ macro_rules! initialize_subscriber_pool {
 
         #[task]
         async fn __start_subscribe_tasks(
-            subscribers: &'static mut [&'static utils::AsyncMutex<
+            subscribers: &'static mut [&'static utils::types::AsyncMutex<
                 dyn mavlink_communications_traits::publish_subscribe_tools::subscriber::Subscriber,
             >],
-            mavlink: &'static utils::AsyncMutex<MavlinkServiceRx>,
+            mavlink: &'static utils::types::AsyncMutex<MavlinkServiceRx>,
             delay: embassy_time::Duration,
         ) {
             loop {

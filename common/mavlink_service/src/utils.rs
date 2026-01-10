@@ -1,10 +1,9 @@
+use crate::service::{MavlinkService, MavlinkServiceTx};
 use embassy_executor::task;
 use embassy_time::Timer;
 use mavlink::MAV_STX_V2;
 use mavlink_communications_traits::publish_subscribe_tools::publisher::DelayedPublisher;
-use mavlink_service::service::{MavlinkService, MavlinkServiceTx};
 use rfd900x::service::RFD900XService;
-use serial_ring_buffered::service::RingBufferedSerialService;
 use utils::types::AsyncMutex;
 
 use mavlink_communications::publishers::heartbeat_publisher::HeartbeatPublisher;

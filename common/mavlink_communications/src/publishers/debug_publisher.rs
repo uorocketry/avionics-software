@@ -15,7 +15,7 @@ pub struct DebugDataPublisher<const N: usize> {
     buffer: RingBuffer<DEBUG_DATA, N>,
 }
 impl<const N: usize> DebugDataPublisher<N> {
-    pub fn new(timestamp: u32, value: f32, index: u8) -> DebugDataPublisher<N> {
+    pub fn new() -> DebugDataPublisher<N> {
         return DebugDataPublisher {
             buffer: RingBuffer::new(),
         };

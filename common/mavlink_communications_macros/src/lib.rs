@@ -13,6 +13,8 @@ mod subscribe_variants;
 use subscribe_variants::*;
 mod utils;
 use utils::*;
+
+const TYPE_IDENTIFIER_INDEX: usize = 0;
 // TODO: Either move some of this shit into a macro or a function as the definition is getting way too long
 /// Derive macro for the `Publisher` trait <br>
 /// Accepts `configure_publisher` as a attribute helper macro
@@ -162,6 +164,7 @@ pub fn derive_publish(input: TokenStream) -> TokenStream {
             name,
             &data_field.as_ref().unwrap(),
             override_timestamp,
+            burst_mode,
         );
     }
     output.into()
@@ -235,7 +238,7 @@ pub fn derive_subscribe(input: TokenStream) -> TokenStream {
                     if let PathArguments::AngleBracketed(arguments) = x.arguments.clone() {
                         // Index of the type
                         // TODO: Get rid of this magic number, (0 is the index of the type name in the array arguments)
-                        let arg = arguments.args.get(0);
+                        let arg = arguments.args.get(TYPE_IDENTIFIER_INDEX);
                         if let None = arg {
                             return TokenStream::from(
                                 syn::Error::new(
@@ -249,7 +252,7 @@ pub fn derive_subscribe(input: TokenStream) -> TokenStream {
                         if let Some(GenericArgument::Type(Type::Path(path))) = arg {
                             // idfk, its needed to "chisel the ice" into the type
                             // TODO: Get rid of this magic number, (0 is the index of the type name in the array arguments)
-                            if let Some(type_path) = path.path.segments.get(0) {
+                            if let Some(type_path) = path.path.segments.get(TYPE_IDENTIFIER_INDEX) {
                                 name_of_type = Some(type_path.ident.clone());
                             } else {
                                 return TokenStream::from(
@@ -275,9 +278,6 @@ pub fn derive_subscribe(input: TokenStream) -> TokenStream {
             }
         }
     }
-
-    println!("{:#?}", input);
-    println!("{:?}", name_of_type);
 
     // Unwrap on "name_of_type" should always resolve to Some(x), and is only used to get around the need to initialize the variable
     let output = subscriber_stream(

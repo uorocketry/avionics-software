@@ -28,6 +28,8 @@ embedded-io-async.workspace = true
 
 [features]
 default = ["common", "uorocketry"]
+# tokio = ["mavlink-core/tokio"]
+std = ["mavlink-core/std"]
 uorocketry = []
 common = []
 embedded = ["mavlink-core/embedded"]

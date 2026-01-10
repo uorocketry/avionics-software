@@ -18,11 +18,20 @@ pub fn select_buffered_mode_stream(
     name: &Ident,
     value_field: &Ident,
     timestamp_override: bool,
+    burst_mode: bool,
 ) -> TokenStream {
-    if timestamp_override == true {
-        return __buffered_mode_stream_ts_override(generic_ident, name, value_field);
+    if burst_mode {
+        if timestamp_override == true {
+            return __buffered_mode_stream_ts_override(generic_ident, name, value_field);
+        } else {
+            return __buffered_burst_mode_stream(generic_ident, name, value_field);
+        }
     } else {
-        return __buffered_mode_stream(generic_ident, name, value_field);
+        if timestamp_override == true {
+            return __buffered_mode_stream_ts_override(generic_ident, name, value_field);
+        } else {
+            return __buffered_mode_stream(generic_ident, name, value_field);
+        }
     }
 }
 
@@ -164,7 +173,6 @@ pub fn __buffered_burst_mode_stream(
     name: &Ident,
     rb_ident: &Ident,
 ) -> TokenStream {
-    todo!();
     quote! {
 		impl<const #generic_ident: usize> mavlink_communications_traits::publish_subscribe_tools::publisher::Publisher for #name<#generic_ident> {
 		fn publish(
@@ -186,6 +194,8 @@ pub fn __buffered_burst_mode_stream(
 					return 0;
 				}
 			}
+
+			
 
 			frame.serialize_message_data(header, &payload);
 
