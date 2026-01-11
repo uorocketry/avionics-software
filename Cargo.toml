@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 
-members = ["boards/*", "common/*", "apps/sergw", "mavlink-ground-station-cli"]
+members = ["boards/*", "common/*", "apps/sergw"]
 
 # Specify which members to build by default. Some libraries, such as messages, contain dev-dependencies that will give
 # compile errors if built directly.
@@ -69,21 +69,11 @@ path = "./common/utils"
 [workspace.dependencies.rfd900x]
 path = "./common/rfd900x"
 
-[workspace.dependencies.mavlink]
-path = "./common/mavlink_dialect"
+[workspace.dependencies.uor-mavlink]
+path = "./common/uor-mavlink"
 
-# TODO: Rename mavlink_XXX to uor_mavlink_XXX to show that it is unaffiliated with the actual mavlink crate
-[workspace.dependencies.mavlink_communications]
-path = "./common/mavlink_communications"
-
-[workspace.dependencies.mavlink_communications_traits]
-path = "./common/mavlink_communications_traits"
-default-features = false
-[workspace.dependencies.mavlink_communications_macros]
-path = "./common/mavlink_communications_macros"
-
-[workspace.dependencies.mavlink_service]
-path = "./common/mavlink_service"
+[workspace.dependencies.uor-mavlink-macros]
+path = "./common/uor-mavlink-macros"
 
 [workspace.dependencies.nb]
 version = "1.1.0"
