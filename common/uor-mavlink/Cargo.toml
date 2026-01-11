@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 
 rfd900x = { workspace = true }
-serial_ring_buffered = { workspace = true }
+peripheral-services = { workspace = true }
 embedded-io = { workspace = true }
 embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
 embassy-executor = { version = "0.7.0", features = [

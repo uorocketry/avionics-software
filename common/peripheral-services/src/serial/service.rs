@@ -13,7 +13,6 @@ use heapless::String;
 use messages::argus::envelope::Node;
 use messages::argus::envelope::{Envelope, envelope::Message as EnvelopeMessage};
 use prost::Message;
-use utils::serial::traits::{AsyncSerialError, AsyncSerialProvider};
 
 pub struct SerialService {
 	pub uart: Uart<'static, mode::Async>,
@@ -114,48 +113,6 @@ impl SerialService {
 		match self.uart.read_until_idle(buff).await {
 			Ok(len) => Ok(len),
 			Err(error) => Err(error),
-		}
-	}
-}
-impl AsyncSerialProvider for SerialService {
-	async fn read(
-		&mut self,
-		buff: &mut [u8],
-	) -> Result<usize, AsyncSerialError> {
-		match self.read_raw(buff).await {
-			Ok(len) => return Ok(len),
-			Err(_) => return Err(AsyncSerialError::ReadError),
-		}
-	}
-
-	async fn write(
-		&mut self,
-		data: &[u8],
-	) -> Result<(), AsyncSerialError> {
-		match self.write_all(data).await {
-			Ok(_) => return Ok(()),
-			Err(_) => return Err(AsyncSerialError::WriteError),
-		}
-	}
-}
-impl AsyncSerialProvider for &mut SerialService {
-	async fn read(
-		&mut self,
-		buff: &mut [u8],
-	) -> Result<usize, AsyncSerialError> {
-		match self.read_raw(buff).await {
-			Ok(len) => return Ok(len),
-			Err(_) => return Err(AsyncSerialError::ReadError),
-		}
-	}
-
-	async fn write(
-		&mut self,
-		data: &[u8],
-	) -> Result<(), AsyncSerialError> {
-		match self.write_all(data).await {
-			Ok(_) => return Ok(()),
-			Err(_) => return Err(AsyncSerialError::WriteError),
 		}
 	}
 }

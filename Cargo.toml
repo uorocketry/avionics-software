@@ -57,11 +57,8 @@ version = "0.9.1"
 [workspace.dependencies.messages]
 path = "./common/messages"
 
-[workspace.dependencies.serial]
-path = "./common/serial"
-
-[workspace.dependencies.serial_ring_buffered]
-path = "./common/serial_ring_buffered"
+[workspace.dependencies.peripheral-services]
+path = "./common/peripheral-services"
 
 [workspace.dependencies.utils]
 path = "./common/utils"

@@ -1,14 +1,11 @@
 [package]
-name = "serial"
+name = "peripheral-services"
 version = "0.1.0"
 edition = "2024"
 
-
 [dependencies]
 
-defmt = { workspace = true }
 embassy-embedded-hal = { workspace = true }
-embassy-time = { workspace = true }
 embassy-stm32 = { workspace = true, features = [
     "defmt",
     "stm32h733vg",
@@ -20,10 +17,11 @@ embassy-stm32 = { workspace = true, features = [
 ] }
 embedded-io = { workspace = true }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
-heapless = { workspace = true }
 messages = { workspace = true }
-prost = { workspace = true }
 utils = { workspace = true }
 
-[lib]
-path = "lib.rs"
+defmt = { workspace = true }
+embassy-time = { workspace = true }
+
+heapless = { workspace = true }
+prost = { workspace = true }

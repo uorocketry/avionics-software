@@ -15,7 +15,7 @@ strain = []
 calibration = []
 
 [dependencies]
-serial = { workspace = true }
+peripheral-services.workspace = true
 chrono = { workspace = true }
 cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
