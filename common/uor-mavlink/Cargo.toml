@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 
-rfd900x = { workspace = true }
+driver-services = { workspace = true }
 peripheral-services = { workspace = true }
 embedded-io = { workspace = true }
 embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }

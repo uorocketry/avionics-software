@@ -1,8 +1,8 @@
 use defmt::{self, info};
+use driver_services::rfd900x::service::{RFD900Rx, RFD900Tx, RFD900XService};
 use embassy_executor::{Spawner, task};
 use embassy_time::{Duration, Timer};
 use embedded_io_async::{Read, Write};
-use rfd900x::service::{RFD900Rx, RFD900Tx, RFD900XService};
 
 use crate::uor_mavlink_dialect::{
 	MAV_STX, MAVLinkV1MessageRaw, MAVLinkV2MessageRaw, MAX_FRAME_SIZE, MavHeader, MessageData,

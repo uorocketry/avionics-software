@@ -1,10 +1,9 @@
 [package]
-name = "rfd900x"
+name = "driver-services"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
 
 embassy-time = { workspace = true, features = [

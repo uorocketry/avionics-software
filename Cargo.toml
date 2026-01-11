@@ -63,8 +63,8 @@ path = "./common/peripheral-services"
 [workspace.dependencies.utils]
 path = "./common/utils"
 
-[workspace.dependencies.rfd900x]
-path = "./common/rfd900x"
+[workspace.dependencies.driver-services]
+path = "./common/driver-services"
 
 [workspace.dependencies.uor-mavlink]
 path = "./common/uor-mavlink"

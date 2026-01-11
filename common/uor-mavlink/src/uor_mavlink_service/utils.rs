@@ -1,6 +1,6 @@
+use driver_services::rfd900x::service::RFD900XService;
 use embassy_executor::task;
 use embassy_time::Timer;
-use rfd900x::service::RFD900XService;
 use utils::types::AsyncMutex;
 
 use crate::uor_mavlink_communications::publishers::heartbeat_publisher::HeartbeatPublisher;
