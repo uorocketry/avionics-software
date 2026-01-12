@@ -1,0 +1,43 @@
+[package]
+name = "phoenix"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+harness = false
+
+[features]
+default = ["music"]
+music = []
+
+[dependencies]
+cortex-m = { workspace = true }
+cortex-m-rt = { workspace = true }
+static_cell = "2"
+embassy-executor = { version = "0.7.0", features = [
+	"nightly",
+	"task-arena-size-10240",
+	"arch-cortex-m",
+	"executor-thread",
+	"executor-interrupt",
+	"defmt",
+] }
+embassy-stm32 = { version = "0.2.0", features = [
+	"defmt",
+	"stm32h733vg",
+	"time-driver-tim2",
+	"exti",
+	"memory-x",
+	"unstable-pac",
+	"chrono",
+] }
+embassy-sync = { version = "0.6.2", features = ["defmt"] }
+embassy-time = { version = "0.4.0", features = [
+	"defmt",
+	"defmt-timestamp-uptime",
+	"tick-hz-32_768",
+] }
+embedded-alloc = { workspace = true }
+defmt = { workspace = true }
+defmt-rtt = { workspace = true }
+panic-probe = { workspace = true }
