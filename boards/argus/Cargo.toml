@@ -10,8 +10,9 @@ harness = false
 pressure = []
 temperature = []
 strain = []
-calibration = []
 
+#TODO: Fix this
+calibration = []
 [dependencies]
 chrono = { workspace = true }
 cortex-m = { workspace = true }
@@ -79,6 +80,7 @@ num-traits = { version = "0.2.19", default-features = false, features = [
 	"libm",
 ] }
 panic-probe = { workspace = true }
+peripheral-services.workspace = true
 pid = "4.0.0"
 prost = { workspace = true }
 serde = { workspace = true, features = ["derive", "serde_derive"] }
@@ -86,6 +88,7 @@ smlang = { workspace = true }
 static_cell = "2"
 stm32-fmc = "0.3.0"
 strum = { version = "0.27.2", default-features = false, features = ["derive"] }
+utils = { workspace = true }
 
 [[test]]
 name = "sd"

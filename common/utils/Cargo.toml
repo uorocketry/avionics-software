@@ -1,0 +1,20 @@
+#TODO: This needs to be seperated into multiple modules. Some apis need to be std (macro apis), and embassy-stm32 throws link errors as it doesn't like std enviroments
+
+[package]
+name = "utils"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embassy-sync = { version = "0.6.2", features = ["defmt"] }
+embassy-stm32 = { version = "0.2.0", features = [
+    "defmt",
+    "stm32h733vg",
+    "time-driver-tim2",
+    "exti",
+    "memory-x",
+    "unstable-pac",
+    "chrono",
+] }
+embedded-alloc = { workspace = true }
+embedded-io-async = { workspace = true, features = ["defmt-03"] }

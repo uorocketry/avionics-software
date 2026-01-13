@@ -2,13 +2,13 @@ use defmt::error;
 use embassy_executor::task;
 use embassy_time::Timer;
 use strum::EnumCount;
+use utils::types::AsyncMutex;
 
 use crate::adc::types::AdcDevice;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
 use crate::temperature::config::RTD_MEASUREMENT_INTERVAL;
 use crate::temperature::service::TemperatureService;
-use crate::utils::types::AsyncMutex;
 
 // Task that iterates through the ADCs and measures the RTDs at a slower interval than the thermocouples being read
 // We don't need that frequent readings for the RTDs

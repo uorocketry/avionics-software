@@ -1,0 +1,27 @@
+[package]
+name = "peripheral-services"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+defmt = { workspace = true }
+
+embassy-embedded-hal = { workspace = true }
+embassy-stm32 = { workspace = true, features = [
+    "defmt",
+    "stm32h733vg",
+    "time-driver-tim2",
+    "exti",
+    "memory-x",
+    "unstable-pac",
+    "chrono",
+] }
+embassy-time = { workspace = true }
+embedded-io = { workspace = true }
+embedded-io-async = { workspace = true, features = ["defmt-03"] }
+
+heapless = { workspace = true }
+messages = { workspace = true }
+prost = { workspace = true }
+utils = { workspace = true }

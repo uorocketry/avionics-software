@@ -27,6 +27,12 @@
     },
     // Spelling
     "cSpell.words": [
+        "chrono",
+        "defmt",
+        "heapless",
+        "mavlink",
+        "serde",
+        "sergw",
         "uorocketry"
     ]
 }

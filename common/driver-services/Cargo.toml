@@ -1,0 +1,18 @@
+[package]
+name = "driver-services"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+defmt = { workspace = true }
+
+embassy-time = { workspace = true, features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+    "tick-hz-32_768",
+] }
+embedded-io-async = { workspace = true, features = ["defmt-03"] }
+heapless = { workspace = true }
+messages = { workspace = true }
+peripheral-services = { workspace = true }
+utils = { workspace = true }

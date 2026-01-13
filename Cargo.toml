@@ -32,8 +32,24 @@ version = "0.4"
 [workspace.dependencies.embedded-alloc]
 version = "0.6.0"
 
+[workspace.dependencies.embedded-io]
+version = "0.6.1"
+
+[workspace.dependencies.embedded-io-async]
+version = "0.6.1"
+
+
 [workspace.dependencies.enum_dispatch]
 version = "0.3.11"
+
+[workspace.dependencies.embassy-embedded-hal]
+version = "0.3.0"
+
+[workspace.dependencies.embassy-stm32]
+version = "0.2.0"
+
+[workspace.dependencies.embassy-time]
+version = "0.4.0"
 
 [workspace.dependencies.heapless]
 version = "0.9.1"
@@ -41,8 +57,24 @@ version = "0.9.1"
 [workspace.dependencies.messages]
 path = "./common/messages"
 
+[workspace.dependencies.peripheral-services]
+path = "./common/peripheral-services"
+
+[workspace.dependencies.utils]
+path = "./common/utils"
+
+[workspace.dependencies.driver-services]
+path = "./common/driver-services"
+
+[workspace.dependencies.uor-mavlink]
+path = "./common/uor-mavlink"
+
+[workspace.dependencies.uor-mavlink-macros]
+path = "./common/uor-mavlink-macros"
+
 [workspace.dependencies.nb]
 version = "1.1.0"
+default-features = false
 
 [workspace.dependencies.panic-probe]
 version = "0.3"

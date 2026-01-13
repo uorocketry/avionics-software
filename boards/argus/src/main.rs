@@ -8,22 +8,25 @@ compile_error!("You must enable exactly one of the features: 'pressure', 'temper
 use argus::adc::service::{AdcConfig, AdcService};
 use argus::adc::types::AdcDevice;
 use argus::led_indicator::service::LedIndicatorService;
+use argus::node::node::CURRENT_NODE;
 use argus::sd::service::SDCardService;
 use argus::sd::task::sd_card_task;
-use argus::serial::service::SerialService;
 use argus::session::service::SessionService;
 use argus::state_machine::service::{StateMachineOrchestrator, StateMachineWorker};
 use argus::state_machine::types::Events;
-use argus::utils::hal::configure_hal;
-use argus::utils::types::AsyncMutex;
 use defmt::info;
 use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::Pin;
+use embassy_stm32::usart::Uart;
 use embassy_stm32::{bind_interrupts, peripherals, usart};
+use messages::argus::envelope::{Node, NodeType};
 use panic_probe as _;
+use peripheral_services::serial::service::SerialService;
+use serde::ser;
 use static_cell::StaticCell;
 use strum::EnumCount;
+use utils::{hal::configure_hal, types::AsyncMutex};
 
 // Mapping of NVIC interrupts to Embassy interrupt handlers
 bind_interrupts!(struct InterruptRequests {
@@ -38,6 +41,7 @@ static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new()
 static SESSION_SERVICE: StaticCell<AsyncMutex<SessionService>> = StaticCell::new();
 static LED_INDICATOR_SERVICE: StaticCell<AsyncMutex<LedIndicatorService<2>>> = StaticCell::new();
 static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrator>> = StaticCell::new();
+// static CURRENT_NODE: StaticCell<Node> = StaticCell::new();
 
 #[cfg(feature = "temperature")]
 static TEMPERATURE_SERVICE: StaticCell<AsyncMutex<argus::temperature::service::TemperatureService<{ AdcDevice::COUNT }>>> = StaticCell::new();
@@ -51,6 +55,11 @@ static STRAIN_SERVICE: StaticCell<AsyncMutex<argus::strain::service::StrainServi
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
+
+	let mut serial_config = usart::Config::default();
+
+	serial_config.baudrate = 115200;
+
 	let peripherals = configure_hal();
 	let sd_card_service = SD_CARD_SERVICE.init(AsyncMutex::new(SDCardService::new(
 		peripherals.SPI1,
@@ -94,7 +103,8 @@ async fn main(spawner: Spawner) {
 			InterruptRequests,
 			peripherals.DMA1_CH2,
 			peripherals.DMA1_CH3,
-			115200,
+			CURRENT_NODE,
+			serial_config,
 		)
 		.unwrap(),
 	));

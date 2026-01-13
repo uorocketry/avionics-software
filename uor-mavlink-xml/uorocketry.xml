@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<mavlink>
+
+    <include>common.xml</include>
+    <!-- <version>9</version> -->
+    <dialect>8</dialect>
+
+    <enums>
+        <!-- Enums are defined here (optional) -->
+    </enums>
+
+  <messages>
+    <!-- Available message id range is 60000 - 70000 -->
+    <message id="60000" name="TEST_UOR">
+      <description>Test message for the uor mavlink dialect</description>
+      <field type="uint8_t" name="TEST">Test field for the uor mavlink dialect</field>
+    </message>  
+    
+    <message id="60001" name="THERMOCOUPLE_UOR">
+      <description>Contains raw thermocouple data</description>
+      <field type="uint32_t" name="TC_1">Value for thermocouple 1</field>
+      <field type="uint32_t" name="TC_2">Value for thermocouple 2</field>
+      <field type="uint32_t" name="TC_3">Value for thermocouple 3</field>
+      <field type="uint32_t" name="TC_4">Value for thermocouple 4</field>
+      <field type="uint32_t" name="TC_5">Value for thermocouple 5</field>
+      <field type="uint32_t" name="TC_6">Value for thermocouple 6</field>
+      <field type="uint32_t" name="TC_7">Value for thermocouple 7</field>
+      <field type="uint32_t" name="TC_8">Value for thermocouple 8</field>
+      <field type="uint8_t" name="PAGE_NUM">Page number for thermocouple data. Set to 0 if less than 8 thermocouples are having their data transmitted</field>
+      <field type="uint8_t" name="PAGE_TOTAL">Total number of pages for thermocouple data. Set to 0 if less than 8 thermocouples are having their data transmitted</field>
+      <field type="uint32_t" name="time_boot_ms" units="ms">Timestamp since boot</field>
+    </message> 
+    
+    <message id="60002" name="PRESSURE_UOR">
+      <description>Contains raw pressure data</description>
+      <field type="uint32_t" name="PS_1">Value for pressure sensor 1</field>
+      <field type="uint32_t" name="PS_2">Value for pressure sensor 2</field>
+      <field type="uint32_t" name="PS_3">Value for pressure sensor 3</field>
+      <field type="uint32_t" name="PS_4">Value for pressure sensor 4</field>
+      <field type="uint32_t" name="PS_5">Value for pressure sensor 5</field>
+      <field type="uint32_t" name="PS_6">Value for pressure sensor 6</field>
+      <field type="uint32_t" name="PS_7">Value for pressure sensor 7</field>
+      <field type="uint32_t" name="PS_8">Value for pressure sensor 8</field>
+      <field type="uint8_t" name="PAGE_NUM">Page number for pressure data. Set to 0 if less than 8 pressure sensors are having their data transmitted</field>
+      <field type="uint8_t" name="PAGE_TOTAL">Total number of pages for pressure data. Set to 0 if less than 8 pressure sensors are having their data transmitted</field>
+      <field type="uint32_t" name="time_boot_ms" units="ms">Timestamp since boot</field>
+    </message>  
+    
+    <message id="60003" name="STRAIN_UOR">
+      <description>Contains raw strain data</description>
+      <field type="uint32_t" name="SG_1">Value for strain gauge 1</field>
+      <field type="uint32_t" name="SG_2">Value for strain gauge 2</field>
+      <field type="uint32_t" name="SG_3">Value for strain gauge 3</field>
+      <field type="uint32_t" name="SG_4">Value for strain gauge 4</field>
+      <field type="uint32_t" name="SG_5">Value for strain gauge 5</field>
+      <field type="uint32_t" name="SG_6">Value for strain gauge 6</field>
+      <field type="uint32_t" name="SG_7">Value for strain gauge 7</field>
+      <field type="uint32_t" name="SG_8">Value for strain gauge 8</field>
+      <field type="uint8_t" name="PAGE_NUM">Page number for strain gauge data. Set to 0 if less than 8 strain gauges are having their data transmitted</field>
+      <field type="uint8_t" name="PAGE_TOTAL">Total number of pages for strain gauge data. Set to 0 if less than 8 strain gauges are having their data transmitted</field>
+      <field type="uint32_t" name="time_boot_ms" units="ms">Timestamp since boot</field>
+    </message>  
+    
+  </messages>
+
+</mavlink>

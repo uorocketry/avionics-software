@@ -1,19 +1,22 @@
+use core::mem::swap;
+
+use defmt::info;
+use embassy_stm32::Peripheral;
 use embassy_stm32::interrupt::typelevel::Binding;
 use embassy_stm32::mode;
 use embassy_stm32::usart::ConfigError;
 pub use embassy_stm32::usart::Error as UsartError;
 use embassy_stm32::usart::{Config, Instance, InterruptHandler, RxDma, RxPin, TxDma, TxPin, Uart};
-use embassy_stm32::Peripheral;
 use embassy_time::Timer;
-use embedded_io_async::Write;
+use embedded_io_async::{ErrorType, Read, Write};
 use heapless::String;
-use messages::argus::envelope::{envelope::Message as EnvelopeMessage, Envelope};
+use messages::argus::envelope::Node;
+use messages::argus::envelope::{Envelope, envelope::Message as EnvelopeMessage};
 use prost::Message;
-
-use crate::node::CURRENT_NODE;
 
 pub struct SerialService {
 	pub uart: Uart<'static, mode::Async>,
+	pub node: Node,
 }
 
 impl SerialService {
@@ -24,14 +27,12 @@ impl SerialService {
 		interrupt_requests: impl Binding<T::Interrupt, InterruptHandler<T>> + 'static,
 		tx_dma: impl Peripheral<P = impl TxDma<T>> + 'static,
 		rx_dma: impl Peripheral<P = impl RxDma<T>> + 'static,
-		baudrate: u32,
+		node: Node,
+		config: Config,
 	) -> Result<Self, ConfigError> {
-		let mut config = Config::default();
-		config.baudrate = baudrate;
-
 		let uart = Uart::<'static, mode::Async>::new(peri, rx, tx, interrupt_requests, tx_dma, rx_dma, config)?;
 
-		Ok(Self { uart })
+		Ok(Self { uart: uart, node: node })
 	}
 
 	/// Write the full buffer, waiting until all bytes are sent.
@@ -47,7 +48,7 @@ impl SerialService {
 		message: EnvelopeMessage,
 	) -> Result<(), UsartError> {
 		let envelope = Envelope {
-			created_by: Some(CURRENT_NODE),
+			created_by: Some(self.node),
 			message: Some(message),
 		};
 		let frame = envelope.encode_length_delimited_to_vec();
@@ -103,5 +104,15 @@ impl SerialService {
 			}
 		}
 		Ok(count)
+	}
+
+	pub async fn read_raw(
+		&mut self,
+		buff: &mut [u8],
+	) -> Result<usize, UsartError> {
+		match self.uart.read_until_idle(buff).await {
+			Ok(len) => Ok(len),
+			Err(error) => Err(error),
+		}
 	}
 }
