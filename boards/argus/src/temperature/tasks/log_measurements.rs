@@ -3,7 +3,7 @@ use defmt::info;
 use embassy_executor::task;
 use heapless::format;
 use messages::argus::envelope::envelope::Message;
-use serial::service::SerialService;
+use peripheral_services::serial::service::SerialService;
 use strum::EnumCount;
 use utils::types::AsyncMutex;
 

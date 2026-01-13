@@ -1,6 +1,6 @@
 use defmt::Format;
 use derive_more::From;
-use serial::service::UsartError;
+use peripheral_services::serial::service::UsartError;
 
 use crate::adc::service::AdcError;
 use crate::sd::types::SdCardError;

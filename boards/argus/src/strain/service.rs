@@ -1,6 +1,6 @@
 use defmt::error;
 use embassy_time::{Instant, Timer};
-use serial::service::SerialService;
+use peripheral_services::serial::service::SerialService;
 use strum::EnumCount;
 use utils::types::AsyncMutex;
 
