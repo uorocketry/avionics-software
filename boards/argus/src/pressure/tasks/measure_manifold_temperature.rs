@@ -1,13 +1,13 @@
 use embassy_executor::task;
 use embassy_time::Timer;
 use strum::EnumCount;
+use utils::types::AsyncMutex;
 
 use crate::adc::types::AdcDevice;
 use crate::pressure::config::NTC_MEASUREMENT_INTERVAL;
 use crate::pressure::service::PressureService;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
-use crate::utils::types::AsyncMutex;
 
 // Task that iterates through the ADCs and measures the NTCs at a slower interval than the pressures being read
 // We don't need that frequent readings for the NTCs

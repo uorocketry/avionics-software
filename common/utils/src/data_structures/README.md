@@ -1,0 +1,2 @@
+# Contents
+Contains all data structures shared between modules. Each implementation will be optimized with DMA if/when embassy adds memory-to-memory transfer support and optimization is possible. All implemented data structures should be stored here for ease of management

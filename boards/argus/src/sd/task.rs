@@ -1,8 +1,8 @@
 use defmt::{debug, error};
+use utils::types::AsyncMutex;
 
 use crate::led_indicator::service::LedIndicatorService;
 use crate::sd::service::{SDCardService, SD_CARD_WRITE_QUEUE};
-use crate::utils::types::AsyncMutex;
 
 #[embassy_executor::task]
 pub async fn sd_card_task(

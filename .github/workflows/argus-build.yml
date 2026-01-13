@@ -48,9 +48,9 @@ jobs:
 
       - name: Setup Rust Environment (Cached)
         uses: ./.github/actions/common/setup-rust-environment/
-
+# TODO: --target thumbv7em-none-eabihf should not be needed as it should be using workspace target. Look into
       - name: "Build with Pressure Feature"
-        run: cargo build --release --features pressure
+        run: cargo build --release --features pressure --target thumbv7em-none-eabihf
         working-directory: boards/argus
 
   build_temperature:
@@ -64,7 +64,7 @@ jobs:
         uses: ./.github/actions/common/setup-rust-environment/
 
       - name: "Build with Temperature Feature"
-        run: cargo build --release --features temperature
+        run: cargo build --release --features temperature --target thumbv7em-none-eabihf
         working-directory: boards/argus
 
   build_strain:
@@ -78,7 +78,7 @@ jobs:
         uses: ./.github/actions/common/setup-rust-environment/
 
       - name: "Build with Strain Feature"
-        run: cargo build --release --features strain
+        run: cargo build --release --features strain --target thumbv7em-none-eabihf
         working-directory: boards/argus
 
   test:

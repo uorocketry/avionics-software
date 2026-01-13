@@ -3,18 +3,18 @@ use defmt::info;
 use embassy_executor::task;
 use heapless::format;
 use messages::argus::envelope::envelope::Message;
+use peripheral_services::serial::service::SerialService;
 use strum::EnumCount;
+use utils::types::AsyncMutex;
 
 use crate::adc::types::AdcDevice;
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, OperationScope};
-use crate::serial::service::SerialService;
 use crate::session::service::SessionService;
 use crate::state_machine::service::StateMachineWorker;
 use crate::state_machine::types::States;
 use crate::temperature::service::THERMOCOUPLE_READING_QUEUE;
 use crate::temperature::types::{ThermocoupleChannel, ThermocoupleReading};
-use crate::utils::types::AsyncMutex;
 
 // Task for picking up the readings from the channel and logging them to the SD card
 #[task]
