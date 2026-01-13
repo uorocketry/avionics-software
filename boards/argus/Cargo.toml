@@ -13,9 +13,7 @@ strain = []
 
 #TODO: Fix this
 calibration = []
-
 [dependencies]
-peripheral-services.workspace = true
 chrono = { workspace = true }
 cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
@@ -82,6 +80,7 @@ num-traits = { version = "0.2.19", default-features = false, features = [
 	"libm",
 ] }
 panic-probe = { workspace = true }
+peripheral-services.workspace = true
 pid = "4.0.0"
 prost = { workspace = true }
 serde = { workspace = true, features = ["derive", "serde_derive"] }

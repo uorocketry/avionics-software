@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 
+defmt = { workspace = true }
+
 embassy-embedded-hal = { workspace = true }
 embassy-stm32 = { workspace = true, features = [
     "defmt",
@@ -15,13 +17,11 @@ embassy-stm32 = { workspace = true, features = [
     "unstable-pac",
     "chrono",
 ] }
+embassy-time = { workspace = true }
 embedded-io = { workspace = true }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
-messages = { workspace = true }
-utils = { workspace = true }
-
-defmt = { workspace = true }
-embassy-time = { workspace = true }
 
 heapless = { workspace = true }
+messages = { workspace = true }
 prost = { workspace = true }
+utils = { workspace = true }
