@@ -26,27 +26,27 @@ jobs:
         run: |
           cargo install cargo-sort cargo-deny
           rustup component add rustfmt clippy
-        working-directory: $crate-path
+        working-directory: ${crate-path}
 
       - name: Check Formatting
         run: cargo fmt -- --check
-        working-directory: $crate-path
+        working-directory: ${crate-path}
 
       - name: Check Cargo.toml Sorting
         run: cargo sort --check
-        working-directory: $crate-path
+        working-directory: ${crate-path}
 
       - name: Check for Clippy Warnings
-        run: cargo clippy -p $crate-name --features $default-features --no-deps
-        working-directory: $crate-path
+        run: cargo clippy -p ${crate-name} --features ${default-features} --no-deps
+        working-directory: ${crate-path}
 
       - name: Check for Crate Duplication
         run: cargo deny check bans
-        working-directory: $crate-path
+        working-directory: ${crate-path}
 
       - name: Check for Advisories
         run: cargo deny check advisories
-        working-directory: $crate-path
+        working-directory: ${crate-path}
 
   test:
     name: Run Host Tests
