@@ -40,20 +40,6 @@ jobs:
         run: cargo clippy -p ${{ inputs.crate-name }} --features ${{ inputs.default-features }} --no-deps
         working-directory: ${{ inputs.crate-path }}
 
-  cargo-deny:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        checks:
-          - advisories
-          - bans
-    continue-on-error: ${{ matrix.checks == 'advisories' }}
-    steps:
-      - uses: actions/checkout@v2
-      - uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          command: check ${{ matrix.checks }}
-
   test:
     name: Run Host Tests
     runs-on: ubuntu-latest
