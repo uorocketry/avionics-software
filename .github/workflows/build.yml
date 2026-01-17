@@ -48,21 +48,21 @@ jobs:
         run: cargo deny check advisories
         working-directory: $crate-path
 
-    test:
-      name: Run Host Tests
-      runs-on: ubuntu-latest
-      env:
-        # NOTE: Unsure why this is here
-        RUST_MIN_STACK: 8388608
-      steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+  test:
+    name: Run Host Tests
+    runs-on: ubuntu-latest
+    env:
+      # NOTE: Unsure why this is here
+      RUST_MIN_STACK: 8388608
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
 
-      - name: Setup Rust Environment (Cached)
-        uses: ./.github/actions/common/setup-rust-environment/
+    - name: Setup Rust Environment (Cached)
+      uses: ./.github/actions/common/setup-rust-environment/
 
-        name: "Run Host Tests"
-      - uses: actions-rs/cargo@v1
-        with:
-          command: make
-          args: test-host
+      name: "Run Host Tests"
+    - uses: actions-rs/cargo@v1
+      with:
+        command: make
+        args: test-host
