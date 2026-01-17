@@ -61,8 +61,8 @@ jobs:
     - name: Setup Rust Environment (Cached)
       uses: ./.github/actions/common/setup-rust-environment/
 
-      name: "Run Host Tests"
-    - uses: actions-rs/cargo@v1
+    - name: "Run Host Tests"
+      uses: actions-rs/cargo@v1
       with:
         command: make
         args: test-host
