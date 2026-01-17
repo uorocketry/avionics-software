@@ -6,7 +6,7 @@ on:
       - "boards/phoenix/**"
       - "common/**" # because phoenix has some dependencies on common
   workflow_dispatch:
-name: Build Verification
+name: Phoenix Build Verification
 
 jobs:
   checks:
