@@ -37,7 +37,7 @@ jobs:
         working-directory: ${{ inputs.crate-path }}
 
       - name: Check for Clippy Warnings
-        run: cargo clippy -p ${{ inputs.crate-name } --features ${{ inputs.default-features }} --no-deps
+        run: cargo clippy -p ${{ inputs.crate-name }} --features ${{ inputs.default-features }} --no-deps
         working-directory: ${{ inputs.crate-path }}
 
   cargo-deny:
