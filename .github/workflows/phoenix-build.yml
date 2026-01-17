@@ -1,0 +1,31 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "boards/phoenix/**"
+      - "common/**" # because phoenix has some dependencies on common
+  workflow_dispatch:
+name: Build Verification
+
+jobs:
+  checks:
+    uses: ./.github/workflow/build.yml
+    with:
+      crate-name: phoenix
+      crate-path: boards/phoenix
+      default-features: music
+
+  build:
+    name: Build Phoenix (All Features)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/common/setup-rust-environment/
+
+      - name: Build
+        run: cargo build --release --features pressure
+        working-directory: boards/phoenix
