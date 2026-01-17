@@ -11,7 +11,7 @@ name: Build Verification
 
 jobs:
   checks:
-    uses: ./.github/workflows/build.yml@5b631423b2b4a90ee887956bf9f6a541edea234a
+    uses: ./.github/workflows/build.yml
     with:
       crate-name: argus
       crate-path: boards/argus

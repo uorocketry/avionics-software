@@ -10,7 +10,7 @@ name: Build Verification
 
 jobs:
   checks:
-    uses: ./.github/workflow/build.yml@5b631423b2b4a90ee887956bf9f6a541edea234a
+    uses: ./.github/workflow/build.yml
     with:
       crate-name: phoenix
       crate-path: boards/phoenix
