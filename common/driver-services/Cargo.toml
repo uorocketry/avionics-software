@@ -6,13 +6,27 @@ edition = "2024"
 [dependencies]
 defmt = { workspace = true }
 
+ublox = { version = "0.9.0", features = [
+    "serde",
+    "ubx_proto31",
+], default-features = false }
 embassy-time = { workspace = true, features = [
     "defmt",
     "defmt-timestamp-uptime",
     "tick-hz-32_768",
 ] }
+embassy-executor = { workspace = true }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
 heapless = { workspace = true }
 messages = { workspace = true }
 peripheral-services = { workspace = true }
 utils = { workspace = true }
+embassy-stm32 = { workspace = true, features = [
+    "defmt",
+    "stm32h733vg",
+    "time-driver-tim2",
+    "exti",
+    "memory-x",
+    "unstable-pac",
+    "chrono",
+] }

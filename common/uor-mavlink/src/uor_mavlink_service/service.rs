@@ -1,5 +1,5 @@
 use defmt::{self, info};
-use driver_services::rfd900x::service::{RFD900Rx, RFD900Tx, RFD900XService};
+use driver_services::rfd900x_service::service::{RFD900Rx, RFD900Tx, RFD900XService};
 use embassy_executor::{Spawner, task};
 use embassy_time::{Duration, Timer};
 use embedded_io_async::{Read, Write};

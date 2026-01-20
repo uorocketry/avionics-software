@@ -1,4 +1,4 @@
-use crate::rfd900x::data::EncryptionLevel;
+use crate::rfd900x_service::data::EncryptionLevel;
 
 // Delay (in ms) between each configuration command
 pub const CONFIG_WRITE_DELAY_MS: u64 = 100;

@@ -1,4 +1,4 @@
-use driver_services::rfd900x::service::RFD900XService;
+use driver_services::rfd900x_service::service::RFD900XService;
 use embassy_executor::task;
 use embassy_time::Timer;
 use utils::types::AsyncMutex;

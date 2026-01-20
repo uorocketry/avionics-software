@@ -9,8 +9,8 @@ use peripheral_services::serial_ring_buffered::service::RingBufferedSerialServic
 use peripheral_services::serial_ring_buffered::service::RingBufferedSerialServiceTx;
 
 use crate::in_rfd_ati_mode;
-use crate::rfd900x::config::*;
-use crate::rfd900x::data::*;
+use crate::rfd900x_service::config::*;
+use crate::rfd900x_service::data::*;
 
 pub struct RFD900XService {
 	io_service: RingBufferedSerialService,

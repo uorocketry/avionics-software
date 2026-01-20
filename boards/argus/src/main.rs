@@ -55,6 +55,8 @@ static STRAIN_SERVICE: StaticCell<AsyncMutex<argus::strain::service::StrainServi
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
+	// Configures the embedded allocator and other startup requirements
+	utils::hal::configure_hal();
 
 	let mut serial_config = usart::Config::default();
 

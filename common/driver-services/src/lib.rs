@@ -1,3 +1,4 @@
 #![no_std]
-
-pub mod rfd900x;
+#![feature(impl_trait_in_assoc_type)]
+pub mod max_m10m_service;
+pub mod rfd900x_service;

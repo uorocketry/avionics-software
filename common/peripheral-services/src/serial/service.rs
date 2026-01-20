@@ -3,10 +3,10 @@ use core::mem::swap;
 use defmt::info;
 use embassy_stm32::Peripheral;
 use embassy_stm32::interrupt::typelevel::Binding;
-use embassy_stm32::mode;
-use embassy_stm32::usart::ConfigError;
+use embassy_stm32::mode::{self, Async};
 pub use embassy_stm32::usart::Error as UsartError;
 use embassy_stm32::usart::{Config, Instance, InterruptHandler, RxDma, RxPin, TxDma, TxPin, Uart};
+use embassy_stm32::usart::{ConfigError, UartRx, UartTx};
 use embassy_time::Timer;
 use embedded_io_async::{ErrorType, Read, Write};
 use heapless::String;
@@ -15,7 +15,8 @@ use messages::argus::envelope::{Envelope, envelope::Message as EnvelopeMessage};
 use prost::Message;
 
 pub struct SerialService {
-	pub uart: Uart<'static, mode::Async>,
+	pub tx_component: SerialServiceTx,
+	pub rx_component: SerialServiceRx,
 	pub node: Node,
 }
 
@@ -31,8 +32,13 @@ impl SerialService {
 		config: Config,
 	) -> Result<Self, ConfigError> {
 		let uart = Uart::<'static, mode::Async>::new(peri, rx, tx, interrupt_requests, tx_dma, rx_dma, config)?;
+		let (tx_component, rx_component) = uart.split();
 
-		Ok(Self { uart: uart, node: node })
+		Ok(Self {
+			tx_component: SerialServiceTx { component: tx_component },
+			rx_component: SerialServiceRx { component: rx_component },
+			node: node,
+		})
 	}
 
 	/// Write the full buffer, waiting until all bytes are sent.
@@ -40,7 +46,7 @@ impl SerialService {
 		&mut self,
 		data: &[u8],
 	) -> Result<(), UsartError> {
-		self.uart.write_all(data).await
+		self.tx_component.component.write_all(data).await
 	}
 
 	pub async fn write_envelope_message(
@@ -53,8 +59,8 @@ impl SerialService {
 		};
 		let frame = envelope.encode_length_delimited_to_vec();
 
-		self.uart.write_all(&frame).await?;
-		self.uart.flush().await?;
+		self.tx_component.component.write_all(&frame).await?;
+		self.tx_component.component.flush().await?;
 
 		Timer::after_millis(100).await;
 		Ok(())
@@ -79,7 +85,7 @@ impl SerialService {
 		let mut bytes = [0u8; 32];
 
 		'chunking_loop: loop {
-			let bytes_size = self.uart.read_until_idle(&mut bytes).await?;
+			let bytes_size = self.rx_component.component.read_until_idle(&mut bytes).await?;
 			for byte in &bytes[..bytes_size] {
 				if count >= N {
 					// Buffer full: stop reading and return what we have.
@@ -110,9 +116,51 @@ impl SerialService {
 		&mut self,
 		buff: &mut [u8],
 	) -> Result<usize, UsartError> {
-		match self.uart.read_until_idle(buff).await {
+		match self.rx_component.component.read_until_idle(buff).await {
 			Ok(len) => Ok(len),
 			Err(error) => Err(error),
 		}
+	}
+
+	pub async fn read(
+		&mut self,
+		buf: &mut [u8],
+	) {
+		self.rx_component.component.read_until_idle(buf).await;
+	}
+
+	pub fn split(self) -> (SerialServiceTx, SerialServiceRx) {
+		return (self.tx_component, self.rx_component);
+	}
+}
+
+pub struct SerialServiceTx {
+	pub component: UartTx<'static, Async>,
+}
+
+impl ErrorType for SerialServiceTx {
+	type Error = embassy_stm32::usart::Error;
+}
+impl Write for SerialServiceTx {
+	async fn write(
+		&mut self,
+		buf: &[u8],
+	) -> Result<usize, Self::Error> {
+		<UartTx<'static, Async> as embedded_io_async::Write>::write(&mut self.component, buf).await
+	}
+}
+
+pub struct SerialServiceRx {
+	pub component: UartRx<'static, Async>,
+}
+impl ErrorType for SerialServiceRx {
+	type Error = embassy_stm32::usart::Error;
+}
+impl Read for SerialServiceRx {
+	async fn read(
+		&mut self,
+		buf: &mut [u8],
+	) -> Result<usize, Self::Error> {
+		self.component.read_until_idle(buf).await
 	}
 }
