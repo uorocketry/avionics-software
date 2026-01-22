@@ -31,6 +31,7 @@ embassy-stm32 = { version = "0.2.0", features = [
 	"memory-x",
 	"unstable-pac",
 	"chrono",
+
 ] }
 embassy-sync = { version = "0.6.2", features = ["defmt"] }
 embassy-time = { version = "0.4.0", features = [

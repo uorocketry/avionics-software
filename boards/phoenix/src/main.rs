@@ -5,23 +5,33 @@
 use cortex_m::interrupt;
 use defmt::{error, info};
 use defmt_rtt as _;
-use driver_services::max_m10m_service::{
-	message_listeners::{navposllh_listener::NavPosLlhListener, navsat_listener::NavSatListener},
-	service::{MaxM10MRx, MaxM10MService, MaxM10MTx, start_maxm10m, start_maxm10m_periodic},
-	traits::MaxM10MListener,
+use driver_services::{
+	max_m10m_service::{
+		message_listeners::{navposllh_listener::NavPosLlhListener, navsat_listener::NavSatListener},
+		service::{MaxM10MRx, MaxM10MService, MaxM10MTx, start_maxm10m, start_maxm10m_periodic},
+		traits::MaxM10MListener,
+	},
+	ms561101::service::MS561101Service,
 };
 use embassy_executor::{Spawner, task};
 use embassy_stm32::{
 	bind_interrupts,
 	can::{Frame, frame},
 	fmc::DA0Pin,
+	gpio::Speed,
 	peripherals,
+	spi::Spi,
+	spi::{self, Mode},
+	time::Hertz,
 	usart::{self, Config},
 };
 use embassy_time::{Duration, Timer};
-use messages::argus::envelope::{Node, NodeType};
+use messages::argus::{
+	envelope::{Node, NodeType},
+	pressure,
+};
 use panic_probe as _;
-use peripheral_services::{serial::service::SerialService, serial_ring_buffered::service::RingBufferedSerialService};
+use peripheral_services::{serial::service::SerialService, serial_ring_buffered::service::RingBufferedSerialService, spi::service::SPIService};
 use phoenix::sound::service::SoundService;
 use static_cell::StaticCell;
 use ublox::{
@@ -43,11 +53,6 @@ use utils::types::*;
 static SOUND_SERVICE: StaticCell<AsyncMutex<SoundService>> = StaticCell::new();
 #[cfg(feature = "music")]
 static MUSIC_SERVICE: StaticCell<AsyncMutex<phoenix::music::service::MusicService>> = StaticCell::new();
-static GPS_BUFFER: StaticCell<[u8; 1024]> = StaticCell::new();
-static GPS_SERVICE: StaticCell<AsyncMutex<MaxM10MService>> = StaticCell::new();
-static LISTENERS: StaticCell<[&'static AsyncMutex<dyn MaxM10MListener>; 2]> = StaticCell::new();
-static NAV_POS_LISTENR: StaticCell<AsyncMutex<NavPosLlhListener>> = StaticCell::new();
-static NAV_SAT_LISTENR: StaticCell<AsyncMutex<NavSatListener>> = StaticCell::new();
 
 bind_interrupts!(struct Irqs {
 	UART8 => usart::InterruptHandler<peripherals::UART8>;
@@ -57,48 +62,24 @@ bind_interrupts!(struct Irqs {
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	let p = configure_hal();
-	let mut config: usart::Config = Config::default();
-	config.baudrate = 9600;
+	let chip_select = p.PB8;
+	let mut spi_config = embassy_stm32::spi::Config::default();
+	spi_config.mode = Mode {
+		polarity: spi::Polarity::IdleLow,
+		phase: spi::Phase::CaptureOnFirstTransition,
+	};
+	spi_config.bit_order = spi::BitOrder::MsbFirst;
+	spi_config.frequency = Hertz::khz(1);
+	spi_config.miso_pull = embassy_stm32::gpio::Pull::Down;
+	spi_config.rise_fall_speed = Speed::Low;
 
-	let buffer = GPS_BUFFER.init([0; 1024]);
+	let spi_peripheral = Spi::new(p.SPI4, p.PE2, p.PE6, p.PE5, p.DMA1_CH0, p.DMA1_CH1, spi_config);
+	let spi_service = SPIService::new(spi_peripheral);
 
-	let serial_service = SerialService::new(
-		p.UART8,
-		p.PE1,
-		p.PE0,
-		Irqs,
-		p.DMA1_CH0,
-		p.DMA1_CH1,
-		Node {
-			r#type: NodeType::Phoenix as i32,
-			id: Some(0),
-		},
-		config,
-	)
-	.unwrap();
-	let (mut gps_service_temp, mut gps_service_tx, mut gps_service_rx) = MaxM10MService::new(serial_service);
-	let gps_service = GPS_SERVICE.init(AsyncMutex::new(gps_service_temp));
+	let mut baro_service = MS561101Service::new(spi_service, chip_select).await;
 
 	let sound = SOUND_SERVICE.init(AsyncMutex::new(SoundService::new(p.TIM3, p.PC6)));
-	gps_service_tx
-		.configure(CfgPrtUartBuilder {
-			portid: UartPortId::Uart1,
-			reserved0: 0,
-			tx_ready: 0,
-			mode: UartMode::new(DataBits::Eight, Parity::None, StopBits::One),
-			baud_rate: 9600,
-			in_proto_mask: InProtoMask::UBLOX,
-			out_proto_mask: OutProtoMask::union(OutProtoMask::NMEA, OutProtoMask::UBLOX),
-			flags: 0,
-			reserved5: 0,
-		})
-		.await;
-	let nav_listener = NAV_POS_LISTENR.init(AsyncMutex::new(NavPosLlhListener::new()));
-	let sat_listener = NAV_SAT_LISTENR.init(AsyncMutex::new(NavSatListener::new()));
-	let listeners = LISTENERS.init([nav_listener, sat_listener]);
-	start_maxm10m(&spawner, gps_service, gps_service_rx, listeners, Duration::from_millis(100));
-	spawner.spawn(test_write(gps_service_tx));
-	spawner.spawn(print_ubx_stream(nav_listener, sat_listener));
+	spawner.spawn(baro_test(baro_service));
 	#[cfg(feature = "music")]
 	{
 		use defmt::error;
@@ -108,6 +89,18 @@ async fn main(spawner: Spawner) {
 			Ok(_) => (),
 			Err(e) => error!("Could not spawn music task: {}", e),
 		}
+	}
+}
+
+#[task]
+pub async fn baro_test(mut baro_service: MS561101Service<'static>) -> ! {
+	loop {
+		let (temp, pressure) = baro_service.read_sample(driver_services::ms561101::config::OSR::OSR1024).await;
+		// let pressure = baro_service.read_pressure_raw(&driver_services::ms561101::config::OSR::OSR256).await;
+
+		info!("Read temperature from barometer: {}", temp.fcelsius());
+		info!("Read pressure from barometer: {}", pressure.fbar());
+		Timer::after_millis(50).await;
 	}
 }
 
