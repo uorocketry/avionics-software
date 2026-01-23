@@ -5,6 +5,7 @@ use driver_services::ms561101::{
 	service::MS561101Service,
 	units::{Altitude, Pressure, Temperature},
 };
+use embassy_time::Timer;
 use libm::powf;
 use uor_utils::utils::data_structures::ring_buffer::RingBuffer;
 pub struct AltimeterService<'a> {
@@ -28,7 +29,7 @@ impl<'a> AltimeterService<'a> {
 
 		let p0 = p0_filter.get_average() as f64;
 		info!("P0 DETERMINED TO BE: {}", p0);
-
+		Timer::after_secs(5).await;
 		let filter = MovingAverageFilter::<10>::new();
 		AltimeterService {
 			barometer: barometer,

@@ -8,37 +8,27 @@ use embassy_stm32::{
 	sai::B,
 };
 use embassy_time::{Delay, Timer};
-use peripheral_services::spi::service::SPIService;
+use peripheral_services::{spi::service::SPIService, with_cs};
 
-use crate::{
-	ms561101::{
-		config::{CalibrationData, CalibrationMasks, Commands, OSR, SamplingCommands},
-		math::{calculate_actual_temperature, calculate_compensated_pressure, calculate_temperature_difference},
-		units::{Pressure, Temperature},
-	},
-	with_cs,
+use crate::ms561101::{
+	config::{CalibrationData, CalibrationMasks, Commands, OSR, SamplingCommands},
+	math::{calculate_actual_temperature, calculate_compensated_pressure, calculate_temperature_difference, constant_calculations},
+	units::{Pressure, Temperature},
 };
 pub struct MS561101Service<'a> {
-	pub spi_service: SPIService,
+	pub spi_service: SPIService<'a>,
 	// TODO: This should live in SPU service for obvious reason lol.
-	pub cs: Output<'a>,
 	pub calibration_data: CalibrationData,
 }
 
 // Maximum SPI frequency is 20MHz
 impl<'a> MS561101Service<'a> {
-	pub async fn new(
-		spi_service: SPIService,
-		chip_select: impl Peripheral<P = impl Pin> + 'a,
-	) -> Self {
-		let chip_select = Output::new(chip_select, embassy_stm32::gpio::Level::High, embassy_stm32::gpio::Speed::VeryHigh);
-
+	pub async fn new(spi_service: SPIService<'a>) -> Self {
 		let mut service = MS561101Service {
 			spi_service: spi_service,
-			cs: chip_select,
 			calibration_data: CalibrationData::default(),
 		};
-		with_cs!(service, { service.reset().await });
+		service.reset().await;
 		// Data sheet: Wait 2.8 ms (max) after reset
 		Timer::after_millis(3000).await;
 		let calibration_data = service.read_calibration_data().await;
@@ -63,11 +53,11 @@ impl<'a> MS561101Service<'a> {
 	) -> u32 {
 		let mut read_buffer: [u8; 4] = [0; 4];
 		let mut write_buffer: [u8; 4] = [Commands::ADC as u8, 0, 0, 0];
-		with_cs!(self, self.spi_service.write::<u8>(&[command as u8]).await);
+		self.spi_service.write::<u8>(&[command as u8]).await;
 		// Must wait the time it takes for sensor conversion
 		Timer::after_millis(conversion_delay).await;
 		// TODO: Look into swapping the write & read to a transfer cmd
-		with_cs!(self, self.spi_service.transfer::<u8>(&mut read_buffer, &mut write_buffer).await);
+		self.spi_service.transfer::<u8>(&mut read_buffer, &mut write_buffer).await;
 		u32::from_be_bytes([0, read_buffer[1], read_buffer[2], read_buffer[3]])
 	}
 
@@ -124,8 +114,9 @@ impl<'a> MS561101Service<'a> {
 
 		let delta_t = calculate_temperature_difference(&temperature_raw, &self.calibration_data);
 
-		let pressure = calculate_compensated_pressure(&pressure_raw, &(temperature_raw.clone() as u32), &self.calibration_data, delta_t);
-		let temperature = calculate_actual_temperature(&temperature_raw, &self.calibration_data, delta_t);
+		let constants = constant_calculations(&temperature_raw, &self.calibration_data, delta_t);
+		let pressure = calculate_compensated_pressure(&pressure_raw, constants.2, constants.1);
+		let temperature = constants.0;
 		(Temperature::new(temperature), Pressure::new(pressure))
 	}
 
@@ -134,10 +125,11 @@ impl<'a> MS561101Service<'a> {
 		mask: CalibrationMasks,
 	) -> u16 {
 		let mut buffer = [0; 1];
-		with_cs!(self, {
-			_ = self.spi_service.write::<u8>(&[Commands::PROM as u8 | mask as u8]).await;
-			_ = self.spi_service.read::<u16>(&mut buffer).await;
+		with_cs!(self.spi_service, {
+			self.spi_service.write_nocs::<u8>(&[Commands::PROM as u8 | mask as u8]).await;
+			self.spi_service.read_nocs::<u16>(&mut buffer).await;
 		});
+
 		buffer[0]
 	}
 

@@ -52,9 +52,9 @@ async fn main(spawner: Spawner) {
 	spi_config.rise_fall_speed = Speed::Low;
 
 	let spi_peripheral = Spi::new(p.SPI4, p.PE2, p.PE6, p.PE5, p.DMA1_CH0, p.DMA1_CH1, spi_config);
-	let spi_service = SPIService::new(spi_peripheral);
+	let spi_service = SPIService::new(spi_peripheral, chip_select);
 
-	let mut baro_service = MS561101Service::new(spi_service, chip_select).await;
+	let mut baro_service = MS561101Service::new(spi_service).await;
 	let mut pressure_altimeter_service = AltimeterService::new(baro_service).await;
 
 	let sound = SOUND_SERVICE.init(AsyncMutex::new(SoundService::new(p.TIM3, p.PC6)));
@@ -92,7 +92,7 @@ pub async fn get_altitude(mut altimeter_service: AltimeterService<'static>) -> !
 		let pressure = altimeter_service.pressure(driver_services::ms561101::config::OSR::OSR4096).await;
 
 		// TODO: Look into applying a digital filter to the barometer readings (maybe slew rate, to try and smooth out the output)
-		info!("CURRENT ALTITUDE FROM P0: {}ft", altitude.ffeet());
+		// info!("CURRENT ALTITUDE FROM P0: {}ft", altitude.ffeet());
 		info!("CURRENT ALTITUDE FROM P0: {}m", altitude.fmeters());
 		info!("CURRENT TEMPERATURE: {}°C", temperature.fcelsius());
 		info!("CURRENT PRESSURE: {}mbar", pressure.fmbar());
