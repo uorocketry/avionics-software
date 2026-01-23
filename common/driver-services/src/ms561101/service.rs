@@ -8,7 +8,6 @@ use embassy_stm32::{
 	sai::B,
 };
 use embassy_time::{Delay, Timer};
-use messages::argus::temperature;
 use peripheral_services::spi::service::SPIService;
 
 use crate::{

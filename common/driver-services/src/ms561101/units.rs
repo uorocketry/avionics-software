@@ -1,5 +1,6 @@
-use defmt::Format;
+use defmt::{Format, info};
 
+// TODO: Can probably make these types instead of structs
 #[derive(Default, Format)]
 pub struct Temperature {
 	// Internal value is celsius with decimal points stripped (2103 vs 21.03)
@@ -82,5 +83,49 @@ impl Pressure {
 
 	pub fn fpsi(&self) -> f64 {
 		self.internal as f64 / 100.0 * 15.0
+	}
+}
+
+#[derive(Default, Format)]
+pub struct Altitude {
+	// Internal value is in floating point feet
+	internal: f64,
+}
+
+impl Altitude {
+	pub fn new(feet: f64) -> Self {
+		Altitude { internal: feet }
+	}
+
+	pub fn feet(&self) -> i64 {
+		self.internal as i64
+	}
+
+	pub fn yard(&self) -> i64 {
+		self.internal as i64 / 3
+	}
+
+	pub fn meters(&self) -> i64 {
+		self.internal as i64 / 3
+	}
+
+	pub fn kilometers(&self) -> i64 {
+		self.internal as i64 / 3000
+	}
+
+	pub fn ffeet(&self) -> f64 {
+		self.internal
+	}
+
+	pub fn fyard(&self) -> f64 {
+		self.internal / 3.0
+	}
+
+	pub fn fmeters(&self) -> f64 {
+		self.internal / 3.281
+	}
+
+	pub fn fkilometers(&self) -> f64 {
+		self.internal / 3.281 / 1000.0
 	}
 }

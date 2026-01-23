@@ -10,14 +10,15 @@ use embassy_stm32::usart::{ConfigError, UartRx, UartTx};
 use embassy_time::Timer;
 use embedded_io_async::{ErrorType, Read, Write};
 use heapless::String;
-use messages::argus::envelope::Node;
-use messages::argus::envelope::{Envelope, envelope::Message as EnvelopeMessage};
 use prost::Message;
+#[cfg(feature = "messages")]
+use uor_utils::messages::argus::envelope::Node;
+#[cfg(feature = "messages")]
+use uor_utils::messages::argus::envelope::{Envelope, envelope::Message as EnvelopeMessage};
 
 pub struct SerialService {
 	pub tx_component: SerialServiceTx,
 	pub rx_component: SerialServiceRx,
-	pub node: Node,
 }
 
 impl SerialService {
@@ -28,7 +29,6 @@ impl SerialService {
 		interrupt_requests: impl Binding<T::Interrupt, InterruptHandler<T>> + 'static,
 		tx_dma: impl Peripheral<P = impl TxDma<T>> + 'static,
 		rx_dma: impl Peripheral<P = impl RxDma<T>> + 'static,
-		node: Node,
 		config: Config,
 	) -> Result<Self, ConfigError> {
 		let uart = Uart::<'static, mode::Async>::new(peri, rx, tx, interrupt_requests, tx_dma, rx_dma, config)?;
@@ -37,7 +37,6 @@ impl SerialService {
 		Ok(Self {
 			tx_component: SerialServiceTx { component: tx_component },
 			rx_component: SerialServiceRx { component: rx_component },
-			node: node,
 		})
 	}
 
@@ -49,22 +48,22 @@ impl SerialService {
 		self.tx_component.component.write_all(data).await
 	}
 
-	pub async fn write_envelope_message(
-		&mut self,
-		message: EnvelopeMessage,
-	) -> Result<(), UsartError> {
-		let envelope = Envelope {
-			created_by: Some(self.node),
-			message: Some(message),
-		};
-		let frame = envelope.encode_length_delimited_to_vec();
+	// pub async fn write_envelope_message(
+	// 	&mut self,
+	// 	message: EnvelopeMessage,
+	// ) -> Result<(), UsartError> {
+	// 	let envelope = Envelope {
+	// 		created_by: Some(self.node),
+	// 		message: Some(message),
+	// 	};
+	// 	let frame = envelope.encode_length_delimited_to_vec();
 
-		self.tx_component.component.write_all(&frame).await?;
-		self.tx_component.component.flush().await?;
+	// 	self.tx_component.component.write_all(&frame).await?;
+	// 	self.tx_component.component.flush().await?;
 
-		Timer::after_millis(100).await;
-		Ok(())
-	}
+	// 	Timer::after_millis(100).await;
+	// 	Ok(())
+	// }
 
 	/// Convenience helper to write a `&str` fully.
 	pub async fn write_str(

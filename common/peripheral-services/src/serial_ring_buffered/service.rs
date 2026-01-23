@@ -6,7 +6,6 @@ use embassy_stm32::usart::{ConfigError, RingBufferedUartRx, UartTx};
 use embassy_stm32::{Peripheral, usart};
 use embedded_io::ReadReady;
 use embedded_io_async::{Error, ErrorType, Read, Write};
-use messages::argus::envelope::Node;
 
 #[derive(Debug)]
 pub enum RingBufferedError {

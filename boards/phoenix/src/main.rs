@@ -5,50 +5,28 @@
 use cortex_m::interrupt;
 use defmt::{error, info};
 use defmt_rtt as _;
-use driver_services::{
-	max_m10m_service::{
-		message_listeners::{navposllh_listener::NavPosLlhListener, navsat_listener::NavSatListener},
-		service::{MaxM10MRx, MaxM10MService, MaxM10MTx, start_maxm10m, start_maxm10m_periodic},
-		traits::MaxM10MListener,
-	},
-	ms561101::service::MS561101Service,
-};
+use driver_services::ms561101::service::MS561101Service;
 use embassy_executor::{Spawner, task};
 use embassy_stm32::{
+	adc::Temperature,
 	bind_interrupts,
 	can::{Frame, frame},
 	fmc::DA0Pin,
 	gpio::Speed,
 	peripherals,
-	spi::Spi,
-	spi::{self, Mode},
+	spi::{self, Mode, Spi},
 	time::Hertz,
 	usart::{self, Config},
 };
 use embassy_time::{Duration, Timer};
-use messages::argus::{
-	envelope::{Node, NodeType},
-	pressure,
-};
+use high_level_services::altimeter_service::{self, service::AltimeterService};
 use panic_probe as _;
 use peripheral_services::{serial::service::SerialService, serial_ring_buffered::service::RingBufferedSerialService, spi::service::SPIService};
 use phoenix::sound::service::SoundService;
 use static_cell::StaticCell;
-use ublox::{
-	self, FixedBuffer, Parser, ParserBuilder,
-	cfg_msg::CfgMsgSinglePort,
-	cfg_prt::CfgPrtUartBuilder,
-	mon_gnss::{MonGnss, MonGnssConstellMask},
-	mon_rf::MonRf,
-	nav_pos_llh::NavPosLlh,
-	nav_sat::NavSat,
-};
-use ublox::{
-	cfg_prt::{DataBits, InProtoMask, OutProtoMask, Parity, StopBits, UartMode, UartPortId},
-	mon_ver::MonVer,
-};
-use utils::hal::configure_hal;
-use utils::types::*;
+use uor_utils::utils::types::*;
+use uor_utils::utils::{data_structures::ring_buffer::RingBuffer, hal::configure_hal};
+
 /// To change the pin used for sound, see [phoenix::sound::types]
 static SOUND_SERVICE: StaticCell<AsyncMutex<SoundService>> = StaticCell::new();
 #[cfg(feature = "music")]
@@ -77,9 +55,10 @@ async fn main(spawner: Spawner) {
 	let spi_service = SPIService::new(spi_peripheral);
 
 	let mut baro_service = MS561101Service::new(spi_service, chip_select).await;
+	let mut pressure_altimeter_service = AltimeterService::new(baro_service).await;
 
 	let sound = SOUND_SERVICE.init(AsyncMutex::new(SoundService::new(p.TIM3, p.PC6)));
-	spawner.spawn(baro_test(baro_service));
+	spawner.spawn(get_altitude(pressure_altimeter_service));
 	#[cfg(feature = "music")]
 	{
 		use defmt::error;
@@ -93,7 +72,7 @@ async fn main(spawner: Spawner) {
 }
 
 #[task]
-pub async fn baro_test(mut baro_service: MS561101Service<'static>) -> ! {
+pub async fn baro_poll(mut baro_service: MS561101Service<'static>) -> ! {
 	loop {
 		let (temp, pressure) = baro_service.read_sample(driver_services::ms561101::config::OSR::OSR1024).await;
 		// let pressure = baro_service.read_pressure_raw(&driver_services::ms561101::config::OSR::OSR256).await;
@@ -105,46 +84,19 @@ pub async fn baro_test(mut baro_service: MS561101Service<'static>) -> ! {
 }
 
 #[task]
-pub async fn print_ubx_stream(
-	data: &'static AsyncMutex<NavPosLlhListener>,
-	data_2: &'static AsyncMutex<NavSatListener>,
-) -> ! {
-	info!("Starting read");
+pub async fn get_altitude(mut altimeter_service: AltimeterService<'static>) -> ! {
 	loop {
-		{
-			// Everything but the logging should be wrapped in a function
-			let mut data = data.lock().await;
-			if let Some(payload) = data.internal.clone() {
-				info!("CURRENT DATA LAT: {}", payload.lat_degrees());
-				info!("CURRENT DATA LON: {}", payload.lon_degrees());
-				info!("CURRENT DATA FRESH: {}", data.new_data);
-			} else {
-				info!("No data available");
-			}
-			data.new_data = false;
-		}
-		{
-			// Everything but the logging should be wrapped in a function
-			let mut data_2 = data_2.lock().await;
-			if let Some(payload) = data_2.internal.clone() {
-				info!("CURRENT SATELLITE COUNT: {}", payload.num_svs());
-				info!("CURRENT DATA FRESH: {}", data_2.new_data);
-			} else {
-				info!("No data available");
-			}
-			data_2.new_data = false;
-		}
-		Timer::after_millis(250).await;
-	}
-}
-#[task]
-pub async fn test_write(mut service: MaxM10MTx) -> ! {
-	loop {
-		service.update_message::<NavPosLlh>().await;
-		service.update_message::<NavSat>().await;
-		// service.update_message::<NavPosLlh>().await;
+		// TODO: Reported altitude appears to drift due to head generated from on-board LDOs, this must be fixed with next revision
+		let altitude = altimeter_service.altitude(driver_services::ms561101::config::OSR::OSR4096).await;
+		let temperature = altimeter_service.temperature(driver_services::ms561101::config::OSR::OSR4096).await;
+		let pressure = altimeter_service.pressure(driver_services::ms561101::config::OSR::OSR4096).await;
 
-		Timer::after_millis(100).await;
-		// info!("Writing");
+		// TODO: Look into applying a digital filter to the barometer readings (maybe slew rate, to try and smooth out the output)
+		info!("CURRENT ALTITUDE FROM P0: {}ft", altitude.ffeet());
+		info!("CURRENT ALTITUDE FROM P0: {}m", altitude.fmeters());
+		info!("CURRENT TEMPERATURE: {}°C", temperature.fcelsius());
+		info!("CURRENT PRESSURE: {}mbar", pressure.fmbar());
+
+		Timer::after_millis(10).await;
 	}
 }

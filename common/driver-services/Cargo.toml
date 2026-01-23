@@ -18,9 +18,8 @@ embassy-time = { workspace = true, features = [
 embassy-executor = { workspace = true }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
 heapless = { workspace = true }
-messages = { workspace = true }
 peripheral-services = { workspace = true }
-utils = { workspace = true }
+uor-utils = { workspace = true }
 embassy-stm32 = { workspace = true, features = [
     "defmt",
     "stm32h733vg",

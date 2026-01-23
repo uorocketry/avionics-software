@@ -21,7 +21,6 @@ embassy-time = { workspace = true }
 embedded-io = { workspace = true }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
 
+uor-utils = { workspace = true }
 heapless = { workspace = true }
-messages = { workspace = true }
 prost = { workspace = true }
-utils = { workspace = true }
