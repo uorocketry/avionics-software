@@ -1,4 +1,3 @@
-# SHOULD DO: dedupe these and clean them up
 on:
   push:
     branches: [main]
