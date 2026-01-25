@@ -40,25 +40,28 @@ bind_interrupts!(struct Irqs {
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	let p = configure_hal();
-	let chip_select = p.PB8;
-	let mut spi_config = embassy_stm32::spi::Config::default();
-	spi_config.mode = Mode {
-		polarity: spi::Polarity::IdleLow,
-		phase: spi::Phase::CaptureOnFirstTransition,
-	};
-	spi_config.bit_order = spi::BitOrder::MsbFirst;
-	spi_config.frequency = Hertz::khz(1);
-	spi_config.miso_pull = embassy_stm32::gpio::Pull::Down;
-	spi_config.rise_fall_speed = Speed::Low;
 
-	let spi_peripheral = Spi::new(p.SPI4, p.PE2, p.PE6, p.PE5, p.DMA1_CH0, p.DMA1_CH1, spi_config);
-	let spi_service = SPIService::new(spi_peripheral, chip_select);
+	#[cfg(feature = "music")]
+	{
+		let chip_select = p.PB8;
+		let mut spi_config = embassy_stm32::spi::Config::default();
+		spi_config.mode = Mode {
+			polarity: spi::Polarity::IdleLow,
+			phase: spi::Phase::CaptureOnFirstTransition,
+		};
+		spi_config.bit_order = spi::BitOrder::MsbFirst;
+		spi_config.frequency = Hertz::khz(1);
+		spi_config.miso_pull = embassy_stm32::gpio::Pull::Down;
+		spi_config.rise_fall_speed = Speed::Low;
 
-	let mut baro_service = MS561101Service::new(spi_service).await;
-	let mut pressure_altimeter_service = AltimeterService::new(baro_service).await;
+		let spi_peripheral = Spi::new(p.SPI4, p.PE2, p.PE6, p.PE5, p.DMA1_CH0, p.DMA1_CH1, spi_config);
+		let spi_service = SPIService::new(spi_peripheral, chip_select);
 
+		let mut baro_service = MS561101Service::new(spi_service).await;
+		let mut pressure_altimeter_service = AltimeterService::new(baro_service).await;
+		spawner.spawn(get_altitude(pressure_altimeter_service));
+	}
 	let sound = SOUND_SERVICE.init(AsyncMutex::new(SoundService::new(p.TIM3, p.PC6)));
-	spawner.spawn(get_altitude(pressure_altimeter_service));
 	#[cfg(feature = "music")]
 	{
 		use defmt::error;
@@ -71,28 +74,14 @@ async fn main(spawner: Spawner) {
 	}
 }
 
-#[task]
-pub async fn baro_poll(mut baro_service: MS561101Service<'static>) -> ! {
-	loop {
-		let (temp, pressure) = baro_service.read_sample(driver_services::ms561101::config::OSR::OSR1024).await;
-		// let pressure = baro_service.read_pressure_raw(&driver_services::ms561101::config::OSR::OSR256).await;
-
-		info!("Read temperature from barometer: {}", temp.fcelsius());
-		info!("Read pressure from barometer: {}", pressure.fbar());
-		Timer::after_millis(50).await;
-	}
-}
-
+#[cfg(feature = "altitude")]
 #[task]
 pub async fn get_altitude(mut altimeter_service: AltimeterService<'static>) -> ! {
 	loop {
-		// TODO: Reported altitude appears to drift due to head generated from on-board LDOs, this must be fixed with next revision
 		let altitude = altimeter_service.altitude(driver_services::ms561101::config::OSR::OSR4096).await;
 		let temperature = altimeter_service.temperature(driver_services::ms561101::config::OSR::OSR4096).await;
 		let pressure = altimeter_service.pressure(driver_services::ms561101::config::OSR::OSR4096).await;
 
-		// TODO: Look into applying a digital filter to the barometer readings (maybe slew rate, to try and smooth out the output)
-		// info!("CURRENT ALTITUDE FROM P0: {}ft", altitude.ffeet());
 		info!("CURRENT ALTITUDE FROM P0: {}m", altitude.fmeters());
 		info!("CURRENT TEMPERATURE: {}°C", temperature.fcelsius());
 		info!("CURRENT PRESSURE: {}mbar", pressure.fmbar());
