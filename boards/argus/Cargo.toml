@@ -67,7 +67,6 @@ heapless = { workspace = true }
 high-level-services = { workspace = true }
 itoa = { version = "1.0.15", features = ["no-panic"] }
 libm = { version = "0.2.15", default-features = false }
-uor-utils = { workspace = true, features = ["messages"] }
 micromath = "2.0.0"
 num-traits = { version = "0.2.19", default-features = false, features = [
 	"libm",
@@ -81,6 +80,7 @@ smlang = { workspace = true }
 static_cell = "2"
 stm32-fmc = "0.3.0"
 strum = { version = "0.27.2", default-features = false, features = ["derive"] }
+uor-utils = { workspace = true, features = ["messages"] }
 
 [[test]]
 name = "sd"

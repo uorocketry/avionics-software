@@ -16,6 +16,7 @@ cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
 defmt = { workspace = true }
 defmt-rtt = { workspace = true }
+driver-services = { workspace = true }
 embassy-executor = { version = "0.7.0", features = [
 	"nightly",
 	"task-arena-size-10240",
@@ -41,13 +42,12 @@ embassy-time = { version = "0.4.0", features = [
 	"tick-hz-32_768",
 ] }
 embedded-alloc = { workspace = true }
+high-level-services = { workspace = true }
 panic-probe = { workspace = true }
-static_cell = "2"
-driver-services = { workspace = true }
 peripheral-services = { workspace = true }
-uor-utils = { workspace = true }
+static_cell = "2"
 ublox = { version = "0.9.0", features = [
 	"serde",
 	"ubx_proto31",
 ], default-features = false }
-high-level-services = { workspace = true }
+uor-utils = { workspace = true }

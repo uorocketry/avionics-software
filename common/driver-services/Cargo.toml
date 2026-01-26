@@ -5,21 +5,7 @@ edition = "2024"
 
 [dependencies]
 defmt = { workspace = true }
-
-ublox = { version = "0.9.0", features = [
-    "serde",
-    "ubx_proto31",
-], default-features = false }
-embassy-time = { workspace = true, features = [
-    "defmt",
-    "defmt-timestamp-uptime",
-    "tick-hz-32_768",
-] }
 embassy-executor = { workspace = true }
-embedded-io-async = { workspace = true, features = ["defmt-03"] }
-heapless = { workspace = true }
-peripheral-services = { workspace = true }
-uor-utils = { workspace = true }
 embassy-stm32 = { workspace = true, features = [
     "defmt",
     "stm32h733vg",
@@ -29,3 +15,17 @@ embassy-stm32 = { workspace = true, features = [
     "unstable-pac",
     "chrono",
 ] }
+embassy-time = { workspace = true, features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+    "tick-hz-32_768",
+] }
+embedded-io-async = { workspace = true, features = ["defmt-03"] }
+heapless = { workspace = true }
+peripheral-services = { workspace = true }
+
+ublox = { version = "0.9.0", features = [
+    "serde",
+    "ubx_proto31",
+], default-features = false }
+uor-utils = { workspace = true }

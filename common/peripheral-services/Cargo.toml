@@ -23,7 +23,7 @@ embassy-stm32 = { workspace = true, features = [
 embassy-time = { workspace = true }
 embedded-io = { workspace = true }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
-
-uor-utils = { workspace = true }
 heapless = { workspace = true }
 prost = { workspace = true, optional = true }
+
+uor-utils = { workspace = true }
