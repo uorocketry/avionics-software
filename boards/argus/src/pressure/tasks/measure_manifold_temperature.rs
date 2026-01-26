@@ -1,7 +1,7 @@
 use embassy_executor::task;
 use embassy_time::Timer;
 use strum::EnumCount;
-use utils::types::AsyncMutex;
+use uor_utils::utils::types::AsyncMutex;
 
 use crate::adc::types::AdcDevice;
 use crate::pressure::config::NTC_MEASUREMENT_INTERVAL;

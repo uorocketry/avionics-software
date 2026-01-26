@@ -1,9 +1,9 @@
 use core::str::FromStr;
 
-use csv::SerializeCSV;
 use defmt::Format;
-use messages::argus::strain::strain_reading::StrainReading as StrainReadingProtobuf;
 use serde::{Deserialize, Serialize};
+use uor_utils::csv::SerializeCSV;
+use uor_utils::messages::argus::strain::strain_reading::StrainReading as StrainReadingProtobuf;
 
 use crate::adc::types::AdcDevice;
 use crate::sd::config::MAX_LINE_LENGTH;

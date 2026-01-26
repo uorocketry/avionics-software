@@ -1,7 +1,7 @@
 use defmt::Format;
-use messages::argus::strain::strain_channel::StrainChannel as StrainChannelProtobuf;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
+use uor_utils::messages::argus::strain::strain_channel::StrainChannel as StrainChannelProtobuf;
 
 use crate::adc::driver::types::AnalogChannel;
 

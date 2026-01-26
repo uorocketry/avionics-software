@@ -1,7 +1,7 @@
 use defmt::Format;
-use messages::argus::temperature::thermocouple_channel::ThermocoupleChannel as ThermocoupleChannelProtobuf;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
+use uor_utils::messages::argus::temperature::thermocouple_channel::ThermocoupleChannel as ThermocoupleChannelProtobuf;
 
 use crate::adc::driver::types::AnalogChannel;
 

@@ -4,6 +4,6 @@ rustflags = ["-C", "link-arg=-Tlink.x", "-C", "link-arg=-Tdefmt.x"]
 
 [env]
 DEFMT_LOG = "debug"
-
+# DEFMT_LOG = "trace"
 [build]
 target = "thumbv7em-none-eabihf"

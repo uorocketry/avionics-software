@@ -1,0 +1,49 @@
+[package]
+name = "uor-utils"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+# default = ["mavlink/embedded", "mavlink/uorocketry"]
+std = [
+    "mavlink/std",
+    "mavlink/tcp",
+    "mavlink/udp",
+    "mavlink/direct-serial",
+    "mavlink/serde",
+]
+messages = ["prost"]
+
+[dependencies]
+bitflags = { version = "2.3.1", default-features = false, features = ["serde"] }
+defmt = { workspace = true }
+embassy-stm32 = { version = "0.2.0", features = [
+    "defmt",
+    "stm32h733vg",
+    "time-driver-tim2",
+    "exti",
+    "memory-x",
+    "unstable-pac",
+    "chrono",
+] }
+
+# glob = "0.3.3"
+# prost-build = "0.14.1"
+# protoc-bin-vendored = "3"
+embassy-sync = { version = "0.6.2", features = ["defmt"] }
+embedded-alloc = { workspace = true }
+embedded-io-async = { workspace = true, features = ["defmt-03"] }
+heapless = { workspace = true }
+mavlink = { git = "https://github.com/uorocketry/rust-mavlink.git", features = [
+    "uorocketry",
+], default-features = false, optional = true }
+prost = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive", "serde_derive"] }
+serde-csv-core = { workspace = true }
+ublox = { git = "https://github.com/uorocketry/ublox", default-features = false, features = [
+    "serde",
+] }
+[build-dependencies]
+glob = "0.3.3"
+prost-build = "0.14.1"
+protoc-bin-vendored = "3"

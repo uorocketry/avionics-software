@@ -1,9 +1,9 @@
 use core::str::FromStr;
 
-use csv::SerializeCSV;
 use defmt::Format;
-use messages::argus::temperature::thermocouple_reading::ThermocoupleReading as ThermocoupleReadingProtobuf;
 use serde::{Deserialize, Serialize};
+use uor_utils::csv::SerializeCSV;
+use uor_utils::messages::argus::temperature::thermocouple_reading::ThermocoupleReading as ThermocoupleReadingProtobuf;
 
 use crate::adc::types::AdcDevice;
 use crate::sd::config::MAX_LINE_LENGTH;

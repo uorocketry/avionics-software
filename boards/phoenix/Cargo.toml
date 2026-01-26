@@ -7,14 +7,16 @@ edition = "2024"
 harness = false
 
 [features]
-default = ["music"]
+default = ["music", "altitude"]
 music = []
+altitude = []
 
 [dependencies]
 cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
 defmt = { workspace = true }
 defmt-rtt = { workspace = true }
+driver-services = { workspace = true }
 embassy-executor = { version = "0.7.0", features = [
 	"nightly",
 	"task-arena-size-10240",
@@ -31,6 +33,7 @@ embassy-stm32 = { version = "0.2.0", features = [
 	"memory-x",
 	"unstable-pac",
 	"chrono",
+
 ] }
 embassy-sync = { version = "0.6.2", features = ["defmt"] }
 embassy-time = { version = "0.4.0", features = [
@@ -39,5 +42,12 @@ embassy-time = { version = "0.4.0", features = [
 	"tick-hz-32_768",
 ] }
 embedded-alloc = { workspace = true }
+high-level-services = { workspace = true }
 panic-probe = { workspace = true }
+peripheral-services = { workspace = true }
 static_cell = "2"
+ublox = { version = "0.9.0", features = [
+	"serde",
+	"ubx_proto31",
+], default-features = false }
+uor-utils = { workspace = true }

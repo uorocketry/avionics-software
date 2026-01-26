@@ -3,6 +3,9 @@ name = "peripheral-services"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+messages = ["prost", "uor-utils/messages"]
+
 [dependencies]
 
 defmt = { workspace = true }
@@ -20,8 +23,7 @@ embassy-stm32 = { workspace = true, features = [
 embassy-time = { workspace = true }
 embedded-io = { workspace = true }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
-
 heapless = { workspace = true }
-messages = { workspace = true }
-prost = { workspace = true }
-utils = { workspace = true }
+prost = { workspace = true, optional = true }
+
+uor-utils = { workspace = true }

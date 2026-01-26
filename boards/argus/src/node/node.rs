@@ -1,4 +1,4 @@
-use messages::argus::envelope::{Node, NodeType};
+use uor_utils::messages::argus::envelope::{Node, NodeType};
 
 #[cfg(feature = "temperature")]
 pub static CURRENT_NODE: Node = Node {
