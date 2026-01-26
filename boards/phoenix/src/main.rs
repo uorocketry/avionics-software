@@ -41,7 +41,7 @@ async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	let p = configure_hal();
 
-	#[cfg(feature = "music")]
+	#[cfg(feature = "altitude")]
 	{
 		let chip_select = p.PB8;
 		let mut spi_config = embassy_stm32::spi::Config::default();
