@@ -15,5 +15,7 @@ Common logic shared between boards and possibly ground station can be found at `
 
 See [common/](./common/).
 
+<!--- 
 ### Ground Station
-Coming soon...
+<Coming soon...>
+-->
