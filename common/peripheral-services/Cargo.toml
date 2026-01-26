@@ -3,6 +3,9 @@ name = "peripheral-services"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+messages = ["prost", "uor-utils/messages"]
+
 [dependencies]
 
 defmt = { workspace = true }
@@ -23,4 +26,4 @@ embedded-io-async = { workspace = true, features = ["defmt-03"] }
 
 uor-utils = { workspace = true }
 heapless = { workspace = true }
-prost = { workspace = true }
+prost = { workspace = true, optional = true }

@@ -2,7 +2,7 @@ use core::str::FromStr;
 
 use defmt::info;
 use heapless::{format, Vec};
-use utils::types::AsyncMutex;
+use uor_utils::utils::types::AsyncMutex;
 
 use crate::sd::service::SDCardService;
 use crate::sd::types::{FileName, Line, OperationScope, SdCardError};

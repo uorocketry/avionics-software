@@ -10,11 +10,10 @@ use embassy_stm32::usart::{ConfigError, UartRx, UartTx};
 use embassy_time::Timer;
 use embedded_io_async::{ErrorType, Read, Write};
 use heapless::String;
+#[cfg(feature = "messages")]
 use prost::Message;
 #[cfg(feature = "messages")]
-use uor_utils::messages::argus::envelope::Node;
-#[cfg(feature = "messages")]
-use uor_utils::messages::argus::envelope::{Envelope, envelope::Message as EnvelopeMessage};
+use uor_utils::messages::argus::envelope::{Envelope, Node, envelope::Message as EnvelopeMessage};
 
 pub struct SerialService {
 	pub tx_component: SerialServiceTx,
@@ -48,22 +47,24 @@ impl SerialService {
 		self.tx_component.component.write_all(data).await
 	}
 
-	// pub async fn write_envelope_message(
-	// 	&mut self,
-	// 	message: EnvelopeMessage,
-	// ) -> Result<(), UsartError> {
-	// 	let envelope = Envelope {
-	// 		created_by: Some(self.node),
-	// 		message: Some(message),
-	// 	};
-	// 	let frame = envelope.encode_length_delimited_to_vec();
+	#[cfg(feature = "messages")]
+	pub async fn write_envelope_message(
+		&mut self,
+		message: EnvelopeMessage,
+	) -> Result<(), UsartError> {
+		let envelope = Envelope {
+			// TODO: The Node::default should be corrected to how it was in the legacy argus system, but this is low priority RN
+			created_by: Some(Node::default()),
+			message: Some(message),
+		};
+		let frame = envelope.encode_length_delimited_to_vec();
 
-	// 	self.tx_component.component.write_all(&frame).await?;
-	// 	self.tx_component.component.flush().await?;
+		self.tx_component.component.write_all(&frame).await?;
+		self.tx_component.component.flush().await?;
 
-	// 	Timer::after_millis(100).await;
-	// 	Ok(())
-	// }
+		Timer::after_millis(100).await;
+		Ok(())
+	}
 
 	/// Convenience helper to write a `&str` fully.
 	pub async fn write_str(

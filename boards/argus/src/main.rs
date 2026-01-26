@@ -20,13 +20,13 @@ use embassy_executor::Spawner;
 use embassy_stm32::gpio::Pin;
 use embassy_stm32::usart::Uart;
 use embassy_stm32::{bind_interrupts, peripherals, usart};
-use messages::argus::envelope::{Node, NodeType};
 use panic_probe as _;
 use peripheral_services::serial::service::SerialService;
 use serde::ser;
 use static_cell::StaticCell;
 use strum::EnumCount;
-use utils::{hal::configure_hal, types::AsyncMutex};
+use uor_utils::messages::argus::envelope::{Node, NodeType};
+use uor_utils::utils::{hal::configure_hal, types::AsyncMutex};
 
 // Mapping of NVIC interrupts to Embassy interrupt handlers
 bind_interrupts!(struct InterruptRequests {
@@ -56,7 +56,7 @@ static STRAIN_SERVICE: StaticCell<AsyncMutex<argus::strain::service::StrainServi
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	// Configures the embedded allocator and other startup requirements
-	utils::hal::configure_hal();
+	uor_utils::utils::hal::configure_hal();
 
 	let mut serial_config = usart::Config::default();
 
@@ -105,7 +105,6 @@ async fn main(spawner: Spawner) {
 			InterruptRequests,
 			peripherals.DMA1_CH2,
 			peripherals.DMA1_CH3,
-			CURRENT_NODE,
 			serial_config,
 		)
 		.unwrap(),

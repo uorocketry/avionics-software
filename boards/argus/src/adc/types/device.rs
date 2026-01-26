@@ -1,7 +1,7 @@
 use defmt::Format;
-use messages::argus::adc::AdcDevice as AdcDeviceProtobuf;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
+use uor_utils::messages::argus::adc::AdcDevice as AdcDeviceProtobuf;
 
 // Called AdcDevice to not clash with embassy::adc::Adc
 #[repr(usize)]

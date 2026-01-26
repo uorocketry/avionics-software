@@ -13,7 +13,7 @@ std = [
     "mavlink/direct-serial",
     "mavlink/serde",
 ]
-messages = []
+messages = ["prost"]
 
 [dependencies]
 bitflags = { version = "2.3.1", default-features = false, features = ["serde"] }
@@ -22,7 +22,7 @@ heapless = { workspace = true }
 mavlink = { git = "https://github.com/uorocketry/rust-mavlink.git", features = [
     "uorocketry",
 ], default-features = false, optional = true }
-# prost = { workspace = true }
+prost = { workspace = true, optional = true }
 ublox = { git = "https://github.com/uorocketry/ublox", default-features = false, features = [
     "serde",
 ] }
@@ -44,3 +44,7 @@ embassy-stm32 = { version = "0.2.0", features = [
 ] }
 embedded-alloc = { workspace = true }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
+[build-dependencies]
+glob = "0.3.3"
+prost-build = "0.14.1"
+protoc-bin-vendored = "3"

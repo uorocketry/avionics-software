@@ -67,13 +67,13 @@ heapless = { workspace = true }
 high-level-services = { workspace = true }
 itoa = { version = "1.0.15", features = ["no-panic"] }
 libm = { version = "0.2.15", default-features = false }
-uor-utils = { workspace = true }
+uor-utils = { workspace = true, features = ["messages"] }
 micromath = "2.0.0"
 num-traits = { version = "0.2.19", default-features = false, features = [
 	"libm",
 ] }
 panic-probe = { workspace = true }
-peripheral-services.workspace = true
+peripheral-services = { workspace = true, features = ["messages"] }
 pid = "4.0.0"
 prost = { workspace = true }
 serde = { workspace = true, features = ["derive", "serde_derive"] }

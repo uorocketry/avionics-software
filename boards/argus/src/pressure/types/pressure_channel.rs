@@ -1,7 +1,7 @@
 use defmt::Format;
-use messages::argus::pressure::pressure_channel::PressureChannel as PressureChannelProtobuf;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
+use uor_utils::messages::argus::pressure::pressure_channel::PressureChannel as PressureChannelProtobuf;
 
 use crate::adc::driver::types::AnalogChannel;
 
