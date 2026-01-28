@@ -5,7 +5,10 @@
 use cortex_m::interrupt;
 use defmt::{error, info};
 use defmt_rtt as _;
-use driver_services::ms561101::service::MS561101Service;
+use driver_services::{
+	ejection_channel_driver::{driver::EjectionChannelDriver, utils::EjectionChannelStates},
+	ms561101::service::MS561101Service,
+};
 use embassy_executor::{Spawner, task};
 use embassy_stm32::{
 	adc::Temperature,
@@ -13,7 +16,7 @@ use embassy_stm32::{
 	can::{Frame, frame},
 	fmc::DA0Pin,
 	gpio::Speed,
-	peripherals,
+	peripherals::{self, PA2},
 	spi::{self, Mode, Spi},
 	time::Hertz,
 	usart::{self, Config},
@@ -31,16 +34,23 @@ use uor_utils::utils::{data_structures::ring_buffer::RingBuffer, hal::configure_
 static SOUND_SERVICE: StaticCell<AsyncMutex<SoundService>> = StaticCell::new();
 #[cfg(feature = "music")]
 static MUSIC_SERVICE: StaticCell<AsyncMutex<phoenix::music::service::MusicService>> = StaticCell::new();
+static EJECTION_CHANNEL: StaticCell<AsyncMutex<EjectionChannelDriver>> = StaticCell::new();
 
 bind_interrupts!(struct Irqs {
 	UART8 => usart::InterruptHandler<peripherals::UART8>;
 });
 
 #[embassy_executor::main]
+
 async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	let p = configure_hal();
 
+	let detected: Option<PA2> = None;
+	let ejection_channel = EJECTION_CHANNEL.init(AsyncMutex::new(EjectionChannelDriver::new(p.PD5, p.PD6, p.PA2, detected)));
+
+	spawner.spawn(ejection_update_process(ejection_channel));
+	spawner.spawn(ejection_test_process(ejection_channel));
 	#[cfg(feature = "altitude")]
 	{
 		let chip_select = p.PB8;
@@ -87,5 +97,42 @@ pub async fn get_altitude(mut altimeter_service: AltimeterService<'static>) -> !
 		info!("CURRENT PRESSURE: {}mbar", pressure.fmbar());
 
 		Timer::after_millis(10).await;
+	}
+}
+#[task]
+
+pub async fn ejection_update_process(ejection_channel: &'static AsyncMutex<EjectionChannelDriver<'static>>) {
+	let mut last_state: Option<EjectionChannelStates> = None;
+	loop {
+		{
+			ejection_channel.lock().await.update();
+			let current_state = &ejection_channel.lock().await.get_state();
+			if let Some(state) = &last_state {
+				if current_state != state {
+					info!("State Transition -- {} -- -> -- {} --", state, current_state);
+				}
+			} else {
+				info!("Initialized -- {} --", current_state);
+			}
+			last_state = Some(current_state.clone())
+		}
+		Timer::after_millis(500).await;
+	}
+}
+#[task]
+
+pub async fn ejection_test_process(ejection_channel: &'static AsyncMutex<EjectionChannelDriver<'static>>) {
+	loop {
+		info!("Ejection channel test starting");
+		Timer::after_secs(5).await;
+		{
+			let mut channel = ejection_channel.lock().await;
+			channel.arm();
+		}
+		Timer::after_secs(5).await;
+		{
+			let mut channel = ejection_channel.lock().await;
+			channel.deploy_charge();
+		}
 	}
 }
