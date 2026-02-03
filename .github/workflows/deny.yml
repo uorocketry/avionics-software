@@ -7,7 +7,7 @@ jobs:
       matrix:
         checks:
           - advisories
-          - bans # TODO: Should add other deny checks, once configured
+          - bans licenses sources
 
     # Prevent sudden announcement of a new advisory from failing ci:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
