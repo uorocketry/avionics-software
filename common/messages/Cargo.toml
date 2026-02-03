@@ -1,21 +1,25 @@
 [package]
 name = "messages"
-version = "0.1.0"
 edition = "2021"
 build = "build.rs"
+version.workspace = true
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+license-file.workspace = true
 
 [features]
 default = ["mavlink/embedded", "mavlink/uorocketry"]
 std = [
-    "mavlink/std",
-    "mavlink/tcp",
-    "mavlink/udp",
-    "mavlink/direct-serial",
-    "mavlink/serde",
+  "mavlink/std",
+  "mavlink/tcp",
+  "mavlink/udp",
+  "mavlink/direct-serial",
+  "mavlink/serde",
 ]
 
 [dependencies]
-bitflags = { version = "2.3.1", default-features = false, features = ["serde"] }
+bitflags = { workspace = true, features = ["serde"] }
 defmt = { workspace = true }
 heapless = { workspace = true }
 mavlink = { git = "https://github.com/uorocketry/rust-mavlink.git", features = [

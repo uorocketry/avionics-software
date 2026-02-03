@@ -2,13 +2,16 @@
 
 [package]
 name = "utils"
-version = "0.1.0"
 edition = "2024"
+version.workspace = true
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+license-file.workspace = true
 
 [dependencies]
-embassy-sync = { version = "0.6.2", features = ["defmt"] }
-embassy-stm32 = { version = "0.2.0", features = [
-    "defmt",
+embassy-sync = { workspace = true }
+embassy-stm32 = { workspace = true, features = [
     "stm32h733vg",
     "time-driver-tim2",
     "exti",

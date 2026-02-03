@@ -1,7 +1,11 @@
 [package]
 name = "uor-mavlink-macros"
-version = "0.1.0"
 edition = "2024"
+version.workspace = true
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+license-file.workspace = true
 
 [lib]
 proc-macro = true

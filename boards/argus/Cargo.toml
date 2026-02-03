@@ -1,7 +1,11 @@
 [package]
 name = "argus"
-version = "0.1.0"
 edition = "2021"
+version.workspace = true
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+license-file.workspace = true
 
 [lib]
 harness = false
@@ -55,7 +59,7 @@ embedded-alloc = { workspace = true }
 embedded-hal = { version = "1.0.0", features = ["defmt-03"] }
 embedded-hal-async = { version = "1.0" }
 embedded-hal-bus = { version = "0.3.0", features = ["async", "defmt-03"] }
-embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
+embedded-io-async = { workspace = true, features = ["defmt-03"] }
 embedded-nal-async = "0.8.0"
 embedded-sdmmc = { version = "0.9.0", default-features = false, features = [
 	"defmt-log",
@@ -69,16 +73,14 @@ itoa = { version = "1.0.15", features = ["no-panic"] }
 libm = { version = "0.2.15", default-features = false }
 messages = { workspace = true }
 micromath = "2.0.0"
-num-traits = { version = "0.2.19", default-features = false, features = [
-	"libm",
-] }
+num-traits = { workspace = true, features = ["libm"] }
 panic-probe = { workspace = true }
 peripheral-services.workspace = true
 pid = "4.0.0"
 prost = { workspace = true }
 serde = { workspace = true, features = ["derive", "serde_derive"] }
 smlang = { workspace = true }
-static_cell = "2"
+static_cell = { workspace = true }
 stm32-fmc = "0.3.0"
 strum = { version = "0.27.2", default-features = false, features = ["derive"] }
 utils = { workspace = true }
