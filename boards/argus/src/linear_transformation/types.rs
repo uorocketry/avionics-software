@@ -2,11 +2,11 @@ use core::fmt::Debug;
 use core::hash::Hash;
 use core::str::FromStr;
 
-use csv::SerializeCSV;
 use defmt::Format;
 use num_traits::Float;
 use serde::{Deserialize, Serialize};
 use strum::EnumCount;
+use uor_utils::csv::SerializeCSV;
 
 use crate::adc::types::AdcDevice;
 use crate::sd::config::MAX_LINE_LENGTH;

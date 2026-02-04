@@ -6,7 +6,6 @@ use embassy_stm32::usart::{ConfigError, RingBufferedUartRx, UartTx};
 use embassy_stm32::{Peripheral, usart};
 use embedded_io::ReadReady;
 use embedded_io_async::{Error, ErrorType, Read, Write};
-use messages::argus::envelope::Node;
 
 #[derive(Debug)]
 pub enum RingBufferedError {
@@ -28,7 +27,6 @@ impl Error for RingBufferedError {
 pub struct RingBufferedSerialService {
 	pub tx_component: UartTx<'static, Async>,
 	pub rx_component: RingBufferedUartRx<'static>,
-	pub node_type: Node,
 }
 
 impl ErrorType for RingBufferedSerialService {
@@ -44,7 +42,6 @@ impl RingBufferedSerialService {
 		tx_dma: impl Peripheral<P = impl TxDma<T>> + 'static,
 		rx_dma: impl Peripheral<P = impl RxDma<T>> + 'static,
 		rx_dma_buff: &'static mut [u8],
-		node_type: Node,
 		config: Config,
 	) -> Result<Self, ConfigError> {
 		let uart = Uart::<'static, mode::Async>::new(peri, rx, tx, interrupt_requests, tx_dma, rx_dma, config)?;
@@ -59,7 +56,6 @@ impl RingBufferedSerialService {
 		Ok(Self {
 			tx_component: tx_component,
 			rx_component: rx_component,
-			node_type: node_type,
 		})
 	}
 

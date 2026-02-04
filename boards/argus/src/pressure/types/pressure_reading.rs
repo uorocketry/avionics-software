@@ -1,9 +1,9 @@
 use core::str::FromStr;
 
-use csv::SerializeCSV;
 use defmt::Format;
-use messages::argus::pressure::pressure_reading::PressureReading as PressureReadingProtobuf;
 use serde::{Deserialize, Serialize};
+use uor_utils::csv::SerializeCSV;
+use uor_utils::messages::argus::pressure::pressure_reading::PressureReading as PressureReadingProtobuf;
 
 use crate::adc::types::AdcDevice;
 use crate::pressure::types::PressureChannel;

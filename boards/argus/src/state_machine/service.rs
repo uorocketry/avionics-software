@@ -2,7 +2,7 @@ use core::future::Future;
 
 use defmt::{error, info};
 use embassy_futures::select::{select, Either};
-use utils::types::AsyncMutex;
+use uor_utils::utils::types::AsyncMutex;
 
 use crate::state_machine::types::{Context, Events, StateMachine, StateReceiver, StateWatch, States};
 

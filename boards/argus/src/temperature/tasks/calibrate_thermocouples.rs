@@ -2,7 +2,7 @@ use defmt::error;
 use embassy_executor::task;
 use embassy_futures::yield_now;
 use strum::EnumCount;
-use utils::types::AsyncMutex;
+use uor_utils::utils::types::AsyncMutex;
 
 use crate::adc::types::AdcDevice;
 use crate::state_machine::service::StateMachineWorker;

@@ -2,7 +2,7 @@ use defmt::{error, info};
 use embassy_time::{Instant, Timer};
 use peripheral_services::serial::service::SerialService;
 use strum::EnumCount;
-use utils::types::AsyncMutex;
+use uor_utils::utils::types::AsyncMutex;
 
 use crate::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
 use crate::adc::service::AdcService;

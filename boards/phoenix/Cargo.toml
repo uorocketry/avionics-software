@@ -10,8 +10,9 @@ license.workspace = true
 harness = false
 
 [features]
-default = ["music"]
+default = ["music", "altitude"]
 music = []
+altitude = []
 
 [dependencies]
 cortex-m = { workspace = true }
@@ -32,9 +33,11 @@ embassy-stm32 = { workspace = true, features = [
 	"memory-x",
 	"unstable-pac",
 	"chrono",
+
 ] }
 embassy-sync = { workspace = true }
 embassy-time = { workspace = true, features = ["tick-hz-32_768"] }
 embedded-alloc = { workspace = true }
+high-level-services = { workspace = true }
 panic-probe = { workspace = true }
 static_cell = { workspace = true }

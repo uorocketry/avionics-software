@@ -1,9 +1,9 @@
 use core::str::FromStr;
 
-use csv::SerializeCSV;
 use defmt::{error, info};
 use heapless::LinearMap;
-use utils::types::AsyncMutex;
+use uor_utils::csv::SerializeCSV;
+use uor_utils::utils::types::AsyncMutex;
 
 use crate::adc::types::AdcDevice;
 use crate::linear_transformation::types::{ChannelMarker, ChannelValueMarker, LinearTransformation};
