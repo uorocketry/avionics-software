@@ -24,7 +24,7 @@ jobs:
 
       - name: Install Formatting Dependencies
         run: |
-          cargo install cargo-sort cargo-deny
+          cargo install cargo-sort
           rustup component add rustfmt clippy
         working-directory: ${{ inputs.crate-path }}
 
@@ -36,10 +36,15 @@ jobs:
         run: cargo sort --check
         working-directory: ${{ inputs.crate-path }}
 
-      - name: Check for Clippy Warnings
+      - name: Check for Clippy Warnings (with features)
+        if: ${{ inputs.default-features != '' }}
         run: cargo clippy -p ${{ inputs.crate-name }} --features ${{ inputs.default-features }} --no-deps
         working-directory: ${{ inputs.crate-path }}
 
+      - name: Check for Clippy Warnings (no features)
+        if: ${{ inputs.default-features == '' }}
+        run: cargo clippy -p ${{ inputs.crate-name }} --no-deps
+        working-directory: ${{ inputs.crate-path }}
   test:
     name: Run Host Tests
     runs-on: ubuntu-latest

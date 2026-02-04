@@ -27,5 +27,5 @@ jobs:
         uses: ./.github/actions/common/setup-rust-environment/
 
       - name: Build
-        run: cargo build --release --features pressure
+        run: cargo build --release --features music
         working-directory: boards/phoenix

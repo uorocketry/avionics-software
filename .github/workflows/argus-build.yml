@@ -28,7 +28,7 @@ jobs:
         uses: ./.github/actions/common/setup-rust-environment/
 
       - name: "Build with Pressure Feature"
-        run: cargo build --release --features pressure 
+        run: cargo build --release --features pressure
         working-directory: boards/argus
 
   build_temperature:
