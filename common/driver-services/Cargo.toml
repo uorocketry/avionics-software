@@ -1,7 +1,10 @@
 [package]
 name = "driver-services"
-version = "0.1.0"
 edition = "2024"
+version.workspace = true
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
 
 [dependencies]
 defmt = { workspace = true }
