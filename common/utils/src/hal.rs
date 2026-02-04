@@ -2,7 +2,7 @@ use core::mem::MaybeUninit;
 
 use embassy_stm32::rcc::{AHBPrescaler, APBPrescaler, HSIPrescaler, Pll, PllDiv, PllMul, PllPreDiv, PllSource, Sysclk, VoltageScale};
 /// Any HAL configuration and setup goes here.
-use embassy_stm32::{init, Config, Peripherals};
+use embassy_stm32::{Config, Peripherals, init};
 pub use embedded_alloc::LlffHeap as Heap;
 
 const HEAP_SIZE: usize = 40000;

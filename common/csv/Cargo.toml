@@ -4,7 +4,6 @@ version.workspace = true
 authors.workspace = true
 publish.workspace = true
 license.workspace = true
-license-file.workspace = true
 edition = "2024"
 
 [lib]
@@ -12,8 +11,8 @@ path = "src/lib.rs"
 harness = false
 
 [dependencies]
+defmt = { workspace = true }
+heapless = { workspace = true }
 serde = { workspace = true, features = ["derive", "serde_derive"] }
 serde-csv-core = { workspace = true }
-heapless = { workspace = true }
-defmt = { workspace = true }
 
