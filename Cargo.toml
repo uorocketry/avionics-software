@@ -15,6 +15,7 @@ version = "1.0.1"
 authors = ["UORocketry Avionics Members"]
 publish = false
 license = "GPL-3.0-or-later"
+license-file = "LICENSE"
 
 [workspace.dependencies]
 bitflags = { version = "2.10.0", default-features = false }
@@ -42,9 +43,7 @@ embedded-io-async = { version = "0.6.1" }
 enum_dispatch = "0.3.11"
 heapless = "0.9.1"
 high-level-services = { path = "./common/high-level-services" }
-uor-utils = { path = "./common/uor-utils" }
-uor-proc-macros = { path = "./common/uor-proc-macros" }
-
+libm = "0.2.11"
 nb = "1.1.0"
 num-traits = { version = "0.2.19", default-features = false }
 panic-probe = { version = "0.3", features = ["print-defmt"] }
@@ -54,3 +53,5 @@ serde = { version = "1.0.150", features = ["derive"], default-features = false }
 serde-csv-core = { version = "0.3.2", features = ["defmt"] }
 smlang = "0.8.0"
 static_cell = "2"
+uor-proc-macros = { path = "./common/uor-proc-macros" }
+uor-utils = { path = "./common/uor-utils" }

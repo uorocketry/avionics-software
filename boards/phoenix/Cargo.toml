@@ -19,6 +19,7 @@ cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
 defmt = { workspace = true }
 defmt-rtt = { workspace = true }
+driver-services = { workspace = true }
 embassy-executor = { workspace = true, features = [
 	"nightly",
 	"task-arena-size-10240",
@@ -40,7 +41,6 @@ embassy-time = { workspace = true, features = ["tick-hz-32_768"] }
 embedded-alloc = { workspace = true }
 high-level-services = { workspace = true }
 panic-probe = { workspace = true }
+peripheral-services = { workspace = true }
 static_cell = { workspace = true }
 uor-utils = { workspace = true }
-driver-services = { workspace = true }
-peripheral-services = { workspace = true }

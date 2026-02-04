@@ -1,7 +1,10 @@
 [package]
 name = "high-level-services"
-version = "0.1.0"
 edition = "2024"
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+license-file.workspace = true
 
 [lib]
 
@@ -38,12 +41,12 @@ std = ["mavlink-core/std"]
 
 [dependencies]
 arbitrary = { version = "1.4", optional = true, features = ["derive"] }
-bitflags = "2.10.0"
+bitflags = { workspace = true }
 defmt = { workspace = true }
 defmt-rtt = { workspace = true }
 
 driver-services = { workspace = true }
-embassy-executor = { version = "0.7.0", features = [
+embassy-executor = { workspace = true, features = [
     "nightly",
     "task-arena-size-10240",
     "arch-cortex-m",
@@ -51,23 +54,23 @@ embassy-executor = { version = "0.7.0", features = [
     "executor-interrupt",
     "defmt",
 ] }
-embassy-time = { version = "0.4.0", features = [
+embassy-time = { workspace = true, features = [
     "defmt",
     "defmt-timestamp-uptime",
     "tick-hz-32_768",
 ] }
 embedded-io = { workspace = true }
-embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
-libm = { version = "0.2.15" }
+embedded-io-async = { workspace = true, features = ["defmt-03"] }
+libm = { workspace = true }
 mavlink-core = { version = "0.16.2", default-features = false }
 num-derive = "0.4.2"
-num-traits = { version = "0.2.19", default-features = false }
+num-traits = { workspace = true, default-features = false }
 peripheral-services = { workspace = true }
 rand = { version = "0.9", optional = true, default-features = false, features = [
     "std",
     "std_rng",
 ] }
-serde = { version = "1.0.115", optional = true, features = ["derive"] }
+serde = { workspace = true, optional = true }
 serde_arrays = { version = "0.2.0", optional = true }
 ts-rs = { version = "11.0.1", optional = true }
 uor-proc-macros = { workspace = true }

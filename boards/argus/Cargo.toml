@@ -69,7 +69,7 @@ grounded = "0.2.0"
 heapless = { workspace = true }
 high-level-services = { workspace = true }
 itoa = { version = "1.0.15", features = ["no-panic"] }
-libm = { version = "0.2.15", default-features = false }
+libm = { workspace = true, default-features = false }
 micromath = "2.0.0"
 num-traits = { workspace = true, features = ["libm"] }
 panic-probe = { workspace = true }
