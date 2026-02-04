@@ -53,3 +53,4 @@ prost = { version = "0.14.1", default-features = false, features = ["derive"] }
 serde = { version = "1.0.150", features = ["derive"], default-features = false }
 serde-csv-core = { version = "0.3.2", features = ["defmt"] }
 smlang = "0.8.0"
+static_cell = "2"

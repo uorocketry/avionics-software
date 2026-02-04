@@ -41,3 +41,6 @@ embedded-alloc = { workspace = true }
 high-level-services = { workspace = true }
 panic-probe = { workspace = true }
 static_cell = { workspace = true }
+uor-utils = { workspace = true }
+driver-services = { workspace = true }
+peripheral-services = { workspace = true }
