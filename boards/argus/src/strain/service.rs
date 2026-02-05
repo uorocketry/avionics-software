@@ -1,7 +1,7 @@
 use defmt::error;
 use embassy_time::{Instant, Timer};
-use peripheral_services::serial::service::SerialService;
 use strum::EnumCount;
+use uor_peripherals::serial::peripheral::UORSerial;
 use uor_utils::utils::types::AsyncMutex;
 
 use crate::adc::driver::types::{DataRate, Filter, Gain, ReferenceRange};
@@ -20,7 +20,7 @@ pub struct StrainService<const ADC_COUNT: usize> {
 	// Other services are passed by a mutex to ensure safe concurrent access
 	pub adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
-	pub serial_service: &'static AsyncMutex<SerialService>,
+	pub serial_service: &'static AsyncMutex<UORSerial>,
 	pub session_service: &'static AsyncMutex<SessionService>,
 
 	// Linear transformations that are applied on top of the raw readings for each ADC and channel
@@ -31,7 +31,7 @@ impl<const ADC_COUNT: usize> StrainService<ADC_COUNT> {
 	pub fn new(
 		adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 		sd_card_service: &'static AsyncMutex<SDCardService>,
-		serial_service: &'static AsyncMutex<SerialService>,
+		serial_service: &'static AsyncMutex<UORSerial>,
 		session_service: &'static AsyncMutex<SessionService>,
 	) -> Self {
 		Self {
