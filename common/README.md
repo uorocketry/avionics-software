@@ -40,5 +40,5 @@ NON-Agnostic utilities (these belong in their respective crates/modules) include
 
 ## UOR Proc Macros
 `common\uor-proc-macros` Contains all procedural macros used elsewhere. This crate exists because: 
-1. Procedural macros must be built in a Std environment, and all other crates are no_std. x
+1. Procedural macros must be built in a Std environment, and all other crates are no_std.
 2. Proc macros also require their crates to only export proc macros, nothing else.
