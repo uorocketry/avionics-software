@@ -1,7 +1,10 @@
 [package]
 name = "phoenix"
-version = "0.1.0"
 edition = "2024"
+version.workspace = true
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
 
 [lib]
 harness = false
@@ -16,17 +19,14 @@ cortex-m = { workspace = true }
 cortex-m-rt = { workspace = true }
 defmt = { workspace = true }
 defmt-rtt = { workspace = true }
-driver-services = { workspace = true }
-embassy-executor = { version = "0.7.0", features = [
+embassy-executor = { workspace = true, features = [
 	"nightly",
 	"task-arena-size-10240",
 	"arch-cortex-m",
 	"executor-thread",
 	"executor-interrupt",
-	"defmt",
 ] }
-embassy-stm32 = { version = "0.2.0", features = [
-	"defmt",
+embassy-stm32 = { workspace = true, features = [
 	"stm32h733vg",
 	"time-driver-tim2",
 	"exti",
@@ -35,19 +35,12 @@ embassy-stm32 = { version = "0.2.0", features = [
 	"chrono",
 
 ] }
-embassy-sync = { version = "0.6.2", features = ["defmt"] }
-embassy-time = { version = "0.4.0", features = [
-	"defmt",
-	"defmt-timestamp-uptime",
-	"tick-hz-32_768",
-] }
+embassy-sync = { workspace = true }
+embassy-time = { workspace = true, features = ["tick-hz-32_768"] }
 embedded-alloc = { workspace = true }
-high-level-services = { workspace = true }
 panic-probe = { workspace = true }
-peripheral-services = { workspace = true }
-static_cell = "2"
-ublox = { version = "0.9.0", features = [
-	"serde",
-	"ubx_proto31",
-], default-features = false }
+static_cell = { workspace = true }
+uor-drivers = { workspace = true }
+uor-high-level = { workspace = true }
+uor-peripherals = { workspace = true }
 uor-utils = { workspace = true }

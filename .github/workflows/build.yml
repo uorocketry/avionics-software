@@ -1,0 +1,65 @@
+on:
+  workflow_call:
+    inputs:
+      crate-name:
+        required: true
+        type: string
+      crate-path:
+        required: true
+        type: string
+      default-features:
+        required: false
+        type: string
+
+jobs:
+  lint:
+    name: Check for Formatting/Linting/Semantic Issues
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Rust Environment (Cached)
+        uses: ./.github/actions/common/setup-rust-environment/
+
+      - name: Install Formatting Dependencies
+        run: |
+          cargo install cargo-sort
+          rustup component add rustfmt clippy
+        working-directory: ${{ inputs.crate-path }}
+
+      - name: Check Formatting
+        run: cargo fmt -- --check
+        working-directory: ${{ inputs.crate-path }}
+
+      - name: Check Cargo.toml Sorting
+        run: cargo sort --check
+        working-directory: ${{ inputs.crate-path }}
+
+      - name: Check for Clippy Warnings (with features)
+        if: ${{ inputs.default-features != '' }}
+        run: cargo clippy -p ${{ inputs.crate-name }} --features ${{ inputs.default-features }} --no-deps
+        working-directory: ${{ inputs.crate-path }}
+
+      - name: Check for Clippy Warnings (no features)
+        if: ${{ inputs.default-features == '' }}
+        run: cargo clippy -p ${{ inputs.crate-name }} --no-deps
+        working-directory: ${{ inputs.crate-path }}
+  test:
+    name: Run Host Tests
+    runs-on: ubuntu-latest
+    env:
+      # NOTE: Unsure why this is here
+      RUST_MIN_STACK: 8388608
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup Rust Environment (Cached)
+      uses: ./.github/actions/common/setup-rust-environment/
+
+    - name: "Run Host Tests"
+      uses: actions-rs/cargo@v1
+      with:
+        command: make
+        args: test-host

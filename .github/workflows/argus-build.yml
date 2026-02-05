@@ -1,43 +1,21 @@
-# SHOULD DO: dedupe these and clean them up
 on:
   push:
     branches: [main]
   pull_request:
     paths:
-      - ".github/workflows/argus/**"
       - "boards/argus/**"
       - "common/**" # because argus has some dependencies on common
   workflow_dispatch:
 name: Build Verification
 
 jobs:
-  lint:
-    name: Check for Formatting/Linting/Semantic Issues
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Rust Environment (Cached)
-        uses: ./.github/actions/common/setup-rust-environment/
-
-      - name: Install Formatting Dependencies
-        run: |
-          cargo install cargo-sort
-          rustup component add rustfmt clippy
-        working-directory: boards/argus
-
-      - name: Check Formatting
-        run: cargo fmt -- --check
-        working-directory: boards/argus
-
-      - name: Check Cargo.toml Sorting
-        run: cargo sort --check
-        working-directory: boards/argus
-
-      - name: Check for Clippy Warnings
-        run: cargo clippy -p argus --features temperature --no-deps
-        working-directory: boards/argus
+  checks:
+    uses: ./.github/workflows/build.yml
+    with:
+      crate-name: argus
+      crate-path: boards/argus
+      # TODO: Checks for the other types of board (might benefit from use of matrices)
+      default-features: temperature
 
   build_pressure:
     name: Build with Pressure Feature
@@ -48,9 +26,9 @@ jobs:
 
       - name: Setup Rust Environment (Cached)
         uses: ./.github/actions/common/setup-rust-environment/
-# TODO: --target thumbv7em-none-eabihf should not be needed as it should be using workspace target. Look into
+
       - name: "Build with Pressure Feature"
-        run: cargo build --release --features pressure --target thumbv7em-none-eabihf
+        run: cargo build --release --features pressure
         working-directory: boards/argus
 
   build_temperature:
@@ -64,7 +42,7 @@ jobs:
         uses: ./.github/actions/common/setup-rust-environment/
 
       - name: "Build with Temperature Feature"
-        run: cargo build --release --features temperature --target thumbv7em-none-eabihf
+        run: cargo build --release --features temperature
         working-directory: boards/argus
 
   build_strain:
@@ -78,23 +56,5 @@ jobs:
         uses: ./.github/actions/common/setup-rust-environment/
 
       - name: "Build with Strain Feature"
-        run: cargo build --release --features strain --target thumbv7em-none-eabihf
+        run: cargo build --release --features strain
         working-directory: boards/argus
-
-  test:
-    name: Run Host Tests
-    runs-on: ubuntu-latest
-    env:
-      RUST_MIN_STACK: 8388608
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Rust Environment (Cached)
-        uses: ./.github/actions/common/setup-rust-environment/
-
-      - uses: actions-rs/cargo@v1
-        name: "Run Host Tests"
-        with:
-          command: make
-          args: test-host

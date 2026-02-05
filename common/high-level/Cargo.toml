@@ -1,0 +1,77 @@
+[package]
+name = "uor-high-level"
+edition = "2024"
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+license-file.workspace = true
+
+[lib]
+
+[features]
+default = ["common", "uorocketry", "full", "embedded"]
+dialect = []
+communications = []
+service = []
+
+# tokio = ["mavlink-core/tokio"]
+full = ["communications", "traits", "service"]
+uorocketry = ["dialect"]
+common = ["dialect"]
+embedded = ["mavlink-core/embedded"]
+serde = [
+    "bitflags/serde",
+    "dep:serde",
+    "dep:serde_arrays",
+    "mavlink-core/serde",
+]
+# arbitrary = [
+#     "dep:arbitrary",
+#     "dep:rand",
+#     "mavlink-bindgen/arbitrary",
+#     "mavlink-core/arbitrary",
+#     "bitflags/arbitrary",
+# ]
+
+ts = []
+standard = []
+minimal = []
+traits = []
+std = ["mavlink-core/std"]
+
+[dependencies]
+arbitrary = { version = "1.4", optional = true, features = ["derive"] }
+bitflags = { workspace = true }
+defmt = { workspace = true }
+defmt-rtt = { workspace = true }
+embassy-executor = { workspace = true, features = [
+    "nightly",
+    "task-arena-size-10240",
+    "arch-cortex-m",
+    "executor-thread",
+    "executor-interrupt",
+    "defmt",
+] }
+embassy-time = { workspace = true, features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+    "tick-hz-32_768",
+] }
+embedded-io = { workspace = true }
+embedded-io-async = { workspace = true, features = ["defmt-03"] }
+libm = { workspace = true }
+mavlink-core = { version = "0.16.2", default-features = false }
+num-derive = "0.4.2"
+num-traits = { workspace = true, default-features = false }
+rand = { version = "0.9", optional = true, default-features = false, features = [
+    "std",
+    "std_rng",
+] }
+serde = { workspace = true, optional = true }
+serde_arrays = { version = "0.2.0", optional = true }
+ts-rs = { version = "11.0.1", optional = true }
+
+uor-drivers = { workspace = true }
+uor-peripherals = { workspace = true }
+uor-proc-macros = { workspace = true }
+uor-utils = { workspace = true }
