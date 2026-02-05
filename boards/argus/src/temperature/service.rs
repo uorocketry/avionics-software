@@ -1,7 +1,7 @@
 use defmt::{error, info};
 use embassy_time::{Instant, Timer};
-use peripheral_services::serial::service::SerialService;
 use strum::EnumCount;
+use uor_peripherals::serial::peripheral::UORSerial;
 use uor_utils::utils::types::AsyncMutex;
 
 use crate::adc::driver::types::{AnalogChannel, DataRate, Filter, Gain, ReferenceRange};
@@ -22,7 +22,7 @@ pub struct TemperatureService<const ADC_COUNT: usize> {
 	// Other services are passed by a mutex to ensure safe concurrent access
 	pub adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 	pub sd_card_service: &'static AsyncMutex<SDCardService>,
-	pub serial_service: &'static AsyncMutex<SerialService>,
+	pub serial_service: &'static AsyncMutex<UORSerial>,
 	pub session_service: &'static AsyncMutex<SessionService>,
 
 	// Store the last RTD reading in Celsius to use for cold junction compensation
@@ -38,7 +38,7 @@ impl<const ADC_COUNT: usize> TemperatureService<ADC_COUNT> {
 	pub fn new(
 		adc_service: &'static AsyncMutex<AdcService<ADC_COUNT>>,
 		sd_card_service: &'static AsyncMutex<SDCardService>,
-		serial_service: &'static AsyncMutex<SerialService>,
+		serial_service: &'static AsyncMutex<UORSerial>,
 		session_service: &'static AsyncMutex<SessionService>,
 	) -> Self {
 		Self {

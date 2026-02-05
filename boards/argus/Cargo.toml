@@ -67,13 +67,11 @@ embedded-test = { version = "0.6.2", features = ["defmt", "embassy"] }
 enum_dispatch = { workspace = true }
 grounded = "0.2.0"
 heapless = { workspace = true }
-high-level-services = { workspace = true }
 itoa = { version = "1.0.15", features = ["no-panic"] }
 libm = { workspace = true, default-features = false }
 micromath = "2.0.0"
 num-traits = { workspace = true, features = ["libm"] }
 panic-probe = { workspace = true }
-peripheral-services = { workspace = true, features = ["messages"] }
 pid = "4.0.0"
 prost = { workspace = true }
 serde = { workspace = true, features = ["derive", "serde_derive"] }
@@ -81,6 +79,8 @@ smlang = { workspace = true }
 static_cell = { workspace = true }
 stm32-fmc = "0.3.0"
 strum = { version = "0.27.2", default-features = false, features = ["derive"] }
+uor-high-level = { workspace = true }
+uor-peripherals = { workspace = true, features = ["messages"] }
 uor-utils = { workspace = true, features = ["messages"] }
 
 [[test]]

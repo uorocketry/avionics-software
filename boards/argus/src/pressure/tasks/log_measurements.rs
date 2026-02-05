@@ -1,8 +1,8 @@
 use defmt::info;
 use embassy_executor::task;
 use heapless::format;
-use peripheral_services::serial::service::SerialService;
 use strum::EnumCount;
+use uor_peripherals::serial::peripheral::UORSerial;
 use uor_utils::csv::SerializeCSV;
 use uor_utils::messages::argus::envelope::envelope::Message;
 use uor_utils::utils::types::AsyncMutex;
@@ -20,7 +20,7 @@ use crate::state_machine::types::States;
 #[task]
 pub async fn log_measurements(
 	mut worker: StateMachineWorker,
-	serial_service_mutex: &'static AsyncMutex<SerialService>,
+	serial_service_mutex: &'static AsyncMutex<UORSerial>,
 	sd_card_service_mutex: &'static AsyncMutex<SDCardService>,
 	session_service: &'static AsyncMutex<SessionService>,
 ) {

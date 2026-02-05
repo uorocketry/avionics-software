@@ -25,7 +25,6 @@ cortex-m-rt = "0.7.1"
 critical-section = "1.1"
 defmt = "0.3.2"
 defmt-rtt = "0.4"
-driver-services = { path = "./common/driver-services" }
 embassy-embedded-hal = { version = "0.3.0", features = ["defmt"] }
 embassy-executor = { version = "0.7.0", features = ["defmt"] }
 embassy-futures = { version = "0.1.0", features = ["defmt"] }
@@ -42,16 +41,17 @@ embedded-io = { version = "0.6.1" }
 embedded-io-async = { version = "0.6.1" }
 enum_dispatch = "0.3.11"
 heapless = "0.9.1"
-high-level-services = { path = "./common/high-level-services" }
 libm = "0.2.11"
 nb = "1.1.0"
 num-traits = { version = "0.2.19", default-features = false }
 panic-probe = { version = "0.3", features = ["print-defmt"] }
-peripheral-services = { path = "./common/peripheral-services" }
 prost = { version = "0.14.1", default-features = false, features = ["derive"] }
 serde = { version = "1.0.150", features = ["derive"], default-features = false }
 serde-csv-core = { version = "0.3.2", features = ["defmt"] }
 smlang = "0.8.0"
 static_cell = "2"
+uor-drivers = { path = "./common/drivers" }
+uor-high-level = { path = "./common/high-level" }
+uor-peripherals = { path = "./common/peripherals" }
 uor-proc-macros = { path = "./common/uor-proc-macros" }
 uor-utils = { path = "./common/uor-utils" }
