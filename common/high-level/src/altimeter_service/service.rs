@@ -1,13 +1,11 @@
 use defmt::info;
 use embassy_time::Timer;
 use libm::powf;
-use uor_drivers::ms561101::{
-	self,
-	config::OSR,
-	driver::MS561101,
+use uor_drivers::ms561101::{self, config::OSR, driver::MS561101};
+use uor_utils::{
+	signal_processing::filters::fir::MovingAverageFilter,
 	units::{Altitude, Pressure, Temperature},
 };
-use uor_utils::utils::data_structures::ring_buffer::RingBuffer;
 pub struct AltimeterService<'a> {
 	pub barometer: MS561101<'a>,
 	p0: f64,
@@ -66,32 +64,5 @@ impl<'a> AltimeterService<'a> {
 		oversampling: OSR,
 	) -> Pressure {
 		self.barometer.read_sample(oversampling).await.1
-	}
-}
-
-// TODO: This should be moved to uor-utils/utils
-pub struct MovingAverageFilter<const N: usize> {
-	internal: RingBuffer<f32, N>,
-}
-
-impl<const N: usize> MovingAverageFilter<N> {
-	pub fn new() -> Self {
-		MovingAverageFilter { internal: RingBuffer::new() }
-	}
-
-	pub fn push(
-		&mut self,
-		value: f32,
-	) {
-		self.internal.push(value);
-	}
-
-	// TODO: This is currently bugged, the ring buffer initializes with all 0s, so the average will be extremely low until all positions are occupied
-	pub fn get_average(&mut self) -> f32 {
-		let mut average = 0.0;
-		for i in self.internal.internal_buffer.clone() {
-			average += i;
-		}
-		average / (self.internal.internal_buffer.len() as f32)
 	}
 }

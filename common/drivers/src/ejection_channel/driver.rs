@@ -4,12 +4,12 @@ use defmt::info;
 use embassy_stm32::Peripheral;
 use embassy_stm32::gpio::{Level, Pin};
 use embassy_stm32::pac::octospi::regs::Ar;
-use peripheral_services::gpio::peripheral::GPIOPin;
+use uor_peripherals::gpio::peripheral::GPIOPin;
 
-use crate::ejection_channel_driver::utils::EjectionChannelStates;
-use crate::ejection_channel_driver::utils::EjectionChannelStates::*;
+use crate::ejection_channel::utils::EjectionChannelStates;
+use crate::ejection_channel::utils::EjectionChannelStates::*;
 
-pub struct EjectionChannelDriver<'a> {
+pub struct EjectionChannel<'a> {
 	trigger: GPIOPin<'a>,
 	arm: GPIOPin<'a>,
 	sense: GPIOPin<'a>,
@@ -18,7 +18,7 @@ pub struct EjectionChannelDriver<'a> {
 	state: EjectionChannelStates,
 }
 
-impl<'a> EjectionChannelDriver<'a> {
+impl<'a> EjectionChannel<'a> {
 	pub fn new(
 		trigger: impl Peripheral<P = impl Pin> + 'a,
 		arm: impl Peripheral<P = impl Pin> + 'a,
@@ -27,25 +27,22 @@ impl<'a> EjectionChannelDriver<'a> {
 	) -> Self {
 		let mut trigger = GPIOPin::new(
 			trigger,
-			peripheral_services::gpio::utils::GPIOMode::Output(embassy_stm32::gpio::Speed::Medium),
+			uor_peripherals::gpio::utils::GPIOMode::Output(embassy_stm32::gpio::Speed::Medium),
 		);
-		let mut arm = GPIOPin::new(
-			arm,
-			peripheral_services::gpio::utils::GPIOMode::Output(embassy_stm32::gpio::Speed::Medium),
-		);
+		let mut arm = GPIOPin::new(arm, uor_peripherals::gpio::utils::GPIOMode::Output(embassy_stm32::gpio::Speed::Medium));
 		trigger.set_low();
 		arm.set_low();
-		let sense: GPIOPin<'_> = GPIOPin::new(sense, peripheral_services::gpio::utils::GPIOMode::Input(embassy_stm32::gpio::Pull::Down));
+		let sense: GPIOPin<'_> = GPIOPin::new(sense, uor_peripherals::gpio::utils::GPIOMode::Input(embassy_stm32::gpio::Pull::Down));
 		let detected_pin: Option<GPIOPin<'a>> = None;
 
 		if let Some(pin) = detected {
 			let detected_pin = Some(GPIOPin::new(
 				pin,
-				peripheral_services::gpio::utils::GPIOMode::Output(embassy_stm32::gpio::Speed::Medium),
+				uor_peripherals::gpio::utils::GPIOMode::Output(embassy_stm32::gpio::Speed::Medium),
 			));
 		}
 
-		let mut driver = EjectionChannelDriver {
+		let mut driver = EjectionChannel {
 			trigger: trigger,
 			arm: arm,
 			sense: sense,

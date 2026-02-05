@@ -21,7 +21,10 @@ use embassy_time::{Duration, Timer};
 use panic_probe as _;
 use phoenix::sound::service::SoundService;
 use static_cell::StaticCell;
-use uor_drivers::ms561101::driver::{MS561101, ejection_channel};
+use uor_drivers::{
+	ejection_channel::{driver::EjectionChannel, utils::EjectionChannelStates},
+	ms561101::driver::MS561101,
+};
 use uor_high_level::altimeter_service::{self, service::AltimeterService};
 use uor_peripherals::{serial::peripheral::UORSerial, serial_ring_buffered::peripheral::RingBufferedUORSerial, spi::peripheral::UORMonoCsSPI};
 use uor_utils::utils::types::*;
@@ -31,7 +34,7 @@ use uor_utils::utils::{data_structures::ring_buffer::RingBuffer, hal::configure_
 static SOUND_SERVICE: StaticCell<AsyncMutex<SoundService>> = StaticCell::new();
 #[cfg(feature = "music")]
 static MUSIC_SERVICE: StaticCell<AsyncMutex<phoenix::music::service::MusicService>> = StaticCell::new();
-static EJECTION_CHANNEL: StaticCell<AsyncMutex<EjectionChannelDriver>> = StaticCell::new();
+static EJECTION_CHANNEL: StaticCell<AsyncMutex<EjectionChannel>> = StaticCell::new();
 
 bind_interrupts!(struct Irqs {
 	UART8 => usart::InterruptHandler<peripherals::UART8>;
@@ -44,7 +47,7 @@ async fn main(spawner: Spawner) {
 	let p = configure_hal();
 
 	let detected: Option<PA2> = None;
-	let ejection_channel = EJECTION_CHANNEL.init(AsyncMutex::new(EjectionChannelDriver::new(p.PD5, p.PD6, p.PA2, detected)));
+	let ejection_channel = EJECTION_CHANNEL.init(AsyncMutex::new(EjectionChannel::new(p.PD5, p.PD6, p.PA2, detected)));
 
 	spawner.spawn(ejection_update_process(ejection_channel));
 	spawner.spawn(ejection_test_process(ejection_channel));
@@ -98,7 +101,7 @@ pub async fn get_altitude(mut altimeter_service: AltimeterService<'static>) -> !
 }
 #[task]
 
-pub async fn ejection_update_process(ejection_channel: &'static AsyncMutex<EjectionChannelDriver<'static>>) {
+pub async fn ejection_update_process(ejection_channel: &'static AsyncMutex<EjectionChannel<'static>>) {
 	let mut last_state: Option<EjectionChannelStates> = None;
 	loop {
 		{
@@ -118,7 +121,7 @@ pub async fn ejection_update_process(ejection_channel: &'static AsyncMutex<Eject
 }
 #[task]
 
-pub async fn ejection_test_process(ejection_channel: &'static AsyncMutex<EjectionChannelDriver<'static>>) {
+pub async fn ejection_test_process(ejection_channel: &'static AsyncMutex<EjectionChannel<'static>>) {
 	loop {
 		info!("Ejection channel test starting");
 		Timer::after_secs(5).await;
