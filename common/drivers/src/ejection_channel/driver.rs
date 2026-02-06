@@ -1,6 +1,6 @@
 use core::clone;
 
-use defmt::info;
+use defmt::{info, warn};
 use embassy_stm32::Peripheral;
 use embassy_stm32::gpio::{Level, Pin};
 use embassy_stm32::pac::octospi::regs::Ar;
@@ -16,6 +16,9 @@ pub struct EjectionChannel<'a> {
 	// Detected the charge detection LED (not present on old revision of phoenix)
 	detected: Option<GPIOPin<'a>>,
 	state: EjectionChannelStates,
+	armed_and_continuity: bool,
+	// This may seem redundant due to internal state machine, HOWEVER, if the continuity check ever fails the rocket will never leave "NoContinuity" resulting in the charge detonation never activating (even if the check fails due to poor solder joints, or flakey wiring)
+	has_been_armed: bool,
 }
 
 impl<'a> EjectionChannel<'a> {
@@ -47,18 +50,18 @@ impl<'a> EjectionChannel<'a> {
 			arm: arm,
 			sense: sense,
 			detected: detected_pin,
-			state: NoContinuity,
+			state: Unknown,
+			armed_and_continuity: false,
+			has_been_armed: false,
 		};
 
-		if driver.check_continuity() {
-			driver.state = Idle;
-		}
 		driver
 	}
 
 	pub fn arm(&mut self) {
 		self.arm.set_high();
 		self.state = Armed;
+		self.has_been_armed = true;
 	}
 
 	pub fn check_continuity(&mut self) -> bool {
@@ -69,10 +72,15 @@ impl<'a> EjectionChannel<'a> {
 	}
 
 	pub fn deploy_charge(&mut self) {
-		self.trigger.set_high();
-		self.state = Deployed;
-		if let Some(detect) = &mut self.detected {
-			detect.set_high();
+		if self.has_been_armed == true {
+			self.trigger.set_high();
+			self.state = Deployed;
+			// Set LED to high
+			if let Some(detect) = &mut self.detected {
+				detect.set_high();
+			}
+		} else {
+			warn!("Did not deploy as channel was never armed");
 		}
 	}
 
@@ -82,21 +90,19 @@ impl<'a> EjectionChannel<'a> {
 
 	// Update the state machine
 	pub fn update(&mut self) {
-		// TODO: Try and reduce the heavy nesting for readability
 		if !self.check_continuity() {
-			if self.state == Deployed {
+			if self.state == Deployed && self.armed_and_continuity {
 				self.state = ConfirmedDeployed;
-			} else if (self.state == Armed) {
+			} else if self.state == Armed && !self.armed_and_continuity {
+				// If arm is "fresh", then we know continuity has not been lost as it never existed to begin with
+				self.state = NoContinuity;
+			} else if self.state == Armed && self.armed_and_continuity {
 				self.state = ContinuityLost;
 			}
-		}
-		if self.check_continuity() {
-			if self.state == ContinuityLost || self.state == NoContinuity {
-				if self.arm.get_set_level() == Level::High {
-					self.state = Armed
-				} else {
-					self.state = Idle;
-				}
+		} else {
+			if self.arm.get_set_level() == Level::High && (self.state != Deployed && self.state != ConfirmedDeployed) {
+				self.state = Armed;
+				self.armed_and_continuity = true;
 			}
 		}
 	}
