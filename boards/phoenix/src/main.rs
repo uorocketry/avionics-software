@@ -23,6 +23,7 @@ use high_level_services::altimeter_service::{self, service::AltimeterService};
 use panic_probe as _;
 use peripheral_services::{serial::service::SerialService, serial_ring_buffered::service::RingBufferedSerialService, spi::service::SPIService};
 use phoenix::sound::service::SoundService;
+use phoenix::led_indicator::service::LedIndicatorService;
 use static_cell::StaticCell;
 use uor_utils::utils::types::*;
 use uor_utils::utils::{data_structures::ring_buffer::RingBuffer, hal::configure_hal};
@@ -31,6 +32,9 @@ use uor_utils::utils::{data_structures::ring_buffer::RingBuffer, hal::configure_
 static SOUND_SERVICE: StaticCell<AsyncMutex<SoundService>> = StaticCell::new();
 #[cfg(feature = "music")]
 static MUSIC_SERVICE: StaticCell<AsyncMutex<phoenix::music::service::MusicService>> = StaticCell::new();
+#[cfg(feature = "led_indicator")]
+static LED_INDICATOR_SERVICE: StaticCell<AsyncMutex<LedIndicatorService<2>>> = StaticCell::new();
+
 
 bind_interrupts!(struct Irqs {
 	UART8 => usart::InterruptHandler<peripherals::UART8>;
@@ -71,6 +75,19 @@ async fn main(spawner: Spawner) {
 			Ok(_) => (),
 			Err(e) => error!("Could not spawn music task: {}", e),
 		}
+	}
+
+	#[cfg(feature = "led_indicator")]
+	{
+		use phoenix::led_indicator::{service::LedIndicatorService, tasks::cycle_leds};
+		use embassy_stm32::gpio::Pin;
+		
+		let led_indicator_service = LED_INDICATOR_SERVICE.init(AsyncMutex::new(LedIndicatorService::new([
+			p.PA1.degrade(),
+			p.PA3.degrade(),
+		])));
+
+		spawner.spawn(cycle_leds(led_indicator_service));
 	}
 }
 

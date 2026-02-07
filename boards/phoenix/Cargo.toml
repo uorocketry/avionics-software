@@ -7,9 +7,10 @@ edition = "2024"
 harness = false
 
 [features]
-default = ["music", "altitude"]
+default = ["music", "altitude", "led_indicator"]
 music = []
 altitude = []
+led_indicator = []
 
 [dependencies]
 cortex-m = { workspace = true }
