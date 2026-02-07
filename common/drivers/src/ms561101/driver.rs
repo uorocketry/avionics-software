@@ -9,12 +9,13 @@ use embassy_stm32::{
 };
 use embassy_time::{Delay, Timer};
 use uor_peripherals::{spi::peripheral::UORMonoCsSPI, with_cs};
+use uor_utils::units::{Pressure, Temperature};
 
 use crate::ms561101::{
 	config::{CalibrationData, CalibrationMasks, Commands, OSR, SamplingCommands},
 	math::{calculate_actual_temperature, calculate_compensated_pressure, calculate_temperature_difference, constant_calculations},
-	units::{Pressure, Temperature},
 };
+
 pub struct MS561101<'a> {
 	pub spi_service: UORMonoCsSPI<'a>,
 	// TODO: This should live in SPU service for obvious reason lol.
