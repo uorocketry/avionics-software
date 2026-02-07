@@ -5,3 +5,5 @@
 pub mod music;
 pub mod sound;
 pub mod utils;
+#[cfg(feature = "led_indicator")]
+pub mod led_indicator;
