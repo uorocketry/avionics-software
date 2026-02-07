@@ -75,10 +75,6 @@ impl<'a> EjectionChannel<'a> {
 		if self.has_been_armed == true {
 			self.trigger.set_high();
 			self.state = Deployed;
-			// Set LED to high
-			if let Some(detect) = &mut self.detected {
-				detect.set_high();
-			}
 		} else {
 			warn!("Did not deploy as channel was never armed");
 		}
@@ -91,6 +87,10 @@ impl<'a> EjectionChannel<'a> {
 	// Update the state machine
 	pub fn update(&mut self) {
 		if !self.check_continuity() {
+			// Set continuity LED low
+			if let Some(detect) = &mut self.detected {
+				detect.set_low();
+			}
 			if self.state == Deployed && self.armed_and_continuity {
 				self.state = ConfirmedDeployed;
 			} else if self.state == Armed && !self.armed_and_continuity {
@@ -100,6 +100,10 @@ impl<'a> EjectionChannel<'a> {
 				self.state = ContinuityLost;
 			}
 		} else {
+			// Set continuity LED high
+			if let Some(detect) = &mut self.detected {
+				detect.set_high();
+			}
 			if self.arm.get_set_level() == Level::High && (self.state != Deployed && self.state != ConfirmedDeployed) {
 				self.state = Armed;
 				self.armed_and_continuity = true;
