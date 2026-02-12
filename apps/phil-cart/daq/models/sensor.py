@@ -31,4 +31,3 @@ class Sensor(Model):
         existing.scale = self.scale
         existing.offset = self.offset
         existing.save()
-        return existing
