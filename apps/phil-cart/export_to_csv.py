@@ -6,7 +6,6 @@ from datetime import datetime
 from pathlib import Path
 
 from daq.models.datapoint import DataPoint
-from daq.models.sensor import Sensor
 from daq.sensors import sensors
 from utils.database import database
 
@@ -21,6 +20,7 @@ if __name__ == "__main__":
 
     try:
         for sensor in sensors:
+            sensor.ensure_exists()
             file_name = (
                 f"{re.sub(r'[^A-Za-z0-9._-]+', '_', sensor.name).strip('._')}.csv"
             )
