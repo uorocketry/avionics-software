@@ -4,11 +4,8 @@ from .sensors import sensors
 
 
 def main():
-    labjack_service = LabjackIngestorService()
+    labjack_service = LabjackIngestorService(mock=True)
     labjack_service.connect()
-
-    if not labjack_service.handle:
-        return
 
     labjack_service.start_transaction()
 

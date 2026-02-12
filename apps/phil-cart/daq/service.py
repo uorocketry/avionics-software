@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from time import sleep
+import random
+import time
 import logging
 from labjack import ljm
 from .models.sensor import Sensor
@@ -13,8 +14,14 @@ class LabjackIngestorService:
     device_ip: str = field(default="192.168.0.250")
     handle: int = field(default=None)
     transaction: tuple = field(default_factory=list)
+    mock: bool = field(default=False)
 
     def configure_sensor(self, sensor: Sensor):
+        if self.mock:
+            logger.info(
+                "Mock mode enabled. Skipping sensor configuration for: %s", sensor.name
+            )
+            return
         logger.info("Configuring sensor: %s", sensor.name)
         self.write_register(
             f"AIN{sensor.positive_channel}_NEGATIVE_CH", sensor.negative_channel
@@ -23,7 +30,12 @@ class LabjackIngestorService:
 
     def read_sensor(self, sensor: Sensor) -> float:
         try:
-            value = ljm.eReadName(self.handle, f"AIN{sensor.positive_channel}")
+            if self.mock:
+                time.sleep(0.1)  # Simulate read delay
+                value = random.uniform(-sensor.range, sensor.range)
+            else:
+                value = ljm.eReadName(self.handle, f"AIN{sensor.positive_channel}")
+
             scaled_value = value * sensor.scale + sensor.offset
             return scaled_value
         except ljm.LJMError as e:
@@ -31,6 +43,9 @@ class LabjackIngestorService:
             return None
 
     def connect(self):
+        if self.mock:
+            logger.info("Mock mode enabled. Skipping Labjack connection.")
+            return
         if self.handle:
             logger.info("Labjack is already connected. Skipping reconnection attempt")
             return
@@ -52,6 +67,9 @@ class LabjackIngestorService:
             self.handle = None
 
     def disconnect(self):
+        if self.mock:
+            logger.info("Mock mode enabled. Skipping Labjack disconnection.")
+            return
         try:
             ljm.close(self.handle)
             logger.info("Disconnected successfully.")
@@ -74,6 +92,10 @@ class LabjackIngestorService:
         self.transaction = None
 
     def commit_transaction(self):
+        if self.mock:
+            logger.info("Mock mode enabled. Skipping transaction commit.")
+            self.clear_transaction_list()
+            return
         if not self.transaction:
             logger.warning("No transaction to commit.")
             return

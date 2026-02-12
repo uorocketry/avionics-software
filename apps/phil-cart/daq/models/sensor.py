@@ -24,6 +24,7 @@ class Sensor(Model):
             return self
 
         # update existing row
+        self.id = existing.id  # update id to match existing row
         existing.positive_channel = self.positive_channel
         existing.negative_channel = self.negative_channel
         existing.range = self.range
