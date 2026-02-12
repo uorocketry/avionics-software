@@ -1,0 +1,20 @@
+# Build output
+Debug/
+Release/
+build/
+
+# STM32CubeIDE metadata
+.settings/
+.cproject
+.project
+.loadpath
+
+# STM32 code generation logs / backups
+*.launch
+*.log
+*.uvguix.*  
+*.uvoptx
+
+# Local/Eclipse workspace metadata
+*.swp
+*.swo
