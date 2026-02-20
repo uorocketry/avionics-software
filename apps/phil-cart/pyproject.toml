@@ -1,0 +1,14 @@
+[project]
+name = "phil-cart"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "colorlog>=6.10.1",
+    "labjack-ljm>=1.23.0",
+    "pandas>=3.0.0",
+    "peewee>=3.19.0",
+    "peewee-db-evolve>=3.7.6",
+    "psycopg2-binary>=2.9.11",
+]
