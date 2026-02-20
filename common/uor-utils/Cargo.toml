@@ -1,7 +1,10 @@
 [package]
 name = "uor-utils"
-version = "0.1.0"
 edition = "2024"
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+license-file.workspace = true
 
 [features]
 # default = ["mavlink/embedded", "mavlink/uorocketry"]
@@ -15,9 +18,9 @@ std = [
 messages = ["prost"]
 
 [dependencies]
-bitflags = { version = "2.3.1", default-features = false, features = ["serde"] }
+bitflags = { workspace = true, default-features = false, features = ["serde"] }
 defmt = { workspace = true }
-embassy-stm32 = { version = "0.2.0", features = [
+embassy-stm32 = { workspace = true, features = [
     "defmt",
     "stm32h733vg",
     "time-driver-tim2",
@@ -30,7 +33,7 @@ embassy-stm32 = { version = "0.2.0", features = [
 # glob = "0.3.3"
 # prost-build = "0.14.1"
 # protoc-bin-vendored = "3"
-embassy-sync = { version = "0.6.2", features = ["defmt"] }
+embassy-sync = { workspace = true, features = ["defmt"] }
 embedded-alloc = { workspace = true }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
 heapless = { workspace = true }

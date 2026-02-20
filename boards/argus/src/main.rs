@@ -21,10 +21,10 @@ use embassy_stm32::gpio::Pin;
 use embassy_stm32::usart::Uart;
 use embassy_stm32::{bind_interrupts, peripherals, usart};
 use panic_probe as _;
-use peripheral_services::serial::service::SerialService;
 use serde::ser;
 use static_cell::StaticCell;
 use strum::EnumCount;
+use uor_peripherals::serial::peripheral::UORSerial;
 use uor_utils::messages::argus::envelope::{Node, NodeType};
 use uor_utils::utils::{hal::configure_hal, types::AsyncMutex};
 
@@ -37,7 +37,7 @@ bind_interrupts!(struct InterruptRequests {
 // And wrapped around a mutex so they can be accessed safely from multiple async tasks
 static SD_CARD_SERVICE: StaticCell<AsyncMutex<SDCardService>> = StaticCell::new();
 static ADC_SERVICE: StaticCell<AsyncMutex<AdcService<{ AdcDevice::COUNT }>>> = StaticCell::new();
-static SERIAL_SERVICE: StaticCell<AsyncMutex<SerialService>> = StaticCell::new();
+static SERIAL_SERVICE: StaticCell<AsyncMutex<UORSerial>> = StaticCell::new();
 static SESSION_SERVICE: StaticCell<AsyncMutex<SessionService>> = StaticCell::new();
 static LED_INDICATOR_SERVICE: StaticCell<AsyncMutex<LedIndicatorService<2>>> = StaticCell::new();
 static STATE_MACHINE_ORCHESTRATOR: StaticCell<AsyncMutex<StateMachineOrchestrator>> = StaticCell::new();
@@ -98,7 +98,7 @@ async fn main(spawner: Spawner) {
 		],
 	)));
 	let serial_service = SERIAL_SERVICE.init(AsyncMutex::new(
-		SerialService::new(
+		UORSerial::new(
 			peripherals.UART7,
 			peripherals.PE8,
 			peripherals.PE7,
