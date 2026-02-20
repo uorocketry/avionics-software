@@ -19,8 +19,8 @@ use embassy_stm32::{
 };
 use embassy_time::{Duration, Timer};
 use panic_probe as _;
-use phoenix::sound::service::SoundService;
 use phoenix::led_indicator::service::LedIndicatorService;
+use phoenix::sound::service::SoundService;
 use static_cell::StaticCell;
 use uor_drivers::{
 	ejection_channel::{driver::EjectionChannel, utils::EjectionChannelStates},
@@ -89,13 +89,10 @@ async fn main(spawner: Spawner) {
 
 	#[cfg(feature = "led_indicator")]
 	{
-		use phoenix::led_indicator::{service::LedIndicatorService, tasks::cycle_leds};
 		use embassy_stm32::gpio::Pin;
-		
-		let led_indicator_service = LED_INDICATOR_SERVICE.init(AsyncMutex::new(LedIndicatorService::new([
-			p.PA1.degrade(),
-			p.PA3.degrade(),
-		])));
+		use phoenix::led_indicator::{service::LedIndicatorService, tasks::cycle_leds};
+
+		let led_indicator_service = LED_INDICATOR_SERVICE.init(AsyncMutex::new(LedIndicatorService::new([p.PA1.degrade(), p.PA3.degrade()])));
 
 		spawner.spawn(cycle_leds(led_indicator_service));
 	}

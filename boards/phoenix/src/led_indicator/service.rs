@@ -1,6 +1,6 @@
 use defmt::warn;
-use embassy_stm32::gpio::{Level, Output, Pin, Speed};
 use embassy_stm32::Peripheral;
+use embassy_stm32::gpio::{Level, Output, Pin, Speed};
 use embassy_time::Timer;
 
 pub struct LedIndicatorService<const COUNT: usize> {
