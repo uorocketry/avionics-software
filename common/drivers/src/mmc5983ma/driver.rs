@@ -3,7 +3,10 @@ use embassy_time::Timer;
 use uor_peripherals::spi::peripheral::UORMonoCsSPI;
 use uor_utils::linear_algebra::vectors::{VectorR3, VectorR3F};
 
-use crate::mmc5983ma::utils::{MMC5983MABandwidth, MMC5983MARegisters};
+use crate::mmc5983ma::{
+	constants::{self, HZ100_DELAY, HZ200_DELAY, HZ400_DELAY, HZ800_DELAY, RW_MASK, X_MASK, X_OFFSET, Y_MASK, Y_OFFSET, Z_MASK, Z_OFFSET},
+	utils::{MMC5983MABandwidth, MMC5983MARegisters},
+};
 
 pub struct MMC5983MA<'a> {
 	pub spi_service: UORMonoCsSPI<'a>,
@@ -28,7 +31,7 @@ impl<'a> MMC5983MA<'a> {
 		write = write | (write_data as u16);
 
 		if rw_n {
-			write = write | 0b1000_0000;
+			write = write | RW_MASK;
 		}
 
 		let _ = self.spi_service.transfer::<u16>(&mut read_buf, &mut [write]).await;
@@ -68,18 +71,17 @@ impl<'a> MMC5983MA<'a> {
 		// The lower two bits of the X,Y, and Z vector magnitudes
 		let xyz_lower = self.transfer(MMC5983MARegisters::XYZOut2, 0, true).await as u32;
 
-		// TODO: GET RID OF THE EVIL MAGIC NUMBERS GRRRR
-		x_val = x_val | ((xyz_lower & 0b1100_0000) >> 6);
-		y_val = y_val | ((xyz_lower & 0b0011_0000) >> 6);
-		z_val = z_val | ((xyz_lower & 0b0000_1100) >> 6);
+		x_val = x_val | ((xyz_lower & X_MASK) >> X_OFFSET);
+		y_val = y_val | ((xyz_lower & Y_MASK) >> Y_OFFSET);
+		z_val = z_val | ((xyz_lower & Z_MASK) >> Z_OFFSET);
 
 		VectorR3::new(x_val as i64, y_val as i64, z_val as i64)
 	}
 
 	pub async fn get_18bit_mag(&mut self) -> VectorR3F {
 		let sensor_vector = VectorR3F::from(self.get_raw_mag_data().await);
-		let mut output: VectorR3F = VectorR3F::new(-5.0, -5.0, -5.0)
-			+ (sensor_vector * VectorR3F::new((10 / 2_i32.pow(18) as f64), (10 / 2_i32.pow(18) as f64), (10 / 2_i32.pow(18) as f64)));
+		let output: VectorR3F = VectorR3F::new(-5.0, -5.0, -5.0)
+			+ (sensor_vector * VectorR3F::new(10.0 / 2_i32.pow(18) as f64, 10.0 / 2_i32.pow(18) as f64, 10.0 / 2_i32.pow(18) as f64));
 		output
 	}
 
@@ -87,22 +89,21 @@ impl<'a> MMC5983MA<'a> {
 		&mut self,
 		bandwidth: MMC5983MABandwidth,
 	) -> VectorR3F {
-		self.transfer(MMC5983MARegisters::InternalControl1, bandwidth.clone() as u8, false);
+		self.transfer(MMC5983MARegisters::InternalControl1, bandwidth.clone() as u8, false).await;
 		self.start_measurement(true, false).await;
-		// TODO: GET RID OF MORE EVIL MAGIC NUMBERS GRRRR
 
 		match bandwidth {
 			MMC5983MABandwidth::Hz100 => {
-				Timer::after_millis(9).await;
+				Timer::after_millis(HZ100_DELAY).await;
 			}
 			MMC5983MABandwidth::Hz200 => {
-				Timer::after_millis(5).await;
+				Timer::after_millis(HZ200_DELAY).await;
 			}
 			MMC5983MABandwidth::Hz400 => {
-				Timer::after_millis(3).await;
+				Timer::after_millis(HZ400_DELAY).await;
 			}
 			MMC5983MABandwidth::Hz800 => {
-				Timer::after_millis(1).await;
+				Timer::after_millis(HZ800_DELAY).await;
 			}
 		}
 		// This all assumes 18 bit mode

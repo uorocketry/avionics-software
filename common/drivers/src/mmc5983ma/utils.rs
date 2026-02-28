@@ -15,7 +15,7 @@ pub enum MMC5983MARegisters {
 	ProductID1 = 0x2F,
 }
 
-// Note that the increasing the bandwidth decreases time the internal filter is running for, resulting in a lower resolution measurement
+// Note that the increasing the bandwidth decreases time the internal filter is running for, resulting in decrease in measurement resolution
 #[derive(Clone)]
 pub enum MMC5983MABandwidth {
 	Hz100 = 0b00,
