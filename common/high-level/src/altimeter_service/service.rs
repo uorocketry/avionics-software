@@ -4,7 +4,7 @@ use libm::powf;
 use uor_drivers::ms561101::{self, config::OSR, driver::MS561101};
 use uor_utils::{
 	signal_processing::filters::fir::MovingAverageFilter,
-	units::{Altitude, Pressure, Temperature},
+	units::{Distance, Pressure, Temperature},
 };
 pub struct AltimeterService<'a> {
 	pub barometer: MS561101<'a>,
@@ -40,7 +40,7 @@ impl<'a> AltimeterService<'a> {
 	pub async fn altitude(
 		&mut self,
 		oversampling: OSR,
-	) -> Altitude {
+	) -> Distance {
 		let current_pressure = self.barometer.read_sample(oversampling).await.1.fmbar();
 
 		// Equation takes pressure in mbar and outputs altitude in feet
@@ -49,7 +49,7 @@ impl<'a> AltimeterService<'a> {
 		// info!("\n\nRAW ALTITUDE: {}", altitude);
 
 		self.filter.push(altitude);
-		Altitude::new(self.filter.get_average() as f64)
+		Distance::new(self.filter.get_average() as f64)
 	}
 
 	pub async fn temperature(

@@ -1,3 +1,7 @@
+use crate::linear_algebra::types::Zero;
+
+#[derive(Clone)]
+
 pub struct VectorR3 {
 	internal: [i64; 3],
 }
@@ -42,6 +46,8 @@ impl core::ops::Mul<i64> for VectorR3 {
 		VectorR3::new(self.internal[0] * rhs, self.internal[1] * rhs, self.internal[2] * rhs)
 	}
 }
+
+#[derive(Clone)]
 
 pub struct VectorR3F {
 	internal: [f64; 3],
@@ -106,5 +112,57 @@ impl core::convert::From<VectorR3> for VectorR3F {
 		let (i, j, k) = value.internal.into();
 
 		VectorR3F::new(i as f64, j as f64, k as f64)
+	}
+}
+
+#[derive(Clone)]
+pub struct VectorR3Custom<T> {
+	pub i: T,
+	pub j: T,
+	pub k: T,
+}
+impl<T: Zero> VectorR3Custom<T> {
+	pub fn new(
+		i: T,
+		j: T,
+		k: T,
+	) -> Self {
+		VectorR3Custom { i, j, k }
+	}
+
+	pub fn zero_vector() -> VectorR3Custom<T> {
+		VectorR3Custom::new(T::zero(), T::zero(), T::zero())
+	}
+}
+// Do the basic implementations for VectorR3 to be a vector space (Addition)
+impl<T: Zero + core::ops::Add<T, Output = T>> core::ops::Add<VectorR3Custom<T>> for VectorR3Custom<T> {
+	type Output = VectorR3Custom<T>;
+
+	fn add(
+		self,
+		rhs: VectorR3Custom<T>,
+	) -> Self::Output {
+		VectorR3Custom::new(self.i + rhs.i, self.j + rhs.j, self.k + rhs.k)
+	}
+}
+// Do the basic implementations for VectorR3 to be a vector space (Scalar Multiplication)
+impl<T: Zero + core::ops::Mul<u64, Output = T>> core::ops::Mul<u64> for VectorR3Custom<T> {
+	type Output = VectorR3Custom<T>;
+
+	fn mul(
+		self,
+		rhs: u64,
+	) -> Self::Output {
+		VectorR3Custom::new(self.i * rhs, self.j * rhs, self.k * rhs)
+	}
+}
+impl<T: Zero + core::ops::Mul<T, Output = T>> core::ops::Mul<VectorR3Custom<T>> for VectorR3Custom<T> {
+	type Output = VectorR3Custom<T>;
+
+	fn mul(
+		self,
+		rhs: VectorR3Custom<T>,
+	) -> Self::Output {
+		VectorR3Custom::new(self.i * rhs.i, self.j * rhs.j, self.k * rhs.k)
 	}
 }

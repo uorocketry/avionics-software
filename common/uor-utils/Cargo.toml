@@ -35,6 +35,7 @@ embassy-stm32 = { workspace = true, features = [
 # protoc-bin-vendored = "3"
 embassy-sync = { workspace = true, features = ["defmt"] }
 embedded-alloc = { workspace = true }
+embassy-time = { workspace = true, features = ["tick-hz-32_768"] }
 embedded-io-async = { workspace = true, features = ["defmt-03"] }
 heapless = { workspace = true }
 mavlink = { git = "https://github.com/uorocketry/rust-mavlink.git", features = [

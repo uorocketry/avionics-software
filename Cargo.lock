@@ -2513,6 +2513,7 @@ dependencies = [
  "defmt 0.3.100",
  "embassy-stm32",
  "embassy-sync 0.6.2",
+ "embassy-time 0.4.0",
  "embedded-alloc",
  "embedded-io-async",
  "glob",

@@ -1,7 +1,11 @@
+use core::{f64::consts::PI, ops::Add};
+
 use defmt::{Format, info};
 
+use crate::linear_algebra::types::Zero;
+
 // TODO: Can probably make these types instead of structs
-#[derive(Default, Format)]
+#[derive(Default, Format, Clone)]
 pub struct Temperature {
 	// Internal value is celsius with decimal points stripped (2103 vs 21.03)
 	internal: i64,
@@ -51,7 +55,26 @@ impl Temperature {
 	}
 }
 
-#[derive(Default, Format)]
+impl core::ops::Add<Temperature> for Temperature {
+	type Output = Temperature;
+
+	fn add(
+		self,
+		rhs: Temperature,
+	) -> Self::Output {
+		Temperature {
+			internal: self.internal + rhs.internal,
+		}
+	}
+}
+
+impl Zero for Temperature {
+	fn zero() -> Self {
+		Self { internal: 0 }
+	}
+}
+
+#[derive(Default, Format, Clone)]
 pub struct Pressure {
 	// Internal is the pressure in mbar with the decimal points stripped (100009 =  1000.09 mbar)
 	internal: i64,
@@ -86,15 +109,34 @@ impl Pressure {
 	}
 }
 
-#[derive(Default, Format)]
-pub struct Altitude {
+impl core::ops::Add<Pressure> for Pressure {
+	type Output = Pressure;
+
+	fn add(
+		self,
+		rhs: Pressure,
+	) -> Self::Output {
+		Pressure {
+			internal: self.internal + rhs.internal,
+		}
+	}
+}
+
+impl Zero for Pressure {
+	fn zero() -> Self {
+		Self { internal: 0 }
+	}
+}
+
+#[derive(Default, Format, Clone)]
+pub struct Distance {
 	// Internal value is in floating point feet
 	internal: f64,
 }
 
-impl Altitude {
+impl Distance {
 	pub fn new(feet: f64) -> Self {
-		Altitude { internal: feet }
+		Distance { internal: feet }
 	}
 
 	pub fn feet(&self) -> i64 {
@@ -127,5 +169,70 @@ impl Altitude {
 
 	pub fn fkilometers(&self) -> f64 {
 		self.internal / 3.281 / 1000.0
+	}
+}
+
+impl core::ops::Add<Distance> for Distance {
+	type Output = Distance;
+
+	fn add(
+		self,
+		rhs: Distance,
+	) -> Self::Output {
+		Distance {
+			internal: self.internal + rhs.internal,
+		}
+	}
+}
+
+impl Zero for Distance {
+	fn zero() -> Self {
+		Self { internal: 0.0 }
+	}
+}
+#[derive(Default, Format, Clone)]
+
+pub struct Angle {
+	// Internal value is in floating radians
+	internal: f64,
+}
+
+impl Angle {
+	pub fn new(radians: f64) -> Self {
+		Angle { internal: radians }
+	}
+
+	pub fn degrees(&self) -> i64 {
+		(self.internal * 180.0 / PI) as i64
+	}
+
+	pub fn fdegrees(&self) -> f64 {
+		self.internal * 180.0 / PI
+	}
+
+	pub fn radians(&self) -> i64 {
+		self.internal as i64
+	}
+
+	pub fn fradians(&self) -> f64 {
+		self.internal
+	}
+}
+
+impl core::ops::Add<Angle> for Angle {
+	type Output = Angle;
+
+	fn add(
+		self,
+		rhs: Angle,
+	) -> Self::Output {
+		Angle {
+			internal: self.internal + rhs.internal,
+		}
+	}
+}
+impl Zero for Angle {
+	fn zero() -> Self {
+		Self { internal: 0.0 }
 	}
 }

@@ -13,11 +13,12 @@ use embassy_stm32::{
 	fmc::DA0Pin,
 	gpio::Speed,
 	peripherals::{self, PA2},
+	rtc::{Rtc, RtcConfig},
 	spi::{self, Mode, Spi},
 	time::Hertz,
 	usart::{self, Config},
 };
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Instant, Timer};
 use panic_probe as _;
 use phoenix::sound::service::SoundService;
 use static_cell::StaticCell;
@@ -46,11 +47,14 @@ async fn main(spawner: Spawner) {
 	info!("Starting up...");
 	let p = configure_hal();
 
+	let rtc_instance = Rtc::new(p.RTC, RtcConfig::default());
+	let time_provider = rtc_instance.time_provider();
+
 	let detected: Option<PA2> = None;
 	let ejection_channel = EJECTION_CHANNEL.init(AsyncMutex::new(EjectionChannel::new(p.PD5, p.PD6, p.PA2, detected)));
 
-	spawner.spawn(ejection_update_process(ejection_channel));
-	spawner.spawn(ejection_test_process(ejection_channel));
+	// spawner.spawn(ejection_update_process(ejection_channel));
+	// spawner.spawn(ejection_test_process(ejection_channel));
 	#[cfg(feature = "altitude")]
 	{
 		let chip_select = p.PB8;
@@ -68,8 +72,8 @@ async fn main(spawner: Spawner) {
 		let spi_service = UORMonoCsSPI::new(spi_peripheral, chip_select);
 
 		let mut baro_service = MS561101::new(spi_service).await;
-		let mut pressure_altimeter_service = AltimeterService::new(baro_service).await;
-		spawner.spawn(get_altitude(pressure_altimeter_service));
+		let mut pressure_altimeter_service: AltimeterService<'_> = AltimeterService::new(baro_service).await;
+		// spawner.spawn(get_altitude(pressure_altimeter_service));
 	}
 	let sound = SOUND_SERVICE.init(AsyncMutex::new(SoundService::new(p.TIM3, p.PC6)));
 	#[cfg(feature = "music")]
@@ -81,6 +85,21 @@ async fn main(spawner: Spawner) {
 			Ok(_) => (),
 			Err(e) => error!("Could not spawn music task: {}", e),
 		}
+	}
+
+	loop {
+		info!("Current time: {}", Instant::now().as_secs());
+		let instant = time_provider.now().unwrap();
+		info!(
+			"Current RTC time: \nYEAR {} \nMONTH {} \nDAYS {} \nHOURS {} \nMINS {} \nSECS {}",
+			instant.year(),
+			instant.month(),
+			instant.day(),
+			instant.hour(),
+			instant.minute(),
+			instant.second()
+		);
+		Timer::after_secs(1).await;
 	}
 }
 
