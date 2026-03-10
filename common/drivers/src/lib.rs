@@ -3,3 +3,4 @@
 pub mod ejection_channel;
 pub mod ms561101;
 pub mod rfd900x;
+pub mod iim20670;
