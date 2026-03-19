@@ -6,7 +6,6 @@ use crate::iim20670::config::{AccelFsSel, GyroFsSel};
 // Raw Data Container
 /// Complete raw IMU sample (16-bit signed, 2's complement from registers)
 #[derive(Clone, Copy, Default, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct RawImuSample {
 	pub gyro: Vector3<i16>,
 	pub accel: Vector3<i16>,
@@ -18,7 +17,6 @@ pub struct RawImuSample {
 // Converted Data Container
 /// Complete converted IMU sample in physical units
 #[derive(Clone, Copy, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct ImuSample {
 	/// Angular rate in degrees per second
 	pub gyro_dps: Vector3<f32>,

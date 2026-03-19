@@ -29,7 +29,6 @@ pub mod reg {
 
 // Gyroscope Full-Scale Range (Table 18)
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum GyroFsSel {
 	/// ±328 dps, 100 LSB/dps
 	Dps328_0 = 0b0000,
@@ -115,61 +114,59 @@ impl Default for GyroFsSel {
 
 // Accelerometer Full-Scale Range (Table 17)
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum AccelFsSel {
 	/// FS = ±16.384g, FS_LR = ±32.768g
-	G16_Lr32 = 0b000,
+	G16Lr32 = 0b000,
 	/// FS = ±16.384g, FS_LR = ±65.536g (DEFAULT)
-	G16_Lr65 = 0b001,
+	G16Lr65 = 0b001,
 	/// FS = ±32.768g, FS_LR = ±32.768g
-	G32_Lr32 = 0b010,
+	G32Lr32 = 0b010,
 	/// FS = ±32.768g, FS_LR = ±65.536g
-	G32_Lr65 = 0b011,
+	G32Lr65 = 0b011,
 	/// FS = ±2.048g, FS_LR = ±4.096g
-	G2_Lr4 = 0b100,
+	G2Lr4 = 0b100,
 	/// FS = ±2.048g, FS_LR = ±16.384g
-	G2_Lr16 = 0b101,
+	G2Lr16 = 0b101,
 	/// FS = ±4.096g, FS_LR = ±4.096g
-	G4_Lr4 = 0b110,
+	G4Lr4 = 0b110,
 	/// FS = ±4.096g, FS_LR = ±8.192g
-	G4_Lr8 = 0b111,
+	G4Lr8 = 0b111,
 }
 
 impl AccelFsSel {
 	/// Returns the high-resolution full-scale range in g
 	pub fn full_scale_g(&self) -> f32 {
 		match self {
-			Self::G16_Lr32 | Self::G16_Lr65 => 16.384,
-			Self::G32_Lr32 | Self::G32_Lr65 => 32.768,
-			Self::G2_Lr4 | Self::G2_Lr16 => 2.048,
-			Self::G4_Lr4 | Self::G4_Lr8 => 4.096,
+			Self::G16Lr32 | Self::G16Lr65 => 16.384,
+			Self::G32Lr32 | Self::G32Lr65 => 32.768,
+			Self::G2Lr4 | Self::G2Lr16 => 2.048,
+			Self::G4Lr4 | Self::G4Lr8 => 4.096,
 		}
 	}
 
 	/// Returns the low-resolution full-scale range in g
 	pub fn full_scale_lr_g(&self) -> f32 {
 		match self {
-			Self::G16_Lr32 => 32.768,
-			Self::G16_Lr65 => 65.536,
-			Self::G32_Lr32 => 32.768,
-			Self::G32_Lr65 => 65.536,
-			Self::G2_Lr4 => 4.096,
-			Self::G2_Lr16 => 16.384,
-			Self::G4_Lr4 => 4.096,
-			Self::G4_Lr8 => 8.192,
+			Self::G16Lr32 => 32.768,
+			Self::G16Lr65 => 65.536,
+			Self::G32Lr32 => 32.768,
+			Self::G32Lr65 => 65.536,
+			Self::G2Lr4 => 4.096,
+			Self::G2Lr16 => 16.384,
+			Self::G4Lr4 => 4.096,
+			Self::G4Lr8 => 8.192,
 		}
 	}
 }
 
 impl Default for AccelFsSel {
 	fn default() -> Self {
-		Self::G16_Lr65
+		Self::G16Lr65
 	}
 }
 
 // SPI Return Status
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SpiReturnStatus {
 	/// 00: Reserved
 	Reserved,

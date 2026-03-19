@@ -10,8 +10,7 @@ use crate::iim20670::{
 };
 
 // Error Type
-#[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, defmt::Format)]
 pub enum Iim20670Error {
 	/// SPI bus communication failure
 	Spi,
@@ -140,10 +139,7 @@ impl<'a> IIM20670<'a> {
 		Ok(())
 	}
 
-	// ========================================================
 	// Raw Sensor Data Reading
-	// ========================================================
-
 	/// Read raw gyroscope data for all three axes.
 	pub async fn read_gyro_raw(&mut self) -> Result<Vector3<i16>, Iim20670Error> {
 		let x = self.read_register(reg::GYRO_X_DATA).await? as i16;
@@ -195,10 +191,7 @@ impl<'a> IIM20670<'a> {
 		})
 	}
 
-	// ========================================================
 	// Converted Sensor Data Reading
-	// ========================================================
-
 	/// Read gyroscope data converted to degrees per second.
 	pub async fn read_gyro_dps(&mut self) -> Result<Vector3<f32>, Iim20670Error> {
 		let raw = self.read_gyro_raw().await?;
