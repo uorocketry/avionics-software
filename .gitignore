@@ -1,3 +1,18 @@
 /target
 .DS_Store
 .uv-cache
+
+# Host application dependencies and build output
+node_modules/
+.svelte-kit/
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Runtime data
+*.db
+*.db-shm
+*.db-wal
+deployments/ground-station/db/data/
+apps/tile-provider/tiles_data/

@@ -1,0 +1,14 @@
+.DS_Store
+node_modules
+/build
+/.svelte-kit
+svelte.config.js
+/package
+.env
+.env.*
+!.env.example
+
+target/
+tailwind.config.ts
+playwright.config.ts
+proto/

@@ -7,6 +7,6 @@ publish.workspace = true
 license.workspace = true
 
 [dependencies]
-clap = { version = "4.5.16", features = ["derive"] }
+clap = { workspace = true }
 ctrlc = "3.4"
 serialport = "4"

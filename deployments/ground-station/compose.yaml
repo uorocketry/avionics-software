@@ -1,0 +1,167 @@
+name: ground-station
+
+x-rust-service: &rust-service
+  build:
+    context: ../..
+    dockerfile: deployments/ground-station/docker/Dockerfile.rust-service
+  restart: unless-stopped
+  networks:
+    - ground-station
+
+services:
+  traefik:
+    image: traefik:v3.7
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --log.level=INFO
+    ports:
+      - "${GROUND_STATION_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ground-station
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.deny-all.rule=HostRegexp(`.+`)
+      - traefik.http.routers.deny-all.entrypoints=web
+      - traefik.http.routers.deny-all.priority=1
+      - traefik.http.routers.deny-all.service=noop@internal
+
+  db:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    environment:
+      SQLD_NODE: standalone
+    volumes:
+      - ./db/data:/var/lib/sqld
+    ports:
+      - "${LIBSQL_PORT:-5001}:8080"
+    networks:
+      - ground-station
+
+  migration:
+    image: docker.io/oven/bun:1
+    working_dir: /app
+    command: ["sh", "-c", "bun install --frozen-lockfile && bun index.ts"]
+    environment:
+      DATABASE_URL: http://db:8080
+    volumes:
+      - ./db:/app
+    depends_on:
+      - db
+    restart: on-failure
+    networks:
+      - ground-station
+
+  web:
+    build:
+      context: ../../apps/ground-station-web
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DB_URL: http://db:8080
+      COMPOSE_PROJECT_NAME: ground-station
+      VITE_ALLOWED_HOSTS: uorocketry.ca,localhost,127.0.0.1,*.local
+      SVELTEKIT_ALLOWED_HOSTS: uorocketry.ca,localhost,127.0.0.1,*.local
+      ALLOWED_SUBNETS: 192.168.8.0/24,127.0.0.1/32,172.18.0.0/16
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    user: "0:0"
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - ground-station
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.web.rule=Host(`uorocketry.ca`) || HostRegexp(`.+\.local`)
+      - traefik.http.routers.web.entrypoints=web
+      - traefik.http.routers.web.service=web
+      - traefik.http.routers.web.priority=100
+      - traefik.http.services.web.loadbalancer.server.port=3000
+
+  tiles:
+    build:
+      context: ../../apps/tile-provider
+      dockerfile: Dockerfile
+    volumes:
+      - tile-data:/var/lib/tiles
+    ports:
+      - "${TILES_PORT:-6565}:6565"
+    restart: unless-stopped
+    networks:
+      - ground-station
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.tiles.rule=Host(`tiles.uorocketry.ca`)
+      - traefik.http.routers.tiles.entrypoints=web
+      - traefik.http.routers.tiles.priority=100
+      - traefik.http.services.tiles.loadbalancer.server.port=6565
+
+  telemetry-ingestor:
+    <<: *rust-service
+    build:
+      context: ../..
+      dockerfile: deployments/ground-station/docker/Dockerfile.rust-service
+      args:
+        CRATE: telemetry-ingestor
+    command:
+      - --libsql-url
+      - http://db:8080
+      - --gateway-connection-string
+      - ${GATEWAY_CONNECTION_STRING:-tcpout:sergw:5656}
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+
+  command-dispatcher:
+    <<: *rust-service
+    build:
+      context: ../..
+      dockerfile: deployments/ground-station/docker/Dockerfile.rust-service
+      args:
+        CRATE: command-dispatcher
+    command:
+      - --libsql-url
+      - http://db:8080
+      - --gateway-connection-string
+      - ${GATEWAY_CONNECTION_STRING:-tcpout:sergw:5656}
+      - --keepalive-interval-secs
+      - "30"
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+
+  sergw:
+    <<: *rust-service
+    profiles:
+      - radio
+    build:
+      context: ../..
+      dockerfile: deployments/ground-station/docker/Dockerfile.rust-service
+      args:
+        CRATE: sergw
+    command:
+      - listen
+      - --serial
+      - ${SERIAL_DEVICE:-/dev/ttyUSB0}
+      - --baud
+      - ${SERIAL_BAUD:-57600}
+      - --host
+      - 0.0.0.0:5656
+    devices:
+      - ${SERIAL_DEVICE:-/dev/ttyUSB0}:${SERIAL_DEVICE:-/dev/ttyUSB0}
+    ports:
+      - "${SERGW_PORT:-5656}:5656"
+
+networks:
+  ground-station:
+    driver: bridge
+
+volumes:
+  tile-data:

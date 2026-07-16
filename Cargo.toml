@@ -1,7 +1,16 @@
 [workspace]
 resolver = "2"
 
-members = ["apps/sergw", "boards/*", "common/*"]
+members = [
+    "apps/antenna-tracker",
+    "apps/command-dispatcher",
+    "apps/sergw",
+    "apps/telemetry-ingestor",
+    "boards/*",
+    "common/*",
+    "tools/ground-station/manual-command-dispatcher",
+    "tools/ground-station/virtual-serial",
+]
 
 # Specify which members to build by default. Some libraries, such as messages, contain dev-dependencies that will give
 # compile errors if built directly.
@@ -20,6 +29,7 @@ license-file = "LICENSE"
 [workspace.dependencies]
 bitflags = { version = "2.10.0", default-features = false }
 chrono = { git = "https://github.com/uorocketry/chrono", default-features = false }
+clap = { version = "4.5.16", features = ["derive"] }
 cortex-m = { version = "0.7.6", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7.1"
 critical-section = "1.1"
@@ -41,15 +51,30 @@ embedded-io = { version = "0.6.1" }
 embedded-io-async = { version = "0.6.1" }
 enum_dispatch = "0.3.11"
 heapless = "0.9.1"
+hostname = "0.4.0"
+libsql = "0.9.20"
 libm = "0.2.11"
+mavlink = { git = "https://github.com/uorocketry/rust-mavlink.git", features = [
+    "uorocketry",
+    "std",
+    "tcp",
+    "udp",
+    "direct-serial",
+    "serde",
+], default-features = false }
+messages-prost = { git = "https://github.com/uorocketry/messages-prost", features = ["std"], default-features = false }
 nb = "1.1.0"
 num-traits = { version = "0.2.19", default-features = false }
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 prost = { version = "0.14.1", default-features = false, features = ["derive"] }
 serde = { version = "1.0.150", features = ["derive"], default-features = false }
 serde-csv-core = { version = "0.3.2", features = ["defmt"] }
+serde_json = "1"
 smlang = "0.8.0"
 static_cell = "2"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
 uor-drivers = { path = "./common/drivers" }
 uor-high-level = { path = "./common/high-level" }
 uor-peripherals = { path = "./common/peripherals" }

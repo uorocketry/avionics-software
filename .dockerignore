@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+.vscode
+target
+**/node_modules
+**/.svelte-kit
+**/.venv
+**/.pytest_cache
+**/__pycache__
+**/*.db
+**/*.db-shm
+**/*.db-wal
+deployments/ground-station/db/data
+apps/tile-provider/tiles_data

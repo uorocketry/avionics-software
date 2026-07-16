@@ -1,21 +1,23 @@
 # uORocketry Avionics Software Monorepo
 
-Welcome to the uORocketry's avionics software monorepo. This is where we house all of our packages and crates from various boards and our ground station software. We're currently in the process of migrating our other repos to this monorepo so bear with us.
+Firmware, shared avionics libraries, host applications, and ground-station deployment configuration live in this repository.
 
 ## Monorepo Structure
-This monorepo is houses three main types of packages.
 
 ### Boards
-Embedded software developed for each of our boards can be found at `boards/*`. 
+Embedded software developed for each board lives in `boards/*`.
 
 See [boards/](./boards/) for more details.
 
 ### Common Logic
-Common logic shared between boards and possibly ground station can be found at `common/*`. 
+Reusable drivers, peripherals, high-level logic, and utilities live in `common/*`.
 
 See [common/](./common/).
 
-<!--- 
+### Host Applications
+
+Independently runnable host applications live in [`apps/`](./apps/), including the Rust serial gateway, telemetry services, operator web interface, tile provider, and antenna tracker.
+
 ### Ground Station
-<Coming soon...>
--->
+
+The complete ground-station stack is defined in [`deployments/ground-station/`](./deployments/ground-station/). Development and field utilities live in [`tools/ground-station/`](./tools/ground-station/), with architecture notes in [`docs/ground-station/`](./docs/ground-station/).

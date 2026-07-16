@@ -1,0 +1,6 @@
+node_modules
+
+# Database
+tiles.db
+tiles.db-shm
+tiles.db-wal

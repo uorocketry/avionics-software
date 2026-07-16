@@ -30,9 +30,12 @@
         "chrono",
         "defmt",
         "heapless",
+        "libsql",
         "mavlink",
+        "ratatui",
         "serde",
         "sergw",
+        "SvelteKit",
         "uorocketry"
     ]
 }
