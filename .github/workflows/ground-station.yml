@@ -1,0 +1,102 @@
+name: Ground Station
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/antenna-tracker/**"
+      - "apps/command-dispatcher/**"
+      - "apps/ground-station-web/**"
+      - "apps/sergw/**"
+      - "apps/telemetry-ingestor/**"
+      - "apps/tile-provider/**"
+      - "deployments/ground-station/**"
+      - "tools/ground-station/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/ground-station.yml"
+  pull_request:
+    paths:
+      - "apps/antenna-tracker/**"
+      - "apps/command-dispatcher/**"
+      - "apps/ground-station-web/**"
+      - "apps/sergw/**"
+      - "apps/telemetry-ingestor/**"
+      - "apps/tile-provider/**"
+      - "deployments/ground-station/**"
+      - "tools/ground-station/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/ground-station.yml"
+
+jobs:
+  rust-host:
+    name: Rust host applications
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy, rustfmt
+      - name: Install native dependencies
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev pkg-config
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Lint ground-station crates
+        run: cargo clippy --locked -p sergw -p command-dispatcher -p telemetry-ingestor -p gps-ingest -p manual-command-dispatcher -p virtual-serial --all-targets -- -D warnings
+      - name: Test ground-station crates
+        run: cargo test --locked -p sergw -p command-dispatcher -p telemetry-ingestor -p gps-ingest -p manual-command-dispatcher -p virtual-serial
+
+  web:
+    name: Ground-station web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ground-station-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run test
+      - run: bun run build
+
+  bun-services:
+    name: Bun tests (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app:
+          - apps/tile-provider
+          - deployments/ground-station/db
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+      - run: bun install --frozen-lockfile
+      - run: bun test
+
+  antenna-python:
+    name: Antenna Python
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/antenna-tracker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --frozen pytest -q
+
+  compose:
+    name: Compose configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f deployments/ground-station/compose.yaml config --quiet
+      - run: docker compose -f deployments/ground-station/compose.yaml --profile radio config --quiet

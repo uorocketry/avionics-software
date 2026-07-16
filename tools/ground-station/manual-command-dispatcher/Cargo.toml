@@ -1,0 +1,19 @@
+[package]
+name = "manual-command-dispatcher"
+version.workspace = true
+authors.workspace = true
+publish.workspace = true
+license.workspace = true
+edition = "2021"
+
+[dependencies]
+tokio = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+mavlink = { workspace = true }
+messages-prost = { workspace = true }
+crossterm = "0.27"
+ratatui = { version = "0.26", default-features = false, features = ["crossterm"] }
+futures = "0.3"
+prost = { workspace = true }

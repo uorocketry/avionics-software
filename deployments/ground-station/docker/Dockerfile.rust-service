@@ -1,0 +1,32 @@
+FROM rust:bookworm AS builder
+
+ARG CRATE
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        clang \
+        cmake \
+        git \
+        libclang-dev \
+        libssl-dev \
+        libudev-dev \
+        llvm-dev \
+        pkg-config \
+        protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+COPY . .
+RUN cargo build --locked --release -p "${CRATE}" \
+    && install -Dm755 "target/release/${CRATE}" /out/service
+
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libudev1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /out/service /app/bin/service
+ENTRYPOINT ["/app/bin/service"]

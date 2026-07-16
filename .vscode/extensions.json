@@ -2,6 +2,10 @@
 	"recommendations": [
 		"dustypomerleau.rust-syntax",
 		"1yib.rust-bundle",
-		"polymeilex.rust-targets"
+		"polymeilex.rust-targets",
+		"svelte.svelte-vscode",
+		"oven.bun-vscode",
+		"ms-python.python",
+		"charliermarsh.ruff"
 	]
 }

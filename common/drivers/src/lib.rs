@@ -1,6 +1,6 @@
 #![no_std]
 #![feature(impl_trait_in_assoc_type)]
 pub mod ejection_channel;
+pub mod iim20670;
 pub mod ms561101;
 pub mod rfd900x;
-pub mod iim20670;

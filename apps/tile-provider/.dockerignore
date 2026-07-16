@@ -1,0 +1,11 @@
+# Exclude tiles data folder
+tiles_data/
+
+# Exclude tiles database files
+tiles.db
+tiles.db-journal
+tiles.db-wal
+tiles.db-shm
+
+# Exclude any other tiles.* files
+tiles.*
