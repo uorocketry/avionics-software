@@ -1,134 +1,198 @@
-use std::sync::atomic::AtomicBool;
-use std::sync::mpsc::channel;
-use std::sync::Arc;
-
-use clap::{Parser, Subcommand};
-
+mod app;
+mod cli;
+mod metrics;
+mod net;
 mod serial;
 mod state;
-mod tcp_server;
+mod ui;
 
-use serial::{list_available_ports, setup_serial_port, spawn_serial_reader, spawn_serial_writer, RECONNECT_DELAY_DURATION};
-use state::SharedState;
-use tcp_server::spawn_tcp_listener;
+use anyhow::Result;
+use clap::{CommandFactory, Parser};
+use serialport::SerialPortType;
+use tracing_subscriber::EnvFilter;
 
-#[derive(Parser)]
-#[command(author, version, about, long_about = None)]
-#[command(propagate_version = true, arg_required_else_help = true)]
-struct Cli {
-	#[command(subcommand)]
-	command: Option<Commands>,
-}
+use crate::app::listen::run_listen;
+use crate::cli::{Cli, Commands, PortsFormat};
+use crate::serial::list_available_ports;
 
-#[derive(Subcommand)]
-enum Commands {
-	Ports,
-	Listen(Listen),
-}
-
-#[derive(Parser)]
-struct Listen {
-	#[arg(long)]
-	serial: String,
-	#[arg(long, default_value_t = 57600)]
-	baud: u32,
-	#[arg(long, default_value = "127.0.0.1:5656")]
-	host: String,
-	#[arg(short, long, action)]
+fn print_ports(
+	all: bool,
 	verbose: bool,
+	format: PortsFormat,
+) {
+	let ports = list_available_ports(all);
+	match format {
+		PortsFormat::Text => {
+			if ports.is_empty() {
+				eprintln!("<no ports>");
+				std::process::exit(2);
+			}
+			for p in ports {
+				if verbose {
+					match p.port_type {
+						SerialPortType::UsbPort(info) => {
+							println!(
+								"{}\tUSB vid:pid {:04x}:{:04x}\t{:?}\t{:?}",
+								p.port_name, info.vid, info.pid, info.product, info.manufacturer,
+							);
+						}
+						other => {
+							println!("{}\t{:?}", p.port_name, other);
+						}
+					}
+				} else {
+					println!("{}", p.port_name);
+				}
+			}
+		}
+		PortsFormat::Json => {
+			#[derive(serde::Serialize)]
+			struct PortOut {
+				name: String,
+				kind: String,
+				vid: Option<u16>,
+				pid: Option<u16>,
+				product: Option<String>,
+				manufacturer: Option<String>,
+			}
+
+			let out: Vec<PortOut> = ports
+				.into_iter()
+				.map(|p| match p.port_type {
+					SerialPortType::UsbPort(info) => PortOut {
+						name: p.port_name,
+						kind: "usb".into(),
+						vid: Some(info.vid),
+						pid: Some(info.pid),
+						product: info.product,
+						manufacturer: info.manufacturer,
+					},
+					other => PortOut {
+						name: p.port_name,
+						kind: format!("{other:?}"),
+						vid: None,
+						pid: None,
+						product: None,
+						manufacturer: None,
+					},
+				})
+				.collect();
+			println!("{}", serde_json::to_string_pretty(&out).unwrap());
+		}
+	}
 }
 
 fn main() {
 	let cli = Cli::parse();
 
-	match &cli.command {
-		Some(Commands::Ports) => match list_available_ports() {
-			Ok(ports) => println!("{}", ports.join(" ")),
-			Err(e) => eprintln!("Error listing serial ports: {}", e),
+	let no_tui = match &cli.command {
+		Some(Commands::Listen(listen)) => listen.no_tui,
+		_ => false,
+	};
+
+	if no_tui {
+		// Enable normal external logging for background daemon
+		tracing_subscriber::fmt()
+			.with_env_filter(EnvFilter::from_default_env())
+			.with_target(false)
+			.try_init()
+			.ok();
+	} else {
+		// Silence external logging to keep TUI clean; route important status via the UI event log.
+		tracing_subscriber::fmt()
+			.with_env_filter(EnvFilter::from_default_env())
+			.with_target(false)
+			.with_writer(std::io::sink)
+			.try_init()
+			.ok();
+	}
+
+	let result: Result<()> = match cli.command {
+		Some(Commands::Ports { all, verbose, format }) => {
+			print_ports(all, verbose, format);
+			Ok(())
+		}
+		Some(Commands::Listen(listen)) => run_listen(listen),
+		#[cfg(target_os = "linux")]
+		Some(Commands::Mock { cmd: sub }) => match sub {
+			crate::cli::MockCmd::Serial { alias } => {
+				let _ = alias;
+				crate::app::mock::run_mock_serial()
+			}
+			crate::cli::MockCmd::Listener { chat } => crate::app::listener::run_chat(chat),
 		},
-		Some(Commands::Listen(listen_opts)) => {
-			if let Err(e) = run_gateway(listen_opts) {
-				eprintln!("Application error: {}", e);
-			}
+		None => {
+			Cli::command().print_help().ok();
+			println!();
+			Ok(())
 		}
-		None => unreachable!("Should be covered by arg_required_else_help = true"),
+	};
+
+	if let Err(err) = result {
+		// Map to stable exit codes
+		let code = exit_code_for_error(&err);
+		eprintln!("error: {err:?}");
+		std::process::exit(code);
 	}
 }
 
-fn setup_ctrl_c_handler(shutdown_flag: &Arc<AtomicBool>) -> Result<(), Box<dyn std::error::Error>> {
-	let shutdown_flag_clone = Arc::clone(shutdown_flag);
-	ctrlc::set_handler(move || {
-		println!("\nReceived Ctrl-C, initiating graceful shutdown...");
-		shutdown_flag_clone.store(true, std::sync::atomic::Ordering::Release);
-	})?;
-	Ok(())
+pub(crate) fn exit_code_for_error(err: &anyhow::Error) -> i32 {
+	// 2: no ports, 3: multiple ports, 4: bind failure, 5: serial open failure, 1: other
+	for cause in err.chain() {
+		if let Some(sel) = cause.downcast_ref::<crate::serial::SerialSelectError>() {
+			return match sel {
+				crate::serial::SerialSelectError::NoPorts => 2,
+				crate::serial::SerialSelectError::MultiplePorts { .. } => 3,
+			};
+		}
+		if let Some(ioe) = cause.downcast_ref::<std::io::Error>() {
+			use std::io::ErrorKind::*;
+			return match ioe.kind() {
+				AddrInUse | AddrNotAvailable | PermissionDenied | ConnectionAborted | ConnectionReset => 4,
+				_ => 1,
+			};
+		}
+		if cause.is::<serialport::Error>() {
+			return 5;
+		}
+	}
+	1
 }
 
-fn run_gateway(opts: &Listen) -> Result<(), Box<dyn std::error::Error>> {
-	let shared_state = Arc::new(std::sync::Mutex::new(SharedState::new(opts.verbose)));
-	let shutdown_flag = Arc::new(AtomicBool::new(false));
-	let shared_port_writer = Arc::new(std::sync::Mutex::new(None::<Box<dyn serialport::SerialPort>>));
-	let (serial_writer_tx, serial_writer_rx) = channel::<Arc<[u8]>>();
+#[cfg(test)]
+mod tests {
+	use super::*;
 
-	setup_ctrl_c_handler(&shutdown_flag)?;
+	#[test]
+	fn exit_code_no_ports() {
+		let err = anyhow::Error::from(crate::serial::SerialSelectError::NoPorts);
+		assert_eq!(exit_code_for_error(&err), 2);
+	}
 
-	println!("Starting TCP listener on: {}", opts.host);
-	let tcp_handle_task = spawn_tcp_listener(&opts.host, &shared_state, &shutdown_flag, serial_writer_tx)?;
-
-	let serial_writer_task = spawn_serial_writer(serial_writer_rx, &shared_port_writer, &shutdown_flag);
-
-	'reconnect_loop: loop {
-		if shutdown_flag.load(std::sync::atomic::Ordering::Acquire) {
-			println!("Shutdown signal received, exiting main loop.");
-			break 'reconnect_loop;
-		}
-
-		println!("Attempting to connect to serial port {} at {} baud...", opts.serial, opts.baud);
-		let port = match setup_serial_port(&opts.serial, opts.baud) {
-			Ok(p) => {
-				println!("Successfully connected to serial port.");
-				p
-			}
-			Err(e) => {
-				eprintln!(
-					"Failed to open serial port: {}. Retrying in {} seconds...",
-					e,
-					RECONNECT_DELAY_DURATION.as_secs()
-				);
-				std::thread::sleep(RECONNECT_DELAY_DURATION);
-				continue 'reconnect_loop;
-			}
-		};
-
-		// The port was opened successfully
-		let port_writer_clone = port.try_clone()?;
-		*shared_port_writer.lock().expect("Mutex poisoned") = Some(port_writer_clone);
-
-		let serial_reader_task = spawn_serial_reader(port, &shared_state, &shutdown_flag);
-
-		// Block until the reader thread exits
-		serial_reader_task.join().unwrap_or_else(|e| {
-			eprintln!("Serial reader thread panicked: {:?}", e);
+	#[test]
+	fn exit_code_multiple_ports() {
+		let err = anyhow::Error::from(crate::serial::SerialSelectError::MultiplePorts {
+			list: vec!["a".into(), "b".into()],
 		});
-
-		// Connection is dead.
-		*shared_port_writer.lock().expect("Mutex poisoned") = None;
-
-		// Retry or exit
-		if !shutdown_flag.load(std::sync::atomic::Ordering::Acquire) {
-			eprintln!("Serial connection lost. Attempting to reconnect...");
-			std::thread::sleep(RECONNECT_DELAY_DURATION);
-		}
+		assert_eq!(exit_code_for_error(&err), 3);
 	}
 
-	println!("Shutting down long-running tasks...");
-	if let Err(e) = tcp_handle_task.join() {
-		eprintln!("TCP listener thread panicked: {:?}", e);
-	}
-	if let Err(e) = serial_writer_task.join() {
-		eprintln!("Serial writer thread panicked: {:?}", e);
+	#[test]
+	fn exit_code_bind_like_io_error() {
+		let err = anyhow::Error::from(std::io::Error::from(std::io::ErrorKind::AddrInUse));
+		assert_eq!(exit_code_for_error(&err), 4);
 	}
 
-	println!("Application has shut down.");
-	Ok(())
+	#[test]
+	fn exit_code_serial_error() {
+		let serr = serialport::Error::new(serialport::ErrorKind::NoDevice, "no device");
+		let err = anyhow::Error::from(serr);
+		assert_eq!(exit_code_for_error(&err), 5);
+	}
+
+	#[test]
+	fn exit_code_other() {
+		let err = anyhow::anyhow!("other");
+		assert_eq!(exit_code_for_error(&err), 1);
+	}
 }
