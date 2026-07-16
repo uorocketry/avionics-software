@@ -1,118 +1,101 @@
-# SERGW - Serial Gateway
+### sergw
 
-## NAME
+Simple serial ↔ TCP gateway with a built‑in TUI and optional zero‑config mDNS advertisement.
 
-sergw - Serial-to-TCP gateway for communication between serial devices and TCP clients
+sergw opens a local serial device and serves it over TCP, broadcasting serial output to all connected clients and forwarding client input to the serial device. It emphasizes pragmatic reliability (auto‑reconnect) and visibility (TUI overview and hex/ascii/dec inspector).
 
-## SYNOPSIS
+### Highlights
 
-**sergw** [*OPTIONS*] _COMMAND_
+- Serial ↔ TCP bridge over raw TCP (no telnet/RFC2217, no TLS)
+- Multi‑client fan‑out: serial output is broadcast to all connected TCP clients
+- Backpressure handling: slow or disconnected clients are dropped
+- TUI: overview (connections, throughput, events) and inspector (hex/ascii/dec)
+- Auto‑reconnect for serial (reader/writer) with buffered retry for writes
+- Zero‑config mDNS (feature ‘mdns’, enabled by default): `_sergw._tcp`
+- Linux mock tools: PTY‑backed mock serial and TCP chat helper (Linux only)
 
-**sergw ports**
+### Install
 
-**sergw listen** [*OPTIONS*] --serial _PORT_
+- From crates.io (default features include mDNS):
 
-## DESCRIPTION
-
-sergw bridges communication between a serial device and multiple TCP clients. Data from the serial port is broadcast to all connected TCP clients. Data from any TCP client is forwarded to the serial port.
-
-The gateway automatically reconnects to the serial port if the connection is lost. Graceful shutdown is supported via Ctrl-C.
-
-## COMMANDS
-
-### ports
-
-Lists available USB serial ports. Outputs port names separated by spaces.
-
-```bash
-sergw ports
-# Output: /dev/ttyUSB0 /dev/ttyUSB1 /dev/ttyACM0
+```
+cargo install sergw
 ```
 
-### listen
+- Without mDNS:
 
-Starts the TCP server and establishes serial communication.
-
-**Required Options:**
-
-- `--serial *PORT*` - Serial port device path (e.g., `/dev/ttyUSB0`, `COM3`)
-
-**Optional Options:**
-
-- `--baud *RATE*` - Serial baud rate (default: 57600)
-- `--host *ADDRESS*` - TCP bind address and port (default: 127.0.0.1:5656)
-- `-v, --verbose` - Enable verbose output
-
-## OPTIONS
-
-| Option          | Description               | Default        |
-| --------------- | ------------------------- | -------------- |
-| `--serial`      | Serial port device path   | Required       |
-| `--baud`        | Serial baud rate          | 57600          |
-| `--host`        | TCP bind address and port | 127.0.0.1:5656 |
-| `-v, --verbose` | Enable verbose logging    | false          |
-
-## EXAMPLES
-
-```bash
-sergw listen --serial /dev/ttyUSB0
-sergw listen --serial /dev/ttyUSB0 --baud 115200 --host 0.0.0.0:8080
-sergw listen --serial /dev/ttyUSB0 --verbose
-sergw ports
+```
+cargo install sergw --no-default-features
 ```
 
-## ARCHITECTURE
+### Quick start
 
-The gateway uses multiple threads:
+Bridge a serial device on port 5656 (defaults shown):
 
-1. **Main Reconnect Loop** - Attempts to connect to the serial port and spawns a reader thread. If the connection is lost, it cleans up and retries after a delay.
-
-2. **Serial Reader Thread** - Reads data from the serial port and broadcasts to all TCP clients.
-
-3. **Serial Writer Thread** - Receives data from TCP clients and writes to the serial port.
-
-4. **TCP Listener Thread** - Accepts new TCP connections and spawns handler threads.
-
-5. **TCP Client Handler Threads** - One per client, handles bidirectional data forwarding.
-
-Thread coordination uses shared state (`Arc<Mutex<...>>`), message channels (`std::sync::mpsc`), and an atomic shutdown flag.
-
-## REQUIREMENTS
-
-- Rust toolchain (install via [rustup](https://rustup.rs/))
-- Serial port access permissions
-  - Linux: Add user to `dialout` group
-  - Windows: Administrator privileges may be required
-
-## TROUBLESHOOTING
-
-### Permission Denied on Serial Port
-
-**Linux:**
-
-```bash
-sudo usermod -a -G dialout $USER
-# Log out and back in
+```
+sergw listen --serial /dev/ttyUSB0 --baud 115200 --host 127.0.0.1:5656
 ```
 
-**Windows:**
+Connect a TCP client (e.g. `nc 127.0.0.1 5656`) to interact.
 
-- Run as Administrator
+### CLI
 
-### Serial Port Not Found
+```
+sergw
+  ports [--all] [--verbose] [--format text|json]
+  listen [--serial <PATH>] [--baud <u32>] [--host <addr:port>]
+         [--data-bits five|six|seven|eight]
+         [--parity none|odd|even]
+         [--stop-bits one|two]
+         [--buffer <usize>]
+  mock serial [--alias <PATH>]           # Linux only
+  mock listener [--host <addr:port>]     # Linux only
+```
 
-1. Verify device is connected and powered
-2. Check if port is in use:
-   ```bash
-   lsof /dev/ttyUSB0  # Linux
-   ```
-3. Try different baud rates
+- `ports`: list serial ports (USB‑only by default). Use `--all` to include non‑USB. `--format json` for machine output.
+- `listen`: start the bridge. If `--serial` is omitted and exactly one USB serial is present, it is auto‑selected; otherwise a helpful error is returned.
+- `mock serial` (Linux): create a PTY that behaves like a serial device and open a TUI to interact.
+- `mock listener` (Linux): connect to a TCP server with a TUI (handy for testing the bridge from the client side).
 
-### TCP Connection Issues
+### mDNS / Bonjour (optional)
 
-1. **Port in use:**
-   ```bash
-   netstat -tulpn | grep :5656  # Linux
-   ```
-2. **Firewall blocking:** Allow incoming connections on specified port
-3. **Network access:** Use `0.0.0.0` instead of `127.0.0.1`
+When built with the `mdns` feature (default), sergw advertises the service using type `_sergw._tcp`.
+
+- Instance name: `sergw:<ttyname>` (e.g. `sergw:ttyUSB0`)
+- TXT records: `provider=sergw`
+
+Disable mDNS by building without default features:
+
+```
+cargo build --no-default-features
+```
+
+### TUI overview
+
+- Tabs: Overview (connections, throughput, events), Inspector (live dump)
+- Inspector: formats (hex/ascii/dec), per‑device filter, pause/scroll
+- Key hints in footer
+
+### Reliability & behavior
+
+- Serial auto‑reconnect on read/write failures; writer retries buffered write after reconnect
+- TCP reader/writer per connection; on backpressure the connection is dropped rather than slowing others
+- Raw byte forwarding (no framing, no higher protocols)
+
+### Exit codes
+
+- 2: no serial ports found for auto‑selection
+- 3: multiple serial ports detected, explicit `--serial` required
+- 4: bind‑like networking error (e.g. address in use)
+- 5: serial open/error
+- 1: other errors
+
+### Development
+
+- Build: `cargo build --all-features`
+- Lint: `cargo clippy --all-targets --all-features -- -D warnings`
+- Tests: unit tests + Linux PTY integration test
+
+### License
+
+GPL‑3.0‑or‑later
