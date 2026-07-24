@@ -1,0 +1,16 @@
+use defmt::{debug, error};
+use uor_utils::utils::types::AsyncMutex;
+
+use crate::sd_spi::service::{SD_CARD_WRITE_QUEUE, SDCardService};
+
+#[embassy_executor::task]
+pub async fn sd_card_task(sd_card_service_mutex: &'static AsyncMutex<SDCardService>) {
+	debug!("Starting SD card write loop.");
+	loop {
+		let (scope, path, line) = SD_CARD_WRITE_QUEUE.receiver().receive().await;
+		if let Err(error) = sd_card_service_mutex.lock().await.write(scope, path, line) {
+			error!("Could not write to SD card: {}", error);
+			continue;
+		}
+	}
+}
